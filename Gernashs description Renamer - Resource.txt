@@ -120,7 +120,7 @@ ReduceLimbDamageMod [AVIF:000BA43E]=Reduces limb damage by:
 Mod_Stabilized_AV [AVIF:00245BC6]=Base stabiltiy increased By:
 Mod_ReducedSprint_AV [AVIF:00245B87]=Sprinting AP usage reduced by:
 Mod_ReducedPowerAttack_AV [AVIF:00245BDB]=Power attack AP Drain reduced by:
-ArmorQuietMod "Armor Quiet Mod" [AVIF:00183316]
+ArmorQuietMod "Armor Quiet Mod" [AVIF:00183316]=
 ActionPoints [AVIF:000002D5]=Action Points Increased By:
 PA_ShockDmg_AV [AVIF:00239EBA]=Potato
 ArmorQuietMod "Armor Quiet Mod" [AVIF:00183316]=Reduces detection from moving by:
