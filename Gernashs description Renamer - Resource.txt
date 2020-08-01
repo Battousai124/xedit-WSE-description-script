@@ -78,7 +78,7 @@ ccSBJFO4001_SolarFlareProjectile [PROJ:FE000842]=Potato
 {{{------------------------------------------------------------------------------}}}
 MS09ZetaRadiationEnch [ENCH:00106DB5]=Changes weapon damage into Zeta Wave radiation
 AlienBlasterProjectile [PROJ:001025A9]=Changes Ammo to Fusion Cells
-Ammo556 "5.56 Round" [AMMO:0001F278]=Changes Ammo to 5.56x45mm NATO ammo
+Ammo556 "5.56 Round" [AMMO:0001F278]=Changes Ammo to 5.56x45mm NATO
 dn_HasReceiver_Converted50 [KYWD:00238455]=Changes Ammo to .50 BMG
 dn_HasReceiver_Converted45 [KYWD:00238456]=Changes Ammo to .45 Auto
 dn_HasReceiver_Converted38 [KYWD:00238453]=Changes Ammo to .32 Auto
