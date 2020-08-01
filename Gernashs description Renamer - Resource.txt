@@ -243,7 +243,7 @@ enchMod_LaserReceiver_Fire1 "Fire Damage" [ENCH:0020003B]=Ignights target for 9 
 enchArmorFallingMod [ENCH:00183315]=
 ench_mod_LegendaryPA_RadsCoreHealth [ENCH:0022879D]=Gain 50% AP Recovery per 50 Rads you absorb
 EnchPA_OverdriveServos "Overdrive Servos" [ENCH:00086524]=Increases Sprint speed by 10% for an Additional Action Point cost
-EnchShockAndStun "Electrical Stun Damage" [ENCH:000C4670]=EFFECT> Chance to stun: 25% + Additional electrical damage +10
+EnchShockAndStun "Electrical Stun Damage" [ENCH:000C4670]=Chance to stun: 25% + Additional electrical damage +10
 EnchModDisarm "Disarm" [ENCH:00246C08]=Chance to disarm
 enchArmorStabilizedMod "Stabilized mod" [ENCH:00245BB4]=Increase Stability by 5% per mod piece
 {{{----------------------------Damage/Resistance_Type----------------------------}}}
