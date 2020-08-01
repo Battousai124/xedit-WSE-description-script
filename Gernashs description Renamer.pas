@@ -1,5 +1,5 @@
 //
-// Date:2020
+// Date:2020-08-01 01:56
 // Ver: 1.0
 // Author: Gernash
 //
@@ -7,7 +7,7 @@
 unit FO4PatchOmodDescriptions;
  
 const
-  sPropertiesList = wbScriptsPath + '_Gernashs description Renamer - Resource.txt';
+  sPropertiesList = wbScriptsPath + '1MODRenamer.txt';
  
 var
   slPropertyMap: TStringList;
@@ -19,9 +19,9 @@ var
   f: Real;
   g: String;
   
-  //
-  // OMOD Property Value Sort to % or Value
-  //
+
+// OMOD Property Value Sort to % or Value
+
   
 begin
   valuetype := GetElementEditValues(prop, 'Value Type');
@@ -36,7 +36,15 @@ if (valuetype = 'FormID,Float') and (valuefunctiontype = 'MUL+ADD') then begin
 		  Result := '+' + IntToStr(Int(f * 100)) + '%'
 		else
 		  Result := IntToStr(Int(f * 100)) + '%';
-	//	Result := (f); //to see the RAW Data
+	end
+else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or (valuePropertytype = 'AimModelRecoilMinDegPerShot') or (valuePropertytype = 'AimModelRecoilMaxDegPerShot') or (valuePropertytype = 'AimModelRecoilArcDeg') or (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then begin
+    f := GetNativeValue(ElementByIndex(prop, 6));
+		if f > 1.0 then
+		  Result := '+' + FloatToStr(f) + chr($00B0)
+	else if f > 0.0 then
+		  Result := '+' + IntToStr(Int(f * 100)) + chr($00B0)
+		else
+		  Result := IntToStr(Int(f * 100)) + chr($00B0);
 	end
 else if (valuetype = 'Float') and (valuefunctiontype = 'MUL+ADD') then begin
     f := GetNativeValue(ElementByIndex(prop, 6));
@@ -82,9 +90,9 @@ else if (valuetype = 'FormID,Int') and (valuePropertytype = 'ZoomData') then beg
 	end
 end;
  
- //
+ 
  // Mapping Name
- //
+
  
 function GetMappedDescription(prop: IInterface; propname: String): String;
 var
@@ -102,7 +110,7 @@ begin
   if mappedValue = '\' then 
 		Result := Format('%s%s', [mappedName, mappedValue])+ ''
 	else if mappedName = 'Damage_Type' then 
-		Result := 'Additional ' + Format('%s' + ' Damage: ' + '%s' + ' ', [query, mappedValue])
+		Result := 'Additional ' + Format('%s' + ' Damage: ' + '%s', [query, mappedValue])
 	else if mappedName = 'Damage_Resistance' then 
 		Result := Format('%s' + ' Damage Reduced by: ' + '%s', [query, mappedValue])
 	else if	mappedName = 'Actor_Values_Type' then 
@@ -112,7 +120,7 @@ begin
 	else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):')then 
 		Result := Format('%s%s', [mappedName, mappedValue])
 	else
-		Result := Format('%s%s' + ' | ', [mappedName, mappedValue]); //output layout 
+		Result := Format('%s%s', [mappedName, mappedValue]); //output layout 
 end;
  
 function GetOmodDescription(rec: IInterface): String;
@@ -121,29 +129,27 @@ var
   prop, properties: IInterface; 
   propname: string;
   sl: TStringList;
+  
 begin
   sl := TStringList.Create;
- 
   properties := ElementByPath(rec, 'DATA\Properties');
+  
   for i := 0 to Pred(ElementCount(properties)) do begin
     prop := ElementByIndex(properties, i);
     propname := GetElementEditValues(prop, 'Property');
     j := slPropertyMap.IndexOfName(propname);
-    if j = -1 then Continue;
-    // add property index as prefix for sorting
-    sl.Add( Format('%.3d', [j]) + GetMappedDescription(prop, propname) );
+	if j = -1 then Continue;
+// add property index as prefix for sorting
+		sl.Add( Format('%.3d', [j]) + GetMappedDescription(prop, propname) );
   end;
- 
- 
-  // sort, concatenate and remove prefixes
+
+// sort, concatenate and remove prefixes
+
   sl.Sort;
   for i := 0 to sl.Count - 1 do begin
-  //Formatting the output
-  //	if Result <> '' then Result := Result + ' | ';  
-	if Result = '\' then Result := Result + '';
-	if Result <> '' then Result := Result + '';
-    Result := Result + Copy(sl[i], 4, Length(sl[i]));
-  end;
+	if  Result <> '' then Result := Result + ' | ';
+		Result := Result + Copy(sl[i], 4, Length(sl[i]));
+  end
     sl.Free;
 end;
  
@@ -162,8 +168,8 @@ begin
     Exit;
  
   // patch the winning override record
-  e := WinningOverride(e);
  
+  e := WinningOverride(e);
   desc := GetOmodDescription(e);
  
   if desc = '' then
