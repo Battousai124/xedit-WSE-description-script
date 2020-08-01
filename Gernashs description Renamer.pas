@@ -157,7 +157,7 @@ begin
   sl.Sort;
   for i := 0 to sl.Count - 1 do begin
 //  AddMessage(sl[i]);
-	if  sl[i] = '127 ' then begin
+	if  sl[i] = '127' then begin
 	Result := Result
 	end
 	else if  Result <> '' then begin
