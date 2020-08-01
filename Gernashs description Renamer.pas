@@ -136,7 +136,7 @@ function GetOmodDescription(rec: IInterface): String;
 var
   i, j: Integer;
   prop, properties: IInterface; 
-  propname: string;
+  propcomp, propname: string;
   sl: TStringList;
   
 begin
@@ -156,8 +156,8 @@ begin
 
   sl.Sort;
   for i := 0 to sl.Count - 1 do begin
-//  AddMessage(sl[i]);
-	if  sl[i] = '127' then begin
+  propcomp := Copy(sl[i], 4, Length(sl[i]));
+	if  propcomp = '' then begin
 	Result := Result
 	end
 	else if  Result <> '' then begin
