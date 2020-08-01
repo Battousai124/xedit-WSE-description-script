@@ -77,15 +77,16 @@ else if valuetype = 'Int' then begin
 		  Result := FloatToStr(f);
  
 	end
+
 else if (valuetype = 'FormID,Int') and (valuePropertytype = 'ZoomData') then begin	
 		Result := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
 	end
-	else if valuetype = 'FormID,Int' then begin	
-	 f := GetNativeValue(ElementByIndex(prop, 6));
+else if valuetype = 'FormID,Int' then begin	
+	f := GetNativeValue(ElementByIndex(prop, 6));
 		if f > 1.0 then
-		  Result := FloatToStr(f);
+		  Result := FloatToStr(f)
 	end
-	else if valuetype = 'FormID,Float' then begin
+else if valuetype = 'FormID,Float' then begin
 		Result := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 7))];
 	end
 end;
@@ -107,20 +108,28 @@ begin
   if mappedValue = '' then exit;
   if mappedName = 'Potato' then exit;
   if query = 'Potato' then exit;
-  if mappedValue = '\' then 
+//		Result := 'zzz'
+		
+	if mappedValue = '\' then
 		Result := Format('%s%s', [mappedName, mappedValue])+ ''
-	else if mappedName = 'Damage_Type' then 
-		Result := 'Additional ' + Format('%s' + ' Damage: ' + '%s', [query, mappedValue])
-	else if mappedName = 'Damage_Resistance' then 
+		
+	else if mappedName = 'Damage_Type' then  
+		Result := Format('Additional ' + '%s' + ' Damage: ' + '%s', [query, mappedValue])
+		
+	else if mappedName = 'Damage_Resistance' then  
 		Result := Format('%s' + ' Damage Reduced by: ' + '%s', [query, mappedValue])
-	else if	mappedName = 'Actor_Values_Type' then 
+		
+	else if	mappedName = 'Actor_Values_Type' then  
 		Result := Format('%s' + '+' + '%s', [query, mappedValue])
-	else if	(mappedName = 'Keywords_Values_Type') or (mappedName = 'MaterialSwaps_Values_Type') or (mappedName = 'Enchantments_Value') or (mappedName = 'MaterialSwaps_Values_Type') or (mappedName = 'Ammo_Type') then 
+		
+	else if	(mappedName = 'Keywords_Values_Type') or (mappedName = 'MaterialSwaps_Values_Type')  or (mappedName = 'MaterialSwaps_Values_Type') or (mappedName = 'Enchantments_Value') or (mappedName = 'Ammo_Type') then  //or (mappedName = 'Enchantments_Value')
 		Result := Format('%s', [query])
-	else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):')then 
+		
+	else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):')then  
 		Result := Format('%s%s', [mappedName, mappedValue])
-	else
+	else  
 		Result := Format('%s%s', [mappedName, mappedValue]); //output layout 
+		
 end;
  
 function GetOmodDescription(rec: IInterface): String;
@@ -140,14 +149,20 @@ begin
     j := slPropertyMap.IndexOfName(propname);
 	if j = -1 then Continue;
 // add property index as prefix for sorting
-		sl.Add( Format('%.3d', [j]) + GetMappedDescription(prop, propname) );
+ 		sl.Add( Format('%.3d', [j]) + GetMappedDescription(prop, propname) );
   end;
 
 // sort, concatenate and remove prefixes
 
   sl.Sort;
   for i := 0 to sl.Count - 1 do begin
-	if  Result <> '' then Result := Result + ' | ';
+//  AddMessage(sl[i]);
+	if  sl[i] = '127 ' then begin
+	Result := Result
+	end
+	else if  Result <> '' then begin
+	Result := Result + ' | '
+	end
 		Result := Result + Copy(sl[i], 4, Length(sl[i]));
   end
     sl.Free;
