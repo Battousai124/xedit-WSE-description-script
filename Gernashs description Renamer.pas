@@ -7,7 +7,7 @@
 unit FO4PatchOmodDescriptions;
  
 const
-  sPropertiesList = wbScriptsPath + '1MODRenamer.txt';
+  sPropertiesList = wbScriptsPath + 'Gernashs description Renamer - Resource.txt';
  
 var
   slPropertyMap: TStringList;
