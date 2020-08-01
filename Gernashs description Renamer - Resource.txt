@@ -252,7 +252,7 @@ DamageTypeValues=Damage_Type
 {{{------------------------------------------------------------------------------}}}
 dn_HasReceiver_Heavy [KYWD:0016303A]=Heavier Weight.
 dn_HasReceiver_Light [KYWD:00163039]=Lighter Weight.
-dtElectricalEnchEffectChanceAlways "Electrical Damage" [ENCH:000856FF]= 
+dtElectricalEnchEffectChanceAlways "Electrical Damage" [ENCH:000856FF]=
 dtEnergy [DMGT:00060A81]=Energy
 dtRadiationExposure [DMGT:00060A85]=Radiation
 dtElectrical [DMGT:00060A80]=Electrical
