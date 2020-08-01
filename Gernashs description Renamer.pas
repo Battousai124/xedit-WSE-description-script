@@ -156,12 +156,12 @@ begin
 
   sl.Sort;
   for i := 0 to sl.Count - 1 do begin
-  propcomp := Copy(sl[i], 4, Length(sl[i]));
-	if  propcomp = '' then begin
-	Result := Result
+  	propcomp := Copy(sl[i], 4, Length(1));
+  	if  (propcomp = '') or (propcomp = '\') then begin
+		Result := Result
 	end
 	else if  Result <> '' then begin
-	Result := Result + ' | '
+		Result := Result + ' | '
 	end
 		Result := Result + Copy(sl[i], 4, Length(sl[i]));
   end
