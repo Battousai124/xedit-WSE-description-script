@@ -159,6 +159,7 @@ var
   
 begin
   sl := TStringList.Create;
+	sl.Sorted := true; //sorting automatically happens at insert 
   
   try
 		properties := ElementByPath(rec, 'DATA\Properties');
@@ -172,9 +173,8 @@ begin
 			sl.Add( Format('%.3d', [j]) + GetMappedDescription(prop, propname) );
 		end;
 
-	// sort, concatenate and remove prefixes
+	//concatenate and remove prefixes
 
-		sl.Sort;
 		for i := 0 to sl.Count - 1 do begin
 		proprefix := Copy(sl[i], 4, Length(1));
 		prosuffix := RightStr(Result, 1);
