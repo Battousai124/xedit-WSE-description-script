@@ -24,7 +24,7 @@ var
 
   
 begin
-  valuetype := GetElementEditValues(prop, 'Value Type');
+	valuetype := GetElementEditValues(prop, 'Value Type');
   valuePropertytype := GetElementEditValues(prop, 'Property');
   valuefunctiontype := GetElementEditValues(prop, 'Function Type');
  
@@ -159,6 +159,7 @@ var
   
 begin
   sl := TStringList.Create;
+	sl.Sorted := true; //sorting automatically happens at insert 
   
   try
 		properties := ElementByPath(rec, 'DATA\Properties');
@@ -168,25 +169,23 @@ begin
 			propname := GetElementEditValues(prop, 'Property');
 			j := slPropertyMap.IndexOfName(propname);
 		if j = -1 then Continue;
-	// add property index as prefix for sorting
+			// add property index as prefix for sorting
 			sl.Add( Format('%.3d', [j]) + GetMappedDescription(prop, propname) );
 		end;
 
-	// sort, concatenate and remove prefixes
+		//concatenate and remove prefixes
 
-		sl.Sort;
 		for i := 0 to sl.Count - 1 do begin
-		proprefix := Copy(sl[i], 4, Length(1));
-		prosuffix := RightStr(Result, 1);
-		if  (proprefix = '') or (proprefix = '\') or (prosuffix = ' ')then begin
-			 Result := Result
+			proprefix := Copy(sl[i], 4, Length(1));
+			prosuffix := RightStr(Result, 1);
+			if  (proprefix = '') or (proprefix = '\') or (prosuffix = ' ')then begin
+				 Result := Result
+			end
+			else if  Result <> '' then begin
+				 Result := Result + ' | '
+			end
+			Result := Result + Copy(sl[i], 4, Length(sl[i]));
 		end
-		else if  Result <> '' then begin
-			 Result := Result + ' | '
-		end
-			 Result := Result + Copy(sl[i], 4, Length(sl[i]));
-		end
-			sl.Free;
 	finally
 		sl.Free;
 		sl:=nil;
@@ -210,14 +209,21 @@ begin
   // patch the winning override record
  
   e := WinningOverride(e);
+	
+	if not Assigned(e) then begin
+		AddMessage('something went wrong when getting the override for this record.');
+		Exit;
+	end;
   desc := GetOmodDescription(e);
  
   if desc = '' then
     Exit;
   
   oldDesc := GetEditValue(ElementByPath(e,'DESC'));
-  if SameText(oldDesc,desc) then 
+  if SameText(oldDesc,desc) then begin
+		AddMessage(Format('description already up to date, ending script - description: "%s"',[desc]));
     Exit;
+	end;
  
   // create new plugin
   if not Assigned(plugin) then begin
@@ -241,6 +247,10 @@ begin
   try
     // copy as override
     r := wbCopyElementToFile(e, plugin, False, True);
+		if not Assigned(r) then begin
+			AddMessage('something went wrong when creating the override record.');
+			Exit;
+		end;
     // setting new description
     SetElementEditValues(r, 'DESC', desc);
   except
