@@ -159,32 +159,38 @@ var
   
 begin
   sl := TStringList.Create;
-  properties := ElementByPath(rec, 'DATA\Properties');
   
-  for i := 0 to Pred(ElementCount(properties)) do begin
-    prop := ElementByIndex(properties, i);
-    propname := GetElementEditValues(prop, 'Property');
-    j := slPropertyMap.IndexOfName(propname);
-	if j = -1 then Continue;
-// add property index as prefix for sorting
- 		sl.Add( Format('%.3d', [j]) + GetMappedDescription(prop, propname) );
-  end;
+  try
+		properties := ElementByPath(rec, 'DATA\Properties');
+		
+		for i := 0 to Pred(ElementCount(properties)) do begin
+			prop := ElementByIndex(properties, i);
+			propname := GetElementEditValues(prop, 'Property');
+			j := slPropertyMap.IndexOfName(propname);
+		if j = -1 then Continue;
+	// add property index as prefix for sorting
+			sl.Add( Format('%.3d', [j]) + GetMappedDescription(prop, propname) );
+		end;
 
-// sort, concatenate and remove prefixes
+	// sort, concatenate and remove prefixes
 
-  sl.Sort;
-  for i := 0 to sl.Count - 1 do begin
-  proprefix := Copy(sl[i], 4, Length(1));
-  prosuffix := RightStr(Result, 1);
-	if  (proprefix = '') or (proprefix = '\') or (prosuffix = ' ')then begin
-	   Result := Result
-	end
-	else if  Result <> '' then begin
-	   Result := Result + ' | '
-	end
-	   Result := Result + Copy(sl[i], 4, Length(sl[i]));
-  end
-    sl.Free;
+		sl.Sort;
+		for i := 0 to sl.Count - 1 do begin
+		proprefix := Copy(sl[i], 4, Length(1));
+		prosuffix := RightStr(Result, 1);
+		if  (proprefix = '') or (proprefix = '\') or (prosuffix = ' ')then begin
+			 Result := Result
+		end
+		else if  Result <> '' then begin
+			 Result := Result + ' | '
+		end
+			 Result := Result + Copy(sl[i], 4, Length(sl[i]));
+		end
+			sl.Free;
+	finally
+		sl.Free;
+		sl:=nil;
+	end;
 end;
  
 function Initialize: Integer;
@@ -195,7 +201,7 @@ end;
  
 function Process(e: IInterface): Integer;
 var
-  desc: string;
+  desc, oldDesc : string;
   r: IInterface;
 begin
   if Signature(e) <> 'OMOD' then
@@ -207,6 +213,10 @@ begin
   desc := GetOmodDescription(e);
  
   if desc = '' then
+    Exit;
+  
+  oldDesc := GetEditValue(ElementByPath(e,'DESC'));
+  if SameText(oldDesc,desc) then 
     Exit;
  
   // create new plugin
@@ -245,6 +255,7 @@ end;
 function Finalize: Integer;
 begin
   slPropertyMap.Free;
+  slPropertyMap:=nil;
   if Assigned(plugin) then
     SortMasters(plugin);
 end;
