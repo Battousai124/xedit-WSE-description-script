@@ -117,8 +117,6 @@ begin
   query := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
   queryfunction := GetElementEditValues(prop, 'Function Type');
 	
-	if mappedName = 'NFW' then exit;
-	
 	if mappedValue = '\' then
 		Result := Format('%s%s', [mappedName, mappedValue])+ ''
 		
