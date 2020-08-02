@@ -51,7 +51,7 @@ else if valuetype = 'FormID,Float' then begin
 		  Result := FloatToStr(f)
 	end
 	
-else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or (valuePropertytype = 'AimModelRecoilMinDegPerShot') or (valuePropertytype = 'AimModelRecoilMaxDegPerShot') or (valuePropertytype = 'AimModelRecoilArcDeg') or (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then begin
+else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or (valuePropertytype = 'AimModelRecoilMinDegPerShot') or (valuePropertytype = 'AimModelRecoilMaxDegPerShot') or (valuePropertytype = 'AimModelRecoilArcDeg') then begin
     f := GetNativeValue(ElementByIndex(prop, 6));
 		if f > 1.0 then
 		  Result := '+' + FloatToStr(f) + chr($00B0)
@@ -61,6 +61,16 @@ else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or (valuePropertytype
 		  Result := IntToStr(Int(f * 100)) + chr($00B0);
 	end
 
+else if (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then begin
+    f := GetNativeValue(ElementByIndex(prop, 6));
+		if f > 1.0 then
+		  Result := FloatToStr(f * 100) + '%'
+		else if f > 0.0 then
+		  Result := '+' + IntToStr(Int(f * 100)) + '%'
+		else
+		  Result := IntToStr(Int(f * 100)) + '%';
+	end
+	
 else if (valuetype = 'Float') and (valuefunctiontype = 'MUL+ADD') then begin
     f := GetNativeValue(ElementByIndex(prop, 6));
 		if f > 1.0 then
