@@ -116,7 +116,9 @@ begin
   mappedValue := GetMappedValue(prop);
   query := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
   queryfunction := GetElementEditValues(prop, 'Function Type');
-		
+	
+	if mappedName = 'NFW' then exit;
+	
 	if mappedValue = '\' then
 		Result := Format('%s%s', [mappedName, mappedValue])+ ''
 		
@@ -126,16 +128,16 @@ begin
 	else if mappedName = 'Damage_Resistance' then  
 		Result := Format('%s' + ' Damage Reduced by: ' + '%s', [query, mappedValue])
 		
-	else if	mappedName = 'Actor_Values_Type' then
+	else if	(mappedName = 'Actor_Values_Type') and (query <> 'NFW') then
 		Result := Format('%s' '+' + '%s', [query, mappedValue])
 		
 	else if	(mappedName = 'Keywords_Values_Type') or (mappedName = 'MaterialSwaps_Values_Type')  or (mappedName = 'MaterialSwaps_Values_Type') or (mappedName = 'Enchantments_Value') or (mappedName = 'Ammo_Type') then
 		Result := Format('%s', [query])
 		
-	else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):')then  
+	else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then  
 		Result := Format('%s%s', [mappedName, mappedValue])
 	
-	else  
+	else  if (query <> 'NFW') then
 		Result := Format('%s%s', [mappedName, mappedValue]); //output layout 
 		
 end;
