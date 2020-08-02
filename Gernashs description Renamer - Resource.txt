@@ -123,6 +123,7 @@ ActionPoints [AVIF:000002D5]=Action Points Increased by:
 ArmorBlockPercent "Armor Block Percent" [AVIF:0018330E]=While blocking, melee damage is reduced by: 
 ArmorQuietMod "Armor Quiet Mod" [AVIF:00183316]=Reduces detection from moving by: 
 ArmorShadowHide "Armor Mod Hide in Shadows" [AVIF:00183312]=Improve stealth in shadows by: 
+ccBGSFO4116_PA_FlameResistance_AV [AVIF:FE06A826]=Fire damage reduced by: 
 ChemDurationMod [AVIF:000BA447]=Increase duration of Chems by: 
 FallingDamageMod [AVIF:000BA43D]=Reduce fall damage by: 
 LGND_ArmorDisarm [AVIF:001F3A48]=Chance to disarm melee Attacker on Hit: 
