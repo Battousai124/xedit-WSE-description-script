@@ -20,7 +20,7 @@ var
   g: String;
   
 
-// OMOD Property Value Sort to % or Value
+// OMOD Property Value Sort to %, x, deg or Value {{{THE MATHS}}}
 
   
 begin
@@ -37,12 +37,25 @@ if (valuetype = 'FormID,Float') and (valuefunctiontype = 'MUL+ADD') then begin
 		else
 		  Result := IntToStr(Int(f * 100)) + '%';
 	end
-
+	
+else if (valuetype = 'FormID,Float') and (valuePropertytype = 'DamageTypeValue') then begin 
+    f := GetNativeValue(ElementByIndex(prop, 7));
+		  Result := FloatToStr(f);
+	end
+	
+else if valuetype = 'FormID,Float' then begin
+	f := GetNativeValue(ElementByIndex(prop, 7));
+		if f > 5.0 then
+		  Result := FloatToStr(f) + '%'
+		else if f > 0.0 then
+		  Result := FloatToStr(f)
+	end
+	
 else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or (valuePropertytype = 'AimModelRecoilMinDegPerShot') or (valuePropertytype = 'AimModelRecoilMaxDegPerShot') or (valuePropertytype = 'AimModelRecoilArcDeg') or (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then begin
     f := GetNativeValue(ElementByIndex(prop, 6));
 		if f > 1.0 then
 		  Result := '+' + FloatToStr(f) + chr($00B0)
-	else if f > 0.0 then
+		else if f > 0.0 then
 		  Result := '+' + IntToStr(Int(f * 100)) + chr($00B0)
 		else
 		  Result := IntToStr(Int(f * 100)) + chr($00B0);
@@ -74,12 +87,12 @@ else if valuetype = 'Float' then begin
 	end
 
 else if valuetype = 'Int' then begin	
-	 f := GetNativeValue(ElementByIndex(prop, 6));
+	f := GetNativeValue(ElementByIndex(prop, 6));
 		  Result := FloatToStr(f);
 	end
 
 else if (valuetype = 'FormID,Int') and ((valuePropertytype = 'ZoomData') or (valuePropertytype = 'Enchantments')) then begin	
-		Result := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+		  Result := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
 	end
 
 else if valuetype = 'FormID,Int' then begin	
@@ -87,21 +100,11 @@ else if valuetype = 'FormID,Int' then begin
 		if f > 1.0 then
 		  Result := FloatToStr(f)
 	end
-	
-else if (valuetype = 'FormID,Float') and (valuePropertytype = 'DamageTypeValue') then begin 
-    f := GetNativeValue(ElementByIndex(prop, 7));
-		  Result := FloatToStr(f);
-	end
-	
-else if valuetype = 'FormID,Float' then begin
-	f := GetNativeValue(ElementByIndex(prop, 7));
-		if f > 1.0 then
-		  Result := FloatToStr(f)
-	end
+
 end;
  
  
- // Mapping Name
+ // Property to Name Mapping Layout
 
  
 function GetMappedDescription(prop: IInterface; propname: String): String;
@@ -113,10 +116,6 @@ begin
   mappedValue := GetMappedValue(prop);
   query := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
   queryfunction := GetElementEditValues(prop, 'Function Type');
- 
-  if mappedValue = '' then exit;
-  if mappedName = 'Potato' then exit;
-  if query = 'Potato' then exit;
 		
 	if mappedValue = '\' then
 		Result := Format('%s%s', [mappedName, mappedValue])+ ''
@@ -128,13 +127,14 @@ begin
 		Result := Format('%s' + ' Damage Reduced by: ' + '%s', [query, mappedValue])
 		
 	else if	mappedName = 'Actor_Values_Type' then
-		Result := Format('%s' '+' + '%s' + '%%', [query, mappedValue])
+		Result := Format('%s' '+' + '%s', [query, mappedValue])
 		
-	else if	(mappedName = 'Keywords_Values_Type') or (mappedName = 'MaterialSwaps_Values_Type')  or (mappedName = 'MaterialSwaps_Values_Type') or (mappedName = 'Enchantments_Value') or (mappedName = 'Ammo_Type') then  //or (mappedName = 'Actor_Values_Type')
+	else if	(mappedName = 'Keywords_Values_Type') or (mappedName = 'MaterialSwaps_Values_Type')  or (mappedName = 'MaterialSwaps_Values_Type') or (mappedName = 'Enchantments_Value') or (mappedName = 'Ammo_Type') then
 		Result := Format('%s', [query])
 		
 	else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):')then  
 		Result := Format('%s%s', [mappedName, mappedValue])
+	
 	else  
 		Result := Format('%s%s', [mappedName, mappedValue]); //output layout 
 		
@@ -164,15 +164,15 @@ begin
 
   sl.Sort;
   for i := 0 to sl.Count - 1 do begin
-  	proprefix := Copy(sl[i], 4, Length(1));
-  	prosuffix := RightStr(Result, 1);
-  	if  (proprefix = '') or (proprefix = '\') or (prosuffix = ' ')then begin
-		Result := Result
+  proprefix := Copy(sl[i], 4, Length(1));
+  prosuffix := RightStr(Result, 1);
+	if  (proprefix = '') or (proprefix = '\') or (prosuffix = ' ')then begin
+	   Result := Result
 	end
 	else if  Result <> '' then begin
-		Result := Result + ' | '
+	   Result := Result + ' | '
 	end
-		Result := Result + Copy(sl[i], 4, Length(sl[i]));
+	   Result := Result + Copy(sl[i], 4, Length(sl[i]));
   end
     sl.Free;
 end;
