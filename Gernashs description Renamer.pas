@@ -195,7 +195,7 @@ end;
  
 function Process(e: IInterface): Integer;
 var
-  desc: string;
+  desc, oldDesc : string;
   r: IInterface;
 begin
   if Signature(e) <> 'OMOD' then
@@ -207,6 +207,10 @@ begin
   desc := GetOmodDescription(e);
  
   if desc = '' then
+    Exit;
+  
+  oldDesc := GetEditValue(ElementByPath(e,'DESC'));
+  if SameText(oldDesc,desc) then 
     Exit;
  
   // create new plugin
