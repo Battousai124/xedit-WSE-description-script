@@ -186,7 +186,6 @@ begin
 		end
 			 Result := Result + Copy(sl[i], 4, Length(sl[i]));
 		end
-			sl.Free;
 	finally
 		sl.Free;
 		sl:=nil;
