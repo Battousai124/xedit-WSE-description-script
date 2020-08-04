@@ -4,7 +4,7 @@
 // Author: Gernash
 //
 
-unit FO4PatchOmodDescriptions;
+unit Renamer; //FO4PatchOmodDescriptions;
  
 const
   sPropertiesList = wbScriptsPath + 'Gernashs description Renamer - Resource.txt';
