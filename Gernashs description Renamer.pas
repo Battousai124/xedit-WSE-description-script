@@ -235,7 +235,7 @@ begin
 
   // create new plugin
   if not Assigned(plugin) then begin
-    if MessageDlg('Create new patch plugin [YES] or append to the last loaded one [NO]?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    if MessageDlg('Create new patch plugin [YES] or append to the last loaded one [NO]?', mtConfirmation, [mbYes, mbNo], 0) = mbYes then
       plugin := AddNewFile
     else
       plugin := FileByIndex(Pred(FileCount));
