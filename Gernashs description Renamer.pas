@@ -147,8 +147,8 @@ begin
 	else if	((mappedName = 'Keywords_Values_Type') and (query <> '1')) or ((mappedName = 'MaterialSwaps_Values_Type') and (query <> 'NFW')) or (mappedName = 'Ammo_Type') then
 		Result := Format('%s', [query])
 
-  else if mappedName = 'Enchantments_Value' then
-    Result := Format('%s' + ' ', [query])
+  	else if (mappedName = 'Enchantments_Value') and (query <> 'NFW') then
+    		Result := Format('%s' + ' ', [query])
 
 	else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then
 		Result := Format('%s%s', [mappedName, mappedValue])
