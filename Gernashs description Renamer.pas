@@ -4,7 +4,7 @@
 // Author: Gernash
 //
 
-unit Gernashs description Renamer;
+unit Gernashs description Renamer; //FO4PatchOmodDescriptions;
 
   // code for editing xEdit scripts with Delphi
 interface
@@ -48,6 +48,14 @@ if (valuetype = 'FormID,Float') and (valuefunctiontype = 'MUL+ADD') then begin
 else if (valuetype = 'FormID,Float') and (valuePropertytype = 'DamageTypeValue') then begin
     f := GetNativeValue(ElementByIndex(prop, 7));
 		  Result := FloatToStr(f);
+	end
+
+else if (valuetype = 'FormID,Float') and (valuePropertytype = 'DamageTypeValue') then begin
+	f := GetNativeValue(ElementByIndex(prop, 6));
+		if f > 5.0 then
+		  Result := FloatToStr(f) + '%'
+		else if f > 0.0 then
+		  Result := FloatToStr(f)
 	end
 
 else if valuetype = 'FormID,Float' then begin
@@ -143,6 +151,9 @@ begin
 
  	else if	(mappedName = 'Actor_Values_Type') and (query <> 'NFW') and (query <> '') then
  		Result := Format('%s' + '+' + '%s', [query, mappedValue])
+ // Ledgendary Effect multiplier
+  	else if	(mappedName = 'Actor_Values_Type') and (query <> 'NFW') and (query = '') then
+ 		Result := Format('%s', [mappedValue])
 
 	else if	((mappedName = 'Keywords_Values_Type') and (query <> '1')) or ((mappedName = 'MaterialSwaps_Values_Type') and (query <> 'NFW')) or (mappedName = 'Ammo_Type') then
 		Result := Format('%s', [query])
@@ -153,9 +164,8 @@ begin
 	else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then
 		Result := Format('%s%s', [mappedName, mappedValue])
 
-	else if (query <> 'NFW') and (mappedName <> 'Keywords_Values_Type') and (mappedName <> 'Actor_Values_Type') and (mappedName <> 'NFW') and (mappedValue <> 'NFW') then
+	else if (query <> 'NFW') and (mappedName <> 'Keywords_Values_Type') and (mappedName <> 'NFW') and (mappedValue <> 'NFW') then //(mappedName <> 'Actor_Values_Type') and
 		Result := Format('%s%s', [mappedName, mappedValue]); //output layout
-
 end;
 
 function GetOmodDescription(rec: IInterface): String;
