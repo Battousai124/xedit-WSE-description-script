@@ -90,7 +90,7 @@ SpellPA_CommonArm "PA Common Arm" [SPEL:0024848D]=Rate 3 points/sec for 3 sec
 {{{----------------------------Keywords_Values_Type---------------------------}}}
 Ammo=Ammo_Type
 {{--------------------------------Caliber|Ammo---------------------------------}}
-ccSBJFO4001_SolarFlareProjectile [PROJ:FE000842]=Potato
+ccSBJFO4001_SolarFlareProjectile [PROJ:FE000842]=NFW
 dn_HasMisc_Kinetic [KYWD:00238428]=
 // Disabled OverrideProjectile=
 {{{----------------------------------------------------------------------------}}}
@@ -229,10 +229,13 @@ PA_OverdriveServos_AV [AVIF:00230599]=Sprint speed Boosted, AP Drain increased b
 PA_Strength_AV [AVIF:0023C9E2]=Increases Strength with all pieces painted by: 
 ReduceLimbDamageMod [AVIF:000BA43E]=Reduces limb damage by: 
 SpeedMult [AVIF:000002DA]=Increases wearer's movement speed by: 
+PowerArmorVent "Power Armor Vent" [AVIF:00084283]=Increases damage radius for Impact Landing by: 
 {{{----------------------Actor_Values_Type---DUD Entries----------------------}}}
 PA_RustyKnuckles_AV [AVIF:0020D96F]=NFW
 PA_OptimizedServos_AV [AVIF:0020D96E]=NFW
 PA_ShockDmg_AV [AVIF:00239EBA]=NFW
+mat_PA_X01_Institute [MSWP:0020DCF6]=NFW
+PA_Intelligence_AV [AVIF:0023C9E3]=NFW
 {{{-----------------------------Enchantments_Value----------------------------}}}
 Enchantments=Enchantments_Value
 {{{---------------------------------------------------------------------------}}}
@@ -356,6 +359,10 @@ enchArmorStabilizedMod "Stabilized mod" [ENCH:00245BB4]=Increase Stability by 5%
 enchMod_LaserReceiver_Fire1 "Fire Damage" [ENCH:0020003B]=Ignights target for 9 Damage over 9 sec
 ench_mod_LegendaryPA_RadsCoreHealth [ENCH:0022879D]=Gain 50% AP Recovery per 50 Rads you absorb
 ench_mod_LegendaryWeapon_DamagePoison "Poison Damage" [ENCH:00085700]=Target Poisoned for 30 Damage over 10 Sec
+EnchPA_Perception "Fortify Agility" [ENCH:0023AD14]=Increases Perception with six pieces painted.
+EnchPA_Intelligence "Fortify Agility" [ENCH:0023AD15]=Increases Intelligence with all pieces painted.
+EnchPA_KineticServos "Kinetic Servos" [ENCH:001D0224]=Increases Action Point refresh speed while moving by: 
+EnchPA_UnarmedDamage "Hydraulic Bracers" [ENCH:001D6CCA]=Increases Unarmed Damage
 {{{--------------------------Damage/Resistance_Type---------------------------}}}
 DamageTypeValue=Damage_Resistance
 DamageTypeValues=Damage_Type
