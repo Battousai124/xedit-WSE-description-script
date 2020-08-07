@@ -85,7 +85,7 @@ HasLegendary_Weapon_DamageVsRobots [KYWD:001F81E7]=Damage against robots increas
 DLC01Bot_FortifyResistDamage "Fortify Damage Resist" [MGEF:0100097E]=Increase Damage resistance by: 5
 {{--------------------------Additional Naming----------------------------}}
 CritPlasma [SPEL:00139F8C]=Can turn enemies into goo.
-SpellPA_CommonArm "PA Common Arm" [SPEL:0024848D]=Rate 3 points/sec for 3 sec
+SpellPA_CommonArm "PA Common Arm" [SPEL:0024848D]=NFW
 {{{-------------------------Keywords_Values_Type---------------------------
 Ammo=Ammo_Type
 {{-----------------------------Calibre|Ammo------------------------------}}
@@ -220,7 +220,13 @@ Mod_ReducedPowerAttack_AV [AVIF:00245BDB]=AP Drain from Power attacks reduced by
 Mod_ReducedSprint_AV [AVIF:00245B87]=AP Drain from Sprinting reduced by: 
 Mod_Stabilized_AV [AVIF:00245BC6]=Base stability increased by: 
 Mod_StealthMove_AV [AVIF:00245BEB]=Increased Movement Speed while sneaking by: 
+PA_Strength_AV [AVIF:0023C9E2]=Increases Strength with all pieces painted by: 
+PA_Perception_AV [AVIF:0023C9E1]=Increases Perception with all pieces painted by: 
+PA_Endurance_AV [AVIF:0023C9E5]=Increases Endurance with all pieces painted by: 
 PA_Charisma_AV [AVIF:0023C9DF]=Increases Charisma with all pieces painted by: 
+PA_Intelligence_AV [AVIF:0023C9E3]=Increases Intelligence with all pieces painted by: 
+PA_Agility_AV [AVIF:0023C9E0]=Increases Agility with all pieces painted: 
+PA_Luck_AV [AVIF:0023C9E4]=Increases Luck with all pieces painted by: 
 PA_Explosives_AV [AVIF:00245AC5]=Reduce Damage from explosions by: 
 PA_KineticServos_AV [AVIF:0022B646]=NFW
 PA_OptimizedBracers_AV [AVIF:0022B645]=AP Drain from Power attacks reduced by: 
@@ -234,7 +240,7 @@ ccBGSFO4116_PA_FlameResistance_AV [AVIF:FE06A826]=Fire damage reduced by:
 {{{-------------------Actor_Values_Type---DUD Entries-------------------}}}
 PA_Intelligence_AV [AVIF:0023C9E3]=NFW
 PA_OptimizedServos_AV [AVIF:0020D96E]=NFW
-PA_RustyKnuckles_AV [AVIF:0020D96F]=NFW
+PA_RustyKnuckles_AV [AVIF:0020D96F]=Unarmed attacks cause Bleed = 3pts./sec for 3 sec. 
 PA_ShockDmg_AV [AVIF:00239EBA]=Adds Energy damage to Unarmed attacks.
 mat_PA_X01_Institute [MSWP:0020DCF6]=NFW
 {{{--------------------------Enchantments_Value-------------------------}}}
@@ -350,16 +356,16 @@ DN160enchGrognakAxe "Bleeding" [ENCH:001A03FC]=Hits cause more stagger, and targ
 DN160enchGrognakCostume "Grognak Costume" [ENCH:0019C799]=Increases the wearer's strength and melee damage.
 EnchModDisarm "Disarm" [ENCH:00246C08]=Chance to disarm
 EnchPA_BloodCleanser "Blood Cleanser" [ENCH:0007C711]=Reduces chance for addiction from drugs.
-EnchPA_CommonArm "PA Common Arm" [ENCH:00248490]=Rate 3 points/sec for 3 sec
+EnchPA_CommonArm "PA Common Arm" [ENCH:00248490]=NFW
 EnchPA_CoreAssembly "Core Assembly" [ENCH:00084277]=Increases Action Point refresh speed.
 EnchPA_EmergencyProtocols "Emergency Protocols" [ENCH:00084279]=Below 20% health, speed increases 25% and incoming damage is reduced 50%.
-EnchPA_Intelligence "Fortify Agility" [ENCH:0023AD15]=Increases Intelligence with all pieces painted.
+EnchPA_Intelligence "Fortify Agility" [ENCH:0023AD15]=NFW
 EnchPA_Jetpack "Jetpack" [ENCH:00125C84]=Enables jet-assisted boost while jumping.
 EnchPA_KineticServos "Kinetic Servos" [ENCH:001D0224]=Increases Action Point refresh speed while moving.
 EnchPA_MedicPump "Medic Pump" [ENCH:0007C716]=Detects hits during combat and automatically uses a Stimpak when health is low.
 EnchPA_OptimizedBracers "Optimised Bracers Left" [ENCH:0018354D]=NFW
 EnchPA_OverdriveServos "Overdrive Servos" [ENCH:00086524]=Increases Sprint speed by 10% for an Additional Action Point cost
-EnchPA_Perception "Fortify Agility" [ENCH:0023AD14]=Increases Perception with six pieces painted.
+EnchPA_Perception "Fortify Agility" [ENCH:0023AD14]=NFW
 EnchPA_PhotovotaicCoating "Photovoltaic Coating" [ENCH:0007C712]=Increases Action Point refresh speed in sunlight.
 EnchPA_RadScrubbers "Rad Scrubbers" [ENCH:001C5A43]=Removes radiation from consumed food and water.
 EnchPA_RadScrubbers "Rad Scrubbers" [ENCH:001C5A43]=Removes radiation from water when drinking.
@@ -379,9 +385,6 @@ EnchWeapModBleed "Bleed" [ENCH:0009733E]=Target Bleeds.
 EnchWeapMod_JunkJetFire [ENCH:00240487]=Projectiles gain additional Fire damage: +18
 HasLegendary_Weapon_AccuracyNotInCombat [KYWD:001F04BC]=If you are not yet in combat, increases VATS accuracy but costs more AP.
 HasLegendary_Weapon_DamageAddiction [KYWD:001EB999]=Does increasing amounts of damage the more withdrawal effects you are suffering.
-PA_Agility_AV [AVIF:0023C9E0]=Increases Agility with all pieces painted.
-PA_Perception_AV [AVIF:0023C9E1]=NFW
-PA_Strength_AV [AVIF:0023C9E2]=NFW
 PA_Unarmed_AV [AVIF:00248491]=Increases Unarmed Damage.
 VRWorkshopShared_ench_mod_LegendaryNerfPerk [ENCH:0024A337]=Nerfed for VR attacks.
 dtFireEnchFlameChanceAlways "Fire Damage" [ENCH:0003F488]=Sets target on fire for 15 points of damage over 3 sec.
@@ -449,7 +452,7 @@ ZM_Recon_Scope_x2 [ZOOM:001C6F3E]=x2 Recon Scope
 ZM_Recon_Scope_x4 [ZOOM:00247A25]=x4 Recon Scope
 ZM_Recon_Scope_x10 [ZOOM:00247A24]=x10 Recon Scope
 {{{---------------------Show Additional Properties----------------------}}}
-Health=Increase Health by: 
+Health=Increases Item Health by: 
 {{{---------------------------Better_Naming-----------------------------}}}
 ZoomDataFOVMult=Zoom: 
 AttackDamage=Damage: 
