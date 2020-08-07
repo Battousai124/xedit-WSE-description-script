@@ -1,8 +1,8 @@
-{{------------------------------Vanilla_Naming---------------------------------}}
-{{{------------------------MaterialSwaps_Values_Type--------------------------}}}
+{{---------------------------Vanilla_Naming------------------------------}}
+{{{---------------------MaterialSwaps_Values_Type-----------------------}}}
 MaterialSwaps=MaterialSwaps_Values_Type
-{{{---------------------------------------------------------------------------}}}
-{{-----------------------------COLOR/Materials---------------------------------}}
+{{{---------------------------------------------------------------------}}}
+{{----------------------------COLOR/Materials----------------------------}}
 BaseballBatAluminium [MSWP:001A034A]=Aluminium
 MetalArmorAlloyed [MSWP:001E7470]=Alloyed Metal
 MetalArmorPolished [MSWP:001E7473]=Polished Metal
@@ -14,10 +14,10 @@ mat_PA_T60_BOSPaladin [MSWP:00197996]=Brotherhood of Steel Paladin
 mat_PA_T60_BOSSentinel [MSWP:0019799D]=Brotherhood of Steel Sentinel
 mat_PA_T60_BoSElder [MSWP:00197998]=Brotherhood of Steel Elder
 mat_PA_T60_RawMetal [MSWP:0020749D]=Brotherhood of Steel Officer
-{{{---------------------------Keywords_Values_Type-----------------------------}}}
+{{{------------------------Keywords_Values_Type-------------------------}}}
 Keywords=Keywords_Values_Type
-{{{-------------------------------Weapon_Types---------------------------------}}}
-{{-----------------------------------Melee--------------------------------------}}
+{{{---------------------------Weapon_Types------------------------------}}}
+{{-------------------------------Melee-----------------------------------}}
 dn_HasLogo_Swatter [KYWD:000B9742]=Increased damage vs armoured targets
 dn_HasMeleeMod_Blades [KYWD:0006908B]=Has Blades (Better damage)
 dn_HasMeleeMod_BladesLarge [KYWD:0006908C]=Has Large Blades (Exceptional Damage)
@@ -27,7 +27,7 @@ dn_HasMeleeMod_Serrated [KYWD:000C73F2]=Has Serrated Blade
 dn_HasMeleeMod_Spikes [KYWD:000483D1]=Has spikes
 dn_HasMeleeMod_SpikesLarge [KYWD:000690AD]=Has Large Spikes
 dn_HasMeleeMod_SpikesSmall [KYWD:0006908A]=Has small spikes (Improved damage)
-{{---------------------------------Ranged-------------------------------------}}
+{{-------------------------------Ranged----------------------------------}}
 AttackTypeChanceCripple [KYWD:000D3FCC]=Chance to Cripple
 AttackTypeExtraLimbDamage [KYWD:000D3FC8]=Extra Limb Damage
 HasLegendary_Armor_LessDMGHumans [KYWD:001F1DF1]=Reduces damage from humans by: 
@@ -60,7 +60,7 @@ mod_Lining_Mesh_BioComm_Enchantment [ENCH:000BA44A]=NFW
 s_30_Charged [KYWD:01010746]=Hold fire to charge
 s_30_ChargedLob [KYWD:01010747]=Hold fire to Release electrified traps
 s_30_ChargedShotgun [KYWD:01010748]=Hold fire to charge shotgun
-{{{-----------------------------Armor------------------------------------------}}}
+{{{----------------------------Armor------------------------------------}}}
 dn_HasLining_Lighter [KYWD:001FE357]=Reduces weight.
 ench_mod_LegendaryArmor_Chameleon [ENCH:001F4D16]=Enemies have a harder time detecting you, while you're sneaking and not moving.
 HasLegendary_Armor_APCost [KYWD:001F1D61]=Action Point costs reduced in VATS by: 
@@ -81,17 +81,17 @@ HasLegendary_Weapon_DamageVsSupermutants [KYWD:001E6850]=Increase damage 'vs' su
 HasLegendary_Weapon_DamageVsGhouls [KYWD:001E684E]=Increase damage 'vs' Ghouls by: 
 HasLegendary_Weapon_DamageLimb [KYWD:001E6D6C]=Limb Damage increased by: 
 HasLegendary_Weapon_DamageVsRobots [KYWD:001F81E7]=Damage against robots increased by: 
-{{{----------------------------legendary affects--------------------------------}}}
+{{{--------------------------legendary affects--------------------------}}}
 DLC01Bot_FortifyResistDamage "Fortify Damage Resist" [MGEF:0100097E]=Increase Damage resistance by: 5
-{{------------------------------Additional Naming--------------------------------}}
+{{--------------------------Additional Naming----------------------------}}
 CritPlasma [SPEL:00139F8C]=Can turn enemies into goo.
 SpellPA_CommonArm "PA Common Arm" [SPEL:0024848D]=Rate 3 points/sec for 3 sec
-{{{----------------------------Keywords_Values_Type---------------------------}}}
+{{{-------------------------Keywords_Values_Type---------------------------
 Ammo=Ammo_Type
-{{--------------------------------Caliber|Ammo---------------------------------}}
+{{-----------------------------Calibre|Ammo------------------------------}}
 ccSBJFO4001_SolarFlareProjectile [PROJ:FE000842]=NFW
 // Disabled OverrideProjectile=
-{{{----------------------------------------------------------------------------}}}
+{{{---------------------------------------------------------------------}}}
 AlienBlasterProjectile [PROJ:001025A9]=Changes Ammo to Fusion Cells.
 Ammo556 "5.56 Round" [AMMO:0001F278]=Changes Ammo to 5.56x45mm NATO.
 CryoProjectile [PROJ:00230F88]=Fires cryogenic capsules.
@@ -191,9 +191,9 @@ dn_HasReceiver_Converted_Plasma [KYWD:0E0008A9]=Changes Ammo to Wattz Plasma Car
 dn_HasReceiver_Converted_Railway_Spike [KYWD:0E00089B]=Changes Ammo to Railway Spikes.
 dn_HasReceiver_Converted_Shotgun [KYWD:0E0008AA]=Changes Ammo to 12 Gauge.
 dn_HasReceiver_Converted_Syringer [KYWD:0E00089F]=Changes Ammo to Syringes.
-{{{------------------------------Actor_Values_Type---------------------------}}}
+{{{---------------------------Actor_Values_Type-------------------------}}}
 ActorValues=Actor_Values_Type
-{{{--------------------------------------------------------------------------}}}
+{{{---------------------------------------------------------------------}}}
 Rating=Increase Armor Rating by: 
 Strength "Strength" [AVIF:000002C2]=Increase STR by: 
 Perception "Perception" [AVIF:000002C3]=Increase PER by: 
@@ -231,15 +231,15 @@ PowerArmorVent "Power Armor Vent" [AVIF:00084283]=Increases damage radius for Im
 ReduceLimbDamageMod [AVIF:000BA43E]=Reduces limb damage by: 
 SpeedMult [AVIF:000002DA]=Increases wearer's movement speed by: 
 ccBGSFO4116_PA_FlameResistance_AV [AVIF:FE06A826]=Fire damage reduced by: 
-{{{----------------------Actor_Values_Type---DUD Entries----------------------}}}
+{{{-------------------Actor_Values_Type---DUD Entries-------------------}}}
 PA_Intelligence_AV [AVIF:0023C9E3]=NFW
 PA_OptimizedServos_AV [AVIF:0020D96E]=NFW
 PA_RustyKnuckles_AV [AVIF:0020D96F]=NFW
 PA_ShockDmg_AV [AVIF:00239EBA]=Adds Energy damage to Unarmed attacks.
 mat_PA_X01_Institute [MSWP:0020DCF6]=NFW
-{{{-----------------------------Enchantments_Value----------------------------}}}
+{{{--------------------------Enchantments_Value-------------------------}}}
 Enchantments=Enchantments_Value
-{{{---------------------------------------------------------------------------}}}
+{{{---------------------------------------------------------------------}}}
 DLC01Bot_CommonArmorEnch "DLC01EnchBot_CommonArmor" [ENCH:01001258]=Rate 3 points/sec for 3 sec
 DLC01Bot_CommonArmorEnch_Unstable "DLC01Bot_CommonArmorEnch_Unstable" [ENCH:010029C6]=Unstable: may break when used
 DLC01Bot_FortifyAssaultronHeadLaserEnch_Unstable "DLC01EnchBot_Unstable_FortifyAssaultronHeadLaser" [ENCH:01002966]=
@@ -418,10 +418,10 @@ mod_Lining_ReinforcedLimbs_Enchantment [ENCH:000BA431]=NFW
 mod_armor_Railroad_InstituteKille_Ench [ENCH:00226713]=Grants 10% bonus damage against Institute members and synths.
 pa_mod_Lining_FieldGen_EMP_CloakEnchantment "Field Gen EMP 4" [ENCH:00249D6B]=Deals Energy damage to nearby enemies.
 dn_HasLining_ResistanceLimbDamage [KYWD:001FE35B]=NFW
-{{{--------------------------Damage/Resistance_Type---------------------------}}}
+{{{-----------------------Damage/Resistance_Type------------------------}}}
 DamageTypeValue=Damage_Resistance
 DamageTypeValues=Damage_Type
-{{{---------------------------------------------------------------------------}}}
+{{{---------------------------------------------------------------------}}}
 dn_HasReceiver_Heavy [KYWD:0016303A]=Heavier Weight.
 dn_HasReceiver_Light [KYWD:00163039]=Lighter Weight.
 dtCryo [DMGT:00060A83]=Cryo
@@ -433,9 +433,9 @@ dtPhysical [DMGT:00060A87]=Additional Physical damage:
 dtPoison [DMGT:00060A84]=Poison
 dtRadiationExposure [DMGT:00060A85]=Radiation
 dtRadiationIngestion [DMGT:00060A86]=Additional Radiation Ingestion damage: 
-{{{--------------------------------ZoomData-----------------------------------}}}
+{{{------------------------------ZoomData-------------------------------}}}
 ZoomData=
-{{{---------------------------------------------------------------------------}}}
+{{{---------------------------------------------------------------------}}}
 dn_HasScope_GlowSights [KYWD:00163050]=Glow Sights, for low visibility environments.
 dn_HasScope_ReflexSight [KYWD:0009430E]=Reflex Sight
 ZM_Standard_Scope_x2 [ZOOM:0019E105]=x2 Short Scope
@@ -448,7 +448,9 @@ ZM_Standard_Scope_x10_NightVision [ZOOM:000AF2B8]=x10 Long Nightvision Scope
 ZM_Recon_Scope_x2 [ZOOM:001C6F3E]=x2 Recon Scope
 ZM_Recon_Scope_x4 [ZOOM:00247A25]=x4 Recon Scope
 ZM_Recon_Scope_x10 [ZOOM:00247A24]=x10 Recon Scope
-{{{-----------------------------Better_Naming--------------------------------}}}
+{{{---------------------Show Additional Properties----------------------}}}
+Health=Increase Health by: 
+{{{---------------------------Better_Naming-----------------------------}}}
 ZoomDataFOVMult=Zoom: 
 AttackDamage=Damage: 
 CriticalDamageMult=Crit. Damage: 
@@ -475,3 +477,10 @@ AimModelRecoilShotsForRunaway=Rounds to Max Recoil:
 ArmorPenetration "Armor Penetration" [AVIF:00097341]=Armor Penetration: 
 SightedTransitionSeconds=Sight Time: 
 AttackActionPointCost=AP Cost: 
+{{{---------------------------------------------------------------------}}}
+{-If you want a new property to show up you have to have it in the list   }
+{e.g. 'Health=Increase Health by: '                                       }
+{-Display order is dictated by the order of the files in this list        }
+{-If you have AFIC and ENCH then use AFIC for the Description and use the }
+{-NFW TAG to exclude the ENCH: description from appearing in the Naming.  }
+{{{---------------------------------------------------------------------}}}
