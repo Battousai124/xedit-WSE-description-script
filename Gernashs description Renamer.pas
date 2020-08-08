@@ -1,5 +1,5 @@
 //
-// Date:2020-08-01 WIP (3)
+// Date:2020-08-01 WIP (3a)
 // Ver: 2.0
 // Author: Gernash
 //
@@ -224,13 +224,6 @@ begin
 				
 				if loopResult = '' then
 				loopResult := Format('Additional %s damage by: %s', [query, mappedValue]);
-//				if value1output2 = '' then continue;
-//				if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
-//				begin
-//					indicesToSkip.Add(j);
-//					loopResult := Format('Additional %s Damage: %s', [value1output2, mappedValue]);
-//					break;
-//				end;
 			end;
 		end
 
@@ -272,27 +265,25 @@ else if  mappedName = 'Damage_Resistance' then
 			else if (mappedName = 'Actor_Values_Type') and (query <> 'NFW') and	(query = '') then
 				loopResult := mappedValue
 
-			else if ((mappedName = 'MaterialSwaps_Values_Type') and (query2 <> 'REM') and (query <> 'NFW')) or (mappedName = 'Ammo_Type') then
+			else if ((mappedName = 'MaterialSwaps_Values_Type') and (query2 <> 'REM') and (query <> 'NFW')) or 
+				(mappedName = 'Ammo_Type') then
 				loopResult := query
 
-			else if ((mappedName = 'Enchantments_Value') and (query <> 'NFW')) or ((mappedName = 'Keywords_Values_Type') and (query <> '')) then
+			else if ((mappedName = 'Enchantments_Value') and (query <> 'NFW')) or 
+				((mappedName = 'Keywords_Values_Type') and (query <> '')) then
 				loopResult := query
 
 			else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then
 				loopResult := Format('%s%s', [mappedName, mappedValue])
 
-			else if (query <> 'NFW') and (mappedName <> 'Damage_Type') and (mappedName <> 'Damage_Resistance') and (query2 <> 'REM') and (mappedName <> 'Keywords_Values_Type') and (mappedName <> 'NFW') and (mappedValue <> 'NFW') then
+			else if (query <> 'NFW') and 
+				(mappedName <> 'Damage_Type') and 
+				(mappedName <> 'Damage_Resistance') and 
+				(query2 <> 'REM') and 
+				(mappedName <> 'Keywords_Values_Type') and 
+				(mappedName <> 'NFW') and 
+				(mappedValue <> 'NFW') then
 				loopResult := Format('%s%s', [mappedName, mappedValue]);
-
-			AddMessage(Format('mappedName: %s', [mappedName]));
-			AddMessage(Format('mappedValue: %s', [mappedValue]));
-			AddMessage(Format('query: %s', [query]));
-//			AddMessage(Format('query2: %s', [query2]));
-//			AddMessage(Format('valuetype2: %s', [valuetype2]));
-//			AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
-//			AddMessage(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
-//			AddMessage(Format('value1output2: %s', [value1output2]));
-//			AddMessage(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
 
