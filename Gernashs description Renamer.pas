@@ -1,5 +1,5 @@
 //
-// Date:2020-08-01 WIP (2)
+// Date:2020-08-01 WIP (3)
 // Ver: 2.0
 // Author: Gernash
 //
@@ -222,13 +222,15 @@ begin
 				valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
 				value1output2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
 				
-				if value1output2 = '' then continue;
-				if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
-				begin
-					indicesToSkip.Add(j);
-					loopResult := Format('Additional %s Damage: %s', [value1output2, mappedValue]);
-					break;
-				end;
+				if loopResult = '' then
+				loopResult := Format('Additional %s damage by: %s', [query, mappedValue]);
+//				if value1output2 = '' then continue;
+//				if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
+//				begin
+//					indicesToSkip.Add(j);
+//					loopResult := Format('Additional %s Damage: %s', [value1output2, mappedValue]);
+//					break;
+//				end;
 			end;
 		end
 
@@ -273,7 +275,7 @@ else if  mappedName = 'Damage_Resistance' then
 			else if ((mappedName = 'MaterialSwaps_Values_Type') and (query2 <> 'REM') and (query <> 'NFW')) or (mappedName = 'Ammo_Type') then
 				loopResult := query
 
-			else if ((mappedName = 'Enchantments_Value') and (query <> 'NFW')) then
+			else if ((mappedName = 'Enchantments_Value') and (query <> 'NFW')) or ((mappedName = 'Keywords_Values_Type') and (query <> '')) then
 				loopResult := query
 
 			else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then
@@ -282,9 +284,9 @@ else if  mappedName = 'Damage_Resistance' then
 			else if (query <> 'NFW') and (mappedName <> 'Damage_Type') and (mappedName <> 'Damage_Resistance') and (query2 <> 'REM') and (mappedName <> 'Keywords_Values_Type') and (mappedName <> 'NFW') and (mappedValue <> 'NFW') then
 				loopResult := Format('%s%s', [mappedName, mappedValue]);
 
-//			AddMessage(Format('mappedName: %s', [mappedName]));
-//			AddMessage(Format('mappedValue: %s', [mappedValue]));
-//			AddMessage(Format('query: %s', [query]));
+			AddMessage(Format('mappedName: %s', [mappedName]));
+			AddMessage(Format('mappedValue: %s', [mappedValue]));
+			AddMessage(Format('query: %s', [query]));
 //			AddMessage(Format('query2: %s', [query2]));
 //			AddMessage(Format('valuetype2: %s', [valuetype2]));
 //			AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
