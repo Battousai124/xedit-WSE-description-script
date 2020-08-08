@@ -7,25 +7,6 @@ BaseballBatAluminium [MSWP:001A034A]=Aluminium
 MetalArmorAlloyed [MSWP:001E7470]=Alloyed Metal
 MetalArmorPolished [MSWP:001E7473]=Polished Metal
 RollingPinAluminium [MSWP:0014942C]=Aluminium
-mat_PA_T60_BOSInitiate [MSWP:00197999]=Brotherhood of Steel Initiate
-mat_PA_T60_BOSKnight [MSWP:0019799A]=Brotherhood of Steel Knight
-mat_PA_T60_BOSKnightCaptain [MSWP:0019799B]=Brotherhood of Steel Knight Captain
-mat_PA_T60_BOSPaladin [MSWP:00197996]=Brotherhood of Steel Paladin
-mat_PA_T60_BOSSentinel [MSWP:0019799D]=Brotherhood of Steel Sentinel
-mat_PA_T60_BoSElder [MSWP:00197998]=Brotherhood of Steel Elder
-mat_PA_T60_RawMetal [MSWP:0020749D]=Brotherhood of Steel Officer
-{{{------------------------Keywords_Values_Type-------------------------}}}
-Keywords=Keywords_Values_Type
-mod_weapon_shock_fist [KYWD:001EC1FD
-{{---------------------------Vanilla_Naming------------------------------}}
-{{{---------------------MaterialSwaps_Values_Type-----------------------}}}
-MaterialSwaps=MaterialSwaps_Values_Type
-{{{---------------------------------------------------------------------}}}
-{{----------------------------COLOR/Materials----------------------------}}
-BaseballBatAluminium [MSWP:001A034A]=Aluminium
-MetalArmorAlloyed [MSWP:001E7470]=Alloyed Metal
-MetalArmorPolished [MSWP:001E7473]=Polished Metal
-RollingPinAluminium [MSWP:0014942C]=Aluminium
 //mat_PA_T60_BOSInitiate [MSWP:00197999]=Brotherhood of Steel Initiate
 //mat_PA_T60_BOSKnight [MSWP:0019799A]=Brotherhood of Steel Knight
 //mat_PA_T60_BOSKnightCaptain [MSWP:0019799B]=Brotherhood of Steel Knight Captain
