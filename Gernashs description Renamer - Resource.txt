@@ -417,7 +417,7 @@ ench_mod_ModLegendaryWeaponsDamageConsecutiveHits_Listener [ENCH:001EF48C]=Incre
 mod_Lining_FieldGen_EMP_CloakEnchantment_4 "Field Gen EMP 4" [ENCH:000BA46C]=Deals Energy damage to nearby enemies.
 mod_Lining_ReinforcedLimbs_Enchantment [ENCH:000BA431]=NFW
 mod_armor_Railroad_InstituteKille_Ench [ENCH:00226713]=Grants 10% bonus damage against Institute members and synths.
-pa_mod_Lining_FieldGen_EMP_CloakEnchantment "Field Gen EMP 4" [ENCH:00249D6B]=Deals Energy damage to nearby enemies.
+pa_mod_Lining_FieldGen_EMP_CloakEnchantment "Field Gen EMP 4" [ENCH:00249D6B]=Deals Energy Damage to nearby enemies: 20/sec in combat
 dn_HasLining_ResistanceLimbDamage [KYWD:001FE35B]=NFW
 {{{-----------------------Damage/Resistance_Type------------------------}}}
 DamageTypeValue=Damage_Resistance
@@ -433,7 +433,7 @@ dn_HasReceiver_Light [KYWD:00163039]=Lighter Weight.
 dtCryo [DMGT:00060A83]=Cryo
 dtElectrical [DMGT:00060A80]=Electrical
 dtElectricalEnchEffectChanceAlways "Electrical Damage" [ENCH:000856FF]=
-dtEnergy [DMGT:00060A81]=NFW
+dtEnergy [DMGT:00060A81]=Energy
 dtFire [DMGT:00060A82]=Fire
 dtPhysical [DMGT:00060A87]=Additional Physical damage: 
 dtPoison [DMGT:00060A84]=Poison
@@ -455,7 +455,7 @@ ZM_Recon_Scope_x2 [ZOOM:001C6F3E]=x2 Recon Scope
 ZM_Recon_Scope_x4 [ZOOM:00247A25]=x4 Recon Scope
 ZM_Recon_Scope_x10 [ZOOM:00247A24]=x10 Recon Scope
 {{{---------------------Show Additional Properties----------------------}}}
-Health=Increase Health by: 
+Health=Increases Item Health by: 
 {{{---------------------------Better_Naming-----------------------------}}}
 ZoomDataFOVMult=Zoom: 
 AttackDamage=Damage: 
