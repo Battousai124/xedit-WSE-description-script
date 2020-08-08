@@ -1,5 +1,5 @@
 //
-// Date:2020-08-01 WIP (1)
+// Date:2020-08-01 WIP (2)
 // Ver: 2.0
 // Author: Gernash
 //
@@ -159,50 +159,6 @@ begin
 		//AddMessage(Format('INT: %s', [loopResult]));
 		end;
 		
-		
-		
-		
-		//////////////////////////////////////
-		//@Halgoth: example for how to consider another property for this property
-		//////////////////////////////////////
-		if (propname = 'AstoroidPotato') then 
-		begin
-			
-			floatValue := GetNativeValue(ElementByIndex(prop, 6));
-			loopResult := FloatToStr(floatValue);
-		
-			for j := i to Pred(ElementCount(properties)) do //look ahead for other interesting property
-			begin
-				if (j=i) then //here not in the declaration of the for loop so that the last property does not need special code
-					continue; 
-				prop2 := ElementByIndex(properties, j);
-				
-				if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then begin
-					Continue; //no idea if necessary, but works the same as other loops
-				end; 
-				
-				//get second propert info
-				valuetype2 := GetElementEditValues(prop2, 'Value Type');
-				valuePropertytype2 := GetElementEditValues(prop2, 'Property');
-				valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
-				
-				//some logic that says: here we should consider both elements
-				if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'ZoomData') then
-				begin
-					//remember that this other property should not be processed anymore, because it was already included in the output of this property
-					indicesToSkip.Add(j);
-					//decide the ouptut for this property by using values of the second property
-					loopResult := 'AstoroidPotato' + slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
-					break;
-				end
-			end
-		end;
-		//////////////////////////////////////
-		
-		
-		
-		
-		
 		// add property index as prefix for sorting
 		mappedValues.Add(loopResult);
 	end;
@@ -247,9 +203,6 @@ begin
 			query := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
 			query2 := GetElementEditValues(prop, 'Function Type');
 			queryfunction := GetElementEditValues(prop, 'Function Type');
-
-//			if mappedName = '\' then
-//				loopResult := Format('%s%s' + '', [mappedName, mappedValue])
 
 		if mappedName = 'Damage_Type' then 
 		begin
@@ -317,8 +270,8 @@ else if  mappedName = 'Damage_Resistance' then
 			else if (mappedName = 'Actor_Values_Type') and (query <> 'NFW') and	(query = '') then
 				loopResult := mappedValue
 
-//			else if ((mappedName = 'MaterialSwaps_Values_Type') and (query2 <> 'REM') and (query <> 'NFW')) or (mappedName = 'Ammo_Type') then //((mappedName = 'Keywords_Values_Type') and (query <> '1')) or 
-//				loopResult := query
+			else if ((mappedName = 'MaterialSwaps_Values_Type') and (query2 <> 'REM') and (query <> 'NFW')) or (mappedName = 'Ammo_Type') then
+				loopResult := query
 
 			else if ((mappedName = 'Enchantments_Value') and (query <> 'NFW')) then
 				loopResult := query
@@ -327,7 +280,7 @@ else if  mappedName = 'Damage_Resistance' then
 				loopResult := Format('%s%s', [mappedName, mappedValue])
 
 			else if (query <> 'NFW') and (mappedName <> 'Damage_Type') and (mappedName <> 'Damage_Resistance') and (query2 <> 'REM') and (mappedName <> 'Keywords_Values_Type') and (mappedName <> 'NFW') and (mappedValue <> 'NFW') then
-				loopResult := Format('%s%s', [mappedName, mappedValue]); // output layout
+				loopResult := Format('%s%s', [mappedName, mappedValue]);
 
 //			AddMessage(Format('mappedName: %s', [mappedName]));
 //			AddMessage(Format('mappedValue: %s', [mappedValue]));
@@ -340,9 +293,8 @@ else if  mappedName = 'Damage_Resistance' then
 //			AddMessage(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
-			//if loopResult <> '\-200%' then
+
 			sl.Add(Format('%.3d', [j]) + loopResult);
-			//AddMessage(Format('sl: %s', [sl[j]]));
 		end;
 		
 	finally
