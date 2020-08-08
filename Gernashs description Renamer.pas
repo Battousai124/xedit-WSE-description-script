@@ -1,7 +1,9 @@
 //
-// Date:2020-08-01 WIP (3a)
 // Ver: 2.0
+// WIP (4)
 // Author: Gernash
+// Scripting: EffEIO
+// Tester: KenShin
 //
 
 unit MODRenamerv2; // FO4PatchOmodDescriptions;
@@ -24,7 +26,7 @@ procedure GetMappedValues(rec : IInterface; mappedValues, indicesToSkip : TStrin
 var
   valuetype, valuefunctiontype, valuePropertytype : string;
 	valuetype2, valuefunctiontype2, valuePropertytype2 : string;
-	loopResult, loopResult2, propname : string;
+	loopResult, loopResult2 : string;
   floatValue, floatValue2: Real;
 	prop, prop2, properties: IInterface;
 	i,j,dummyInt : Integer;
@@ -39,8 +41,8 @@ begin
 		end;
 	
 		prop := ElementByIndex(properties, i);
-		propname := GetElementEditValues(prop, 'Property');
-		j := slPropertyMap.IndexOfName(propname);
+		valuePropertytype := GetElementEditValues(prop, 'Property');
+		j := slPropertyMap.IndexOfName(valuePropertytype);
 		if j = -1 then begin
 			mappedValues.Add('');//necessary, so that number of records stay the same
 			Continue;
@@ -169,9 +171,9 @@ end;
 
 procedure GetMappedDescription(rec : IInterface; sl : TStringList;);
 var
-  mappedName, mappedValue, query, query2, queryfunction, propname, loopResult: String;
-  valuetype, valuefunctiontype, valuePropertytype : string;
-  valuetype2, valuefunctiontype2, valuePropertytype2, value1output2 : string;
+  loopResult: String;
+  valuetype, valuefunctiontype, valuePropertytype, value1Loop1, mappedName, mappedValue : string;
+  valuetype2, valuefunctiontype2, valuePropertytype2, value1Loop2 : string;
   floatValue: Real;
 	prop, properties, prop2 : IInterface; 
 	mappedValues, indicesToSkip : TStringList;
@@ -183,8 +185,8 @@ begin
 	
 	try
 		GetMappedValues(rec, mappedValues, indicesToSkip);
-		
 		properties := ElementByPath(rec, 'DATA\Properties');
+		
 		for i := 0 to Pred(ElementCount(properties)) do
 		begin
 			loopResult  := '';
@@ -192,17 +194,17 @@ begin
 				continue;
 		
 			prop := ElementByIndex(properties, i);
-			propname := GetElementEditValues(prop, 'Property');
-			j := slPropertyMap.IndexOfName(propname);
+			valuePropertytype := GetElementEditValues(prop, 'Property');
+			j := slPropertyMap.IndexOfName(valuePropertytype);
+			
 			if j = -1 then
 				Continue;
 			
-			mappedName := slPropertyMap.Values[propname];
+			mappedName := slPropertyMap.Values[valuePropertytype];
 			mappedValue := mappedValues[i];
-			
-			query := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
-			query2 := GetElementEditValues(prop, 'Function Type');
-			queryfunction := GetElementEditValues(prop, 'Function Type');
+			value1Loop1 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+			valuefunctiontype := GetElementEditValues(prop, 'Function Type');
+			valuetype := GetElementEditValues(prop, 'Value Type');
 
 		if mappedName = 'Damage_Type' then 
 		begin
@@ -220,10 +222,10 @@ begin
 				valuetype2 := GetElementEditValues(prop2, 'Value Type');
 				valuePropertytype2 := GetElementEditValues(prop2, 'Property');
 				valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
-				value1output2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
+				value1Loop2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
 				
 				if loopResult = '' then
-				loopResult := Format('Additional %s damage by: %s', [query, mappedValue]);
+				loopResult := Format('Additional %s damage by: %s', [value1Loop1, mappedValue]);
 			end;
 		end
 
@@ -243,47 +245,57 @@ else if  mappedName = 'Damage_Resistance' then
                 valuetype2 := GetElementEditValues(prop2, 'Value Type');
                 valuePropertytype2 := GetElementEditValues(prop2, 'Property');
                 valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
-                value1output2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
+                value1Loop2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
 
-                if value1output2 = '' then continue;
+                if value1Loop2 = '' then continue;
 
                 if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
                 begin
                     indicesToSkip.Add(j);
-                    loopResult := Format('Reduces %s damage by: %s', [value1output2, mappedValue]);
+                    loopResult := Format('Reduces %s damage by: %s', [value1Loop2, mappedValue]);
                     break;
                 end;
 			end;
 			
 			if loopResult = '' then
-				loopResult := Format('Reduces %s damage by: %s', [query, mappedValue]);
+				loopResult := Format('Reduces %s damage by: %s', [value1Loop1, mappedValue]);
         end 
 
-			else if (mappedName = 'Actor_Values_Type') and (query <> 'NFW') and (query <> '') then
-				loopResult := Format('%s' + '+' + '%s', [query, mappedValue])
+			else if (mappedName = 'Actor_Values_Type') and (value1Loop1 <> 'NFW') and (value1Loop1 <> '') then
+				loopResult := Format('%s' + '+' + '%s', [value1Loop1, mappedValue])
 // Legendary Effect multiplier
-			else if (mappedName = 'Actor_Values_Type') and (query <> 'NFW') and	(query = '') then
+			else if (mappedName = 'Actor_Values_Type') and (value1Loop1 <> 'NFW') and	(value1Loop1 = '') then
 				loopResult := mappedValue
 
-			else if ((mappedName = 'MaterialSwaps_Values_Type') and (query2 <> 'REM') and (query <> 'NFW')) or 
+			else if ((mappedName = 'MaterialSwaps_Values_Type') and (valuetype <> 'REM') and (value1Loop1 <> 'NFW')) or 
 				(mappedName = 'Ammo_Type') then
-				loopResult := query
+				loopResult := value1Loop1
 
-			else if ((mappedName = 'Enchantments_Value') and (query <> 'NFW')) or 
-				((mappedName = 'Keywords_Values_Type') and (query <> '')) then
-				loopResult := query
+			else if ((mappedName = 'Enchantments_Value') and (value1Loop1 <> 'NFW')) or 
+				((mappedName = 'Keywords_Values_Type') and (value1Loop1 <> '') and (value1Loop1 <> 'Energy') and (value1Loop1 <> 'Cold') and (value1Loop1 <> 'Radiation')) then
+				loopResult := value1Loop1
 
 			else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then
 				loopResult := Format('%s%s', [mappedName, mappedValue])
 
-			else if (query <> 'NFW') and 
+			else if (value1Loop1 <> 'NFW') and 
 				(mappedName <> 'Damage_Type') and 
 				(mappedName <> 'Damage_Resistance') and 
-				(query2 <> 'REM') and 
+				(valuetype <> 'REM') and 
 				(mappedName <> 'Keywords_Values_Type') and 
 				(mappedName <> 'NFW') and 
 				(mappedValue <> 'NFW') then
 				loopResult := Format('%s%s', [mappedName, mappedValue]);
+
+//			AddMessage(Format('mappedName: %s', [mappedName]));
+//			AddMessage(Format('mappedValue: %s', [mappedValue]));
+//			AddMessage(Format('value1Loop1: %s', [value1Loop1]));
+//			AddMessage(Format('valuetype: %s', [valuetype]));
+//			AddMessage(Format('valuetype2: %s', [valuetype2]));
+//			AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
+//			AddMessage(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
+//			AddMessage(Format('value1Loop2: %s', [value1Loop2]));
+//			AddMessage(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
 
@@ -301,8 +313,7 @@ end;
 function GetOmodDescription(rec: IInterface): String;
 var
   i: Integer;
-  prop, properties: IInterface;
-  proprefix, prosuffix, propname: string;
+  proprefix, prosuffix: string;
   sl: TStringList;
 
 begin
