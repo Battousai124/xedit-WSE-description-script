@@ -16,7 +16,8 @@ mat_PA_T60_BoSElder [MSWP:00197998]=Brotherhood of Steel Elder
 mat_PA_T60_RawMetal [MSWP:0020749D]=Brotherhood of Steel Officer
 {{{------------------------Keywords_Values_Type-------------------------}}}
 Keywords=Keywords_Values_Type
-mod_weapon_shock_fist [KYWD:001EC1FD{{---------------------------Vanilla_Naming------------------------------}}
+mod_weapon_shock_fist [KYWD:001EC1FD
+{{---------------------------Vanilla_Naming------------------------------}}
 {{{---------------------MaterialSwaps_Values_Type-----------------------}}}
 MaterialSwaps=MaterialSwaps_Values_Type
 {{{---------------------------------------------------------------------}}}
