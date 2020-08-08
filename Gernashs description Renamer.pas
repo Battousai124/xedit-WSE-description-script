@@ -1,10 +1,10 @@
 //
-// Date:2020-08-01 WIP (5)
-// Ver: 1.0
+// Date:2020-08-01 WIP (1)
+// Ver: 2.0
 // Author: Gernash
 //
 
-unit MODRenamer; // FO4PatchOmodDescriptions;
+unit MODRenamerv2; // FO4PatchOmodDescriptions;
 
 // code for editing xEdit scripts with Delphi
 interface
@@ -20,187 +20,342 @@ var
   slPropertyMap: TStringList;
   plugin: IInterface;
 
-function GetMappedValue(prop: IInterface): String;
+procedure GetMappedValues(rec : IInterface; mappedValues, indicesToSkip : TStringList;);
 var
-  valuetype, valuefunctiontype, valuePropertytype: string;
-  f: Real;
-  g: String;
-
-
+  valuetype, valuefunctiontype, valuePropertytype : string;
+	valuetype2, valuefunctiontype2, valuePropertytype2 : string;
+	loopResult, loopResult2, propname : string;
+  floatValue, floatValue2: Real;
+	prop, prop2, properties: IInterface;
+	i,j,dummyInt : Integer;
   // OMOD Property Value Sort to %, x, deg or Value {{{THE MATHS}}}
-
 begin
-  valuetype := GetElementEditValues(prop, 'Value Type');
-  valuePropertytype := GetElementEditValues(prop, 'Property');
-  valuefunctiontype := GetElementEditValues(prop, 'Function Type');
+	properties := ElementByPath(rec, 'DATA\Properties');
+	for i := 0 to Pred(ElementCount(properties)) do
+	begin
+		if indicesToSkip.Find(i,dummyInt) then begin
+			mappedValues.Add('');//necessary, so that number of records stay the same
+			continue;
+		end;
+	
+		prop := ElementByIndex(properties, i);
+		propname := GetElementEditValues(prop, 'Property');
+		j := slPropertyMap.IndexOfName(propname);
+		if j = -1 then begin
+			mappedValues.Add('');//necessary, so that number of records stay the same
+			Continue;
+		end;
+		
+		loopResult:= '';
+		
+		valuetype := GetElementEditValues(prop, 'Value Type');
+		valuePropertytype := GetElementEditValues(prop, 'Property');
+		valuefunctiontype := GetElementEditValues(prop, 'Function Type');
 
-  if (valuetype = 'FormID,Float') and (valuefunctiontype = 'MUL+ADD') then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 7));
-    if f > 1.0 then
-      Result := FloatToStr(f) + 'x'
-    else if f > 0.0 then
-      Result := '+' + IntToStr(Int(f * 100)) + '%'
-    else
-      Result := IntToStr(Int(f * 100)) + '%';
-  end
+		if (valuetype = 'FormID,Float') and (valuefunctiontype = 'MUL+ADD') then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 7));
+			if floatValue > 1.0 then
+				loopResult := FloatToStr(floatValue) + 'x'
+			else if floatValue > 0.0 then
+				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+			else
+				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+		end
 
-  else if (valuetype = 'FormID,Float') and
-    (valuePropertytype = 'DamageTypeValue') then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 7));
-    Result := FloatToStr(f);
-  end
+		else if (valuetype = 'FormID,Float') and
+			(valuePropertytype = 'DamageTypeValue') then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 7));
+			loopResult := FloatToStr(floatValue);
+		end
 
-  else if (valuetype = 'FormID,Float') and
-    (valuePropertytype = 'DamageTypeValue') then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 6));
-    if f > 5.0 then
-      Result := FloatToStr(f) + '%'
-    else if f > 0.0 then
-      Result := FloatToStr(f)
-  end
+		else if (valuetype = 'FormID,Float') and
+			(valuePropertytype = 'DamageTypeValue') then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+			if floatValue > 5.0 then
+				loopResult := FloatToStr(floatValue) + '%'
+			else if floatValue > 0.0 then
+				loopResult := FloatToStr(floatValue)
+		end
 
-  else if valuetype = 'FormID,Float' then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 7));
-    if f > 5.0 then
-      Result := FloatToStr(f) + '%'
-    else if f > 0.0 then
-      Result := FloatToStr(f)
-  end
+		else if valuetype = 'FormID,Float' then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 7));
+			if floatValue > 5.0 then
+				loopResult := FloatToStr(floatValue) + '%'
+			else if floatValue > 0.0 then
+				loopResult := FloatToStr(floatValue)
+		end
 
-  else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or
-    (valuePropertytype = 'AimModelRecoilMinDegPerShot') or
-    (valuePropertytype = 'AimModelRecoilMaxDegPerShot') or
-    (valuePropertytype = 'AimModelRecoilArcDeg') then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 6));
-    if f > 1.0 then
-      Result := '+' + FloatToStr(f) + chr($00B0)
-    else if f > 0.0 then
-      Result := '+' + IntToStr(Int(f * 100)) + chr($00B0)
-    else
-      Result := IntToStr(Int(f * 100)) + chr($00B0);
-  end
+		else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or
+			(valuePropertytype = 'AimModelRecoilMinDegPerShot') or
+			(valuePropertytype = 'AimModelRecoilMaxDegPerShot') or
+			(valuePropertytype = 'AimModelRecoilArcDeg') then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+			if floatValue > 1.0 then
+				loopResult := '+' + FloatToStr(floatValue) + chr($00B0)
+			else if floatValue > 0.0 then
+				loopResult := '+' + IntToStr(Int(floatValue * 100)) + chr($00B0)
+			else
+				loopResult := IntToStr(Int(floatValue * 100)) + chr($00B0);
+		end
 
-  else if (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 6));
-    if f > 1.0 then
-      Result := FloatToStr(f * 100) + '%'
-    else if f > 0.0 then
-      Result := '+' + IntToStr(Int(f * 100)) + '%'
-    else
-      Result := IntToStr(Int(f * 100)) + '%';
-  end
+		else if (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+			if floatValue > 1.0 then
+				loopResult := FloatToStr(floatValue * 100) + '%'
+			else if floatValue > 0.0 then
+				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+			else
+				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+		end
 
-  else if (valuetype = 'Float') and (valuefunctiontype = 'MUL+ADD') then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 6));
-    if f > 1.0 then
-      Result := FloatToStr(f) + 'x'
-    else if f > 0.0 then
-      Result := '+' + IntToStr(Int(f * 100)) + '%'
-    else
-      Result := IntToStr(Int(f * 100)) + '%';
-  end
+		else if (valuetype = 'Float') and (valuefunctiontype = 'MUL+ADD') then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+			if floatValue > 1.0 then
+				loopResult := FloatToStr(floatValue) + 'x'
+			else if floatValue > 0.0 then
+				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+			else
+				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+		end
 
-  else if (valuetype = 'Float') and (valuefunctiontype = 'MinRange') then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 6));
-    Result := FloatToStr(f) + 'units';
-  end
+		else if (valuetype = 'Float') and (valuefunctiontype = 'MinRange') then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+			loopResult := FloatToStr(floatValue) + 'units';
+		end
 
-  else if valuetype = 'Float' then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 6));
-    if f > 1.0 then
-      Result := FloatToStr(f) + 'x'
-    else if f > 0.0 then
-      Result := '+' + IntToStr(Int(f * 100)) + '%'
-    else
-      Result := IntToStr(Int(f * 100)) + '%';
-  end
+		else if valuetype = 'Float' then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+			if floatValue > 1.0 then
+				loopResult := FloatToStr(floatValue) + 'x'
+			else if floatValue > 0.0 then
+				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+			else
+				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+		end
 
-  else if (valuetype = 'FormID,Int') and (valuePropertytype = 'ZoomData') then
-  begin
-    Result := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
-  end
+		else if (valuetype = 'FormID,Int') and (valuePropertytype = 'ZoomData') then
+		begin
+			loopResult := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+		end
 
-  else if (valuetype = 'FormID,Int') then
-  begin
-    Result := '';
-  end
+		else if (valuetype = 'FormID,Int') then
+		begin
+			loopResult := '';
+		end
 
-  else if (valuetype = 'Int') then
-  begin
-    f := GetNativeValue(ElementByIndex(prop, 6));
-    Result := FloatToStr(f);
-	//AddMessage(Format('INT: %s', [Result]));
-  end
-
+		else if (valuetype = 'Int') then
+		begin
+			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+			loopResult := FloatToStr(floatValue);
+		//AddMessage(Format('INT: %s', [loopResult]));
+		end;
+		
+		
+		
+		
+		//////////////////////////////////////
+		//@Halgoth: example for how to consider another property for this property
+		//////////////////////////////////////
+		if (propname = 'AstoroidPotato') then 
+		begin
+			
+			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+			loopResult := FloatToStr(floatValue);
+		
+			for j := i to Pred(ElementCount(properties)) do //look ahead for other interesting property
+			begin
+				if (j=i) then //here not in the declaration of the for loop so that the last property does not need special code
+					continue; 
+				prop2 := ElementByIndex(properties, j);
+				
+				if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then begin
+					Continue; //no idea if necessary, but works the same as other loops
+				end; 
+				
+				//get second propert info
+				valuetype2 := GetElementEditValues(prop2, 'Value Type');
+				valuePropertytype2 := GetElementEditValues(prop2, 'Property');
+				valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
+				
+				//some logic that says: here we should consider both elements
+				if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'ZoomData') then
+				begin
+					//remember that this other property should not be processed anymore, because it was already included in the output of this property
+					indicesToSkip.Add(j);
+					//decide the ouptut for this property by using values of the second property
+					loopResult := 'AstoroidPotato' + slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
+					break;
+				end
+			end
+		end;
+		//////////////////////////////////////
+		
+		
+		
+		
+		
+		// add property index as prefix for sorting
+		mappedValues.Add(loopResult);
+	end;
 end;
 
 
 // Property to Name Mapping Layout
 
-function GetMappedDescription(prop: IInterface; propname: String): String;
+procedure GetMappedDescription(rec : IInterface; sl : TStringList;);
 var
-  mappedName, mappedValue, query, query2, queryfunction: String;
-  f: Real;
+  mappedName, mappedValue, query, query2, queryfunction, propname, loopResult: String;
+  valuetype, valuefunctiontype, valuePropertytype : string;
+  valuetype2, valuefunctiontype2, valuePropertytype2, value1output2 : string;
+  floatValue: Real;
+	prop, properties, prop2 : IInterface; 
+	mappedValues, indicesToSkip : TStringList;
+	i,j,dummyInt : Integer;
 begin
-  mappedName := slPropertyMap.Values[propname];
-  mappedValue := GetMappedValue(prop);
-  query := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
-  query2 := GetElementEditValues(prop, 'Function Type');
-  queryfunction := GetElementEditValues(prop, 'Function Type');
+	mappedValues:=TStringList.Create;
+	indicesToSkip:=TStringList.Create;
+	indicesToSkip.Sorted:=true; //so that .Find() works
+	
+	try
+		GetMappedValues(rec, mappedValues, indicesToSkip);
+		
+		properties := ElementByPath(rec, 'DATA\Properties');
+		for i := 0 to Pred(ElementCount(properties)) do
+		begin
+			loopResult  := '';
+			if indicesToSkip.Find(i,dummyInt) then 
+				continue;
+		
+			prop := ElementByIndex(properties, i);
+			propname := GetElementEditValues(prop, 'Property');
+			j := slPropertyMap.IndexOfName(propname);
+			if j = -1 then
+				Continue;
+			
+			mappedName := slPropertyMap.Values[propname];
+			mappedValue := mappedValues[i];
+			
+			query := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+			query2 := GetElementEditValues(prop, 'Function Type');
+			queryfunction := GetElementEditValues(prop, 'Function Type');
 
-  if mappedValue = '\' then
-    Result := Format('%s%s' + '', [mappedName, mappedValue])
+//			if mappedName = '\' then
+//				loopResult := Format('%s%s' + '', [mappedName, mappedValue])
 
-  else if mappedName = 'Damage_Type' then
-    Result := Format('Additional ' + '%s' + ' Damage: ' + '%s',
-      [query, mappedValue])
+		if mappedName = 'Damage_Type' then 
+		begin
+			
+			for j := 0 to Pred(ElementCount(properties)) do
+			begin
+				if (j=i) then
+					continue; 
+				prop2 := ElementByIndex(properties, j);
+				
+				if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then begin
+					Continue;
+				end; 
+							
+				valuetype2 := GetElementEditValues(prop2, 'Value Type');
+				valuePropertytype2 := GetElementEditValues(prop2, 'Property');
+				valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
+				value1output2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
+				
+				if value1output2 = '' then continue;
+				if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
+				begin
+					indicesToSkip.Add(j);
+					loopResult := Format('Additional %s Damage: %s', [value1output2, mappedValue]);
+					break;
+				end;
+			end;
+		end
 
-  else if mappedName = 'Damage_Resistance' then
-    Result := Format('Reduces ' + '%s' + ' damage by: ' + '%s', [query, mappedValue])
+else if  mappedName = 'Damage_Resistance' then 
+        begin
+		
+            for j := 0 to Pred(ElementCount(properties)) do
+            begin
+                if (j=i) then
+                    continue; 
+                prop2 := ElementByIndex(properties, j);
 
-  else if (mappedName = 'Actor_Values_Type') and (query <> 'NFW') and
-    (query <> '') then
-    Result := Format('%s' + '+' + '%s', [query, mappedValue])
-    // Ledgendary Effect multiplier
-  else if (mappedName = 'Actor_Values_Type') and (query <> 'NFW') and
-    (query = '') then
-    Result := mappedValue
+                if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then begin
+                    Continue;
+                end; 
 
-  else if ((mappedName = 'Keywords_Values_Type') and (query <> '1')) or ((mappedName = 'MaterialSwaps_Values_Type') and (query2 <> 'REM') and
-    (query <> 'NFW')) or (mappedName = 'Ammo_Type') then
-    Result := query
+                valuetype2 := GetElementEditValues(prop2, 'Value Type');
+                valuePropertytype2 := GetElementEditValues(prop2, 'Property');
+                valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
+                value1output2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
 
-  else if ((mappedName = 'Enchantments_Value') and (query <> 'NFW')) then
-    Result := query
+                if value1output2 = '' then continue;
 
-  else if (mappedName = 'Range (Min\Max):') or
-    (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then
-    Result := Format('%s%s', [mappedName, mappedValue]) //or (mappedName = 'Health') 
+                if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
+                begin
+                    indicesToSkip.Add(j);
+                    loopResult := Format('Reduces %s damage by: %s', [value1output2, mappedValue]);
+                    break;
+                end;
+			end;
+			
+			if loopResult = '' then
+				loopResult := Format('Reduces %s damage by: %s', [query, mappedValue]);
+        end 
 
-  else if (query <> 'NFW') and (query2 <> 'REM') and
-    (mappedName <> 'Keywords_Values_Type') and (mappedName <> 'NFW') and
-    (mappedValue <> 'NFW') then // (mappedName <> 'Actor_Values_Type') and
-    Result := Format('%s%s', [mappedName, mappedValue]); // output layout
+			else if (mappedName = 'Actor_Values_Type') and (query <> 'NFW') and (query <> '') then
+				loopResult := Format('%s' + '+' + '%s', [query, mappedValue])
+// Legendary Effect multiplier
+			else if (mappedName = 'Actor_Values_Type') and (query <> 'NFW') and	(query = '') then
+				loopResult := mappedValue
 
-   AddMessage(Format('mappedName: %s', [mappedName]));
-   AddMessage(Format('mappedValue: %s', [mappedValue]));
-   AddMessage(Format('query: %s', [query]));
-   AddMessage(Format('query2: %s', [query2]));
+//			else if ((mappedName = 'MaterialSwaps_Values_Type') and (query2 <> 'REM') and (query <> 'NFW')) or (mappedName = 'Ammo_Type') then //((mappedName = 'Keywords_Values_Type') and (query <> '1')) or 
+//				loopResult := query
 
+			else if ((mappedName = 'Enchantments_Value') and (query <> 'NFW')) then
+				loopResult := query
+
+			else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then
+				loopResult := Format('%s%s', [mappedName, mappedValue])
+
+			else if (query <> 'NFW') and (mappedName <> 'Damage_Type') and (mappedName <> 'Damage_Resistance') and (query2 <> 'REM') and (mappedName <> 'Keywords_Values_Type') and (mappedName <> 'NFW') and (mappedValue <> 'NFW') then
+				loopResult := Format('%s%s', [mappedName, mappedValue]); // output layout
+
+//			AddMessage(Format('mappedName: %s', [mappedName]));
+//			AddMessage(Format('mappedValue: %s', [mappedValue]));
+//			AddMessage(Format('query: %s', [query]));
+//			AddMessage(Format('query2: %s', [query2]));
+//			AddMessage(Format('valuetype2: %s', [valuetype2]));
+//			AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
+//			AddMessage(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
+//			AddMessage(Format('value1output2: %s', [value1output2]));
+//			AddMessage(Format('loopResult: %s', [loopResult]));
+
+			// add property index as prefix for sorting
+			//if loopResult <> '\-200%' then
+			sl.Add(Format('%.3d', [j]) + loopResult);
+			//AddMessage(Format('sl: %s', [sl[j]]));
+		end;
+		
+	finally
+		mappedValues.Free;
+		mappedValues:=nil;
+		indicesToSkip.Free;
+		indicesToSkip:=nil;
+	end;
 end;
 
 function GetOmodDescription(rec: IInterface): String;
 var
-  i, j: Integer;
+  i: Integer;
   prop, properties: IInterface;
   proprefix, prosuffix, propname: string;
   sl: TStringList;
@@ -210,18 +365,8 @@ begin
   sl.Sorted := true; // sorting automatically happens at insert
 
   try
-    properties := ElementByPath(rec, 'DATA\Properties');
-
-    for i := 0 to Pred(ElementCount(properties)) do
-    begin
-      prop := ElementByIndex(properties, i);
-      propname := GetElementEditValues(prop, 'Property');
-      j := slPropertyMap.IndexOfName(propname);
-      if j = -1 then
-        Continue;
-      // add property index as prefix for sorting
-      sl.Add(Format('%.3d', [j]) + GetMappedDescription(prop, propname));
-    end;
+    
+		GetMappedDescription(rec, sl);
 
     // concatenate and remove prefixes
 
@@ -238,7 +383,7 @@ begin
         Result := Result + ' | '
       end;
       Result := Result + Copy(sl[i], 4, Length(sl[i]))
-    end
+    end;
   finally
     sl.Free;
     sl := nil;
