@@ -1,6 +1,6 @@
 //
 // Ver: 2.0
-// WIP (5)
+// WIP (6)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin
@@ -308,7 +308,7 @@ begin
               mappedValue2 := IntToStr(Int(value1Loop2 * 100)) + chr($00B0);
           end;
 
-          if value1Loop2 = '' then continue;
+          if value1Loop2 = '' then continue; //not looking for a string does nothing????
 
           if (mappedName = 'Range (Min\Max):') and (valuePropertytype2 = 'MaxRange') then
           begin
@@ -333,16 +333,22 @@ begin
             else if (mappedName = 'Spread (Min\Max):') and (valuePropertytype2 = 'AimModelMaxConeDegrees') then
             begin
               indicesToSkip.Add(j);
-              if (mappedValue = mappedValue2) then
-                loopResult := Format('Recoil: %s', [mappedValue])
+              if (mappedValue = mappedValue2) or (mappedValue > mappedValue2) then
+                loopResult := Format('Spread: %s', [mappedValue])
               else
                 loopResult := Format('%s %s\%s', [mappedName, mappedValue, mappedValue2]);
                 break;
               end;
+			  
+				if (mappedName = 'Range (Min\Max):') and (loopResult = '') then
+					loopResult := Format('Range: %s', [mappedValue]);
+				if (mappedName = 'Recoil (Min\Max):') and (loopResult = '') then
+					loopResult := Format('Recoil: %s', [mappedValue]);
+				if (mappedName = 'Spread (Min\Max):') and (loopResult = '') then
+					loopResult := Format('Spread: %s', [mappedValue]);
         end;
 
-        if loopResult = '' then
-          loopResult := Format('%s%s cat', [mappedName, mappedValue])
+        
       end
 				
 			else if (mappedName = 'Actor_Values_Type') and (value1Loop1 <> 'NFW') and (value1Loop1 <> '') then
