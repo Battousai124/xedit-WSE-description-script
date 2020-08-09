@@ -1,6 +1,6 @@
 //
 // Ver: 2.0
-// WIP (4)
+// WIP (5)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin
@@ -105,16 +105,16 @@ begin
 				loopResult := IntToStr(Int(floatValue * 100)) + chr($00B0);
 		end
 
-		else if (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then
-		begin
-			floatValue := GetNativeValue(ElementByIndex(prop, 6));
-			if floatValue > 1.0 then
-				loopResult := FloatToStr(floatValue * 100) + '%'
-			else if floatValue > 0.0 then
-				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
-			else
-				loopResult := IntToStr(Int(floatValue * 100)) + '%';
-		end
+//		else if (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then
+//		begin
+//			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+//			if floatValue > 1.0 then
+//				loopResult := FloatToStr(floatValue * 100) + '%'
+//			else if floatValue > 0.0 then
+//				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+//			else
+//				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+//		end
 
 		else if (valuetype = 'Float') and (valuefunctiontype = 'MUL+ADD') then
 		begin
@@ -173,7 +173,7 @@ procedure GetMappedDescription(rec : IInterface; sl : TStringList;);
 var
   loopResult: String;
   valuetype, valuefunctiontype, valuePropertytype, value1Loop1, mappedName, mappedValue : string;
-  valuetype2, valuefunctiontype2, valuePropertytype2, value1Loop2 : string;
+  valuetype2, valuefunctiontype2, valuePropertytype2, value1Loop2, mappedValue2 : string;
   floatValue: Real;
 	prop, properties, prop2 : IInterface; 
 	mappedValues, indicesToSkip : TStringList;
@@ -223,14 +223,23 @@ begin
 				valuePropertytype2 := GetElementEditValues(prop2, 'Property');
 				valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
 				value1Loop2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
-				
-				if loopResult = '' then
-				loopResult := Format('Additional %s damage by: %s', [value1Loop1, mappedValue]);
+			
+				if value1Loop2 = '' then continue;
+
+                if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
+                begin
+                    indicesToSkip.Add(j);
+                    loopResult := Format('Additional %s damage by: %s', [value1Loop2, mappedValue]);
+                    break;
+				end;
 			end;
+			
+			if loopResult = '' then
+				loopResult := Format('Additional %s damage by: %s', [value1Loop1, mappedValue]);
 		end
 
-else if  mappedName = 'Damage_Resistance' then 
-        begin
+		else if mappedName = 'Damage_Resistance' then 
+		begin
 		
             for j := 0 to Pred(ElementCount(properties)) do
             begin
@@ -256,15 +265,90 @@ else if  mappedName = 'Damage_Resistance' then
                     break;
                 end;
 			end;
-			
+
 			if loopResult = '' then
 				loopResult := Format('Reduces %s damage by: %s', [value1Loop1, mappedValue]);
         end 
 
+		else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Spread (Min\Max):') then
+        begin
+		
+              for j := 0 to Pred(ElementCount(properties)) do
+              begin
+                  if (j=i) then
+                      continue;
+                  prop2 := ElementByIndex(properties, j);
+
+                  if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then begin
+                      Continue;
+                  end;
+
+                  valuetype2 := GetElementEditValues(prop2, 'Value Type');
+                  valuePropertytype2 := GetElementEditValues(prop2, 'Property');
+                  valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
+				  value1Loop2 := GetNativeValue(ElementByIndex(prop2, 6));
+				  
+          if (mappedName = 'Range (Min\Max):')  or (mappedName = 'Spread (Min\Max):') then
+          begin
+            if value1Loop2 > 1.0 then
+              mappedValue2 := FloatToStr(value1Loop2) + 'x'
+            else if value1Loop2 > 0.0 then
+              mappedValue2 := '+' + IntToStr(Int(value1Loop2 * 100)) + '%'
+            else
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100)) + '%';
+          end
+
+          else if (mappedName = 'Recoil (Min\Max):') then
+          begin
+            if value1Loop2 > 1.0 then
+              mappedValue2 := '+' + FloatToStr(value1Loop2) + chr($00B0)
+            else if value1Loop2 > 0.0 then
+              mappedValue2 := '+' + IntToStr(Int(value1Loop2 * 100)) + chr($00B0)
+            else
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100)) + chr($00B0);
+          end;
+
+          if value1Loop2 = '' then continue;
+
+          if (mappedName = 'Range (Min\Max):') and (valuePropertytype2 = 'MaxRange') then
+          begin
+            indicesToSkip.Add(j);
+            if (mappedValue = mappedValue2) then
+              loopResult := Format('Range: %s', [mappedValue])
+            else
+              loopResult := Format('%s %s\%s', [mappedName, mappedValue, mappedValue2]);
+              break;
+			end
+
+            else if (mappedName = 'Recoil (Min\Max):') and (valuePropertytype2 = 'AimModelRecoilMaxDegPerShot') then
+            begin
+              indicesToSkip.Add(j);
+              if (mappedValue = mappedValue2) then
+                loopResult := Format('Recoil: %s', [mappedValue])
+              else
+                loopResult := Format('%s %s\%s', [mappedName, mappedValue, mappedValue2]);
+                break;
+              end
+
+            else if (mappedName = 'Spread (Min\Max):') and (valuePropertytype2 = 'AimModelMaxConeDegrees') then
+            begin
+              indicesToSkip.Add(j);
+              if (mappedValue = mappedValue2) then
+                loopResult := Format('Recoil: %s', [mappedValue])
+              else
+                loopResult := Format('%s %s\%s', [mappedName, mappedValue, mappedValue2]);
+                break;
+              end;
+        end;
+
+        if loopResult = '' then
+          loopResult := Format('%s%s cat', [mappedName, mappedValue])
+      end
+				
 			else if (mappedName = 'Actor_Values_Type') and (value1Loop1 <> 'NFW') and (value1Loop1 <> '') then
 				loopResult := Format('%s' + '+' + '%s', [value1Loop1, mappedValue])
 // Legendary Effect multiplier
-			else if (mappedName = 'Actor_Values_Type') and (value1Loop1 <> 'NFW') and	(value1Loop1 = '') then
+			else if (mappedName = 'Actor_Values_Type') and (value1Loop1 <> 'NFW') and (value1Loop1 = '') then
 				loopResult := mappedValue
 
 			else if ((mappedName = 'MaterialSwaps_Values_Type') and (valuetype <> 'REM') and (value1Loop1 <> 'NFW')) or 
@@ -272,30 +356,27 @@ else if  mappedName = 'Damage_Resistance' then
 				loopResult := value1Loop1
 
 			else if ((mappedName = 'Enchantments_Value') and (value1Loop1 <> 'NFW')) or 
-				((mappedName = 'Keywords_Values_Type') and (value1Loop1 <> '') and (value1Loop1 <> 'Energy') and (value1Loop1 <> 'Cold') and (value1Loop1 <> 'Radiation')) then
+				((mappedName = 'Keywords_Values_Type') and (value1Loop1 <> '') and (value1Loop1 <> 'Energy') and (value1Loop1 <> 'Cold') and (value1Loop1 <> 'Radiation') and (value1Loop1 <> 'Split Beam Shotgun Energy')) then
 				loopResult := value1Loop1
 
-			else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Cone (Min\Max):') then
-				loopResult := Format('%s%s', [mappedName, mappedValue])
-
 			else if (value1Loop1 <> 'NFW') and 
-				(mappedName <> 'Damage_Type') and 
-				(mappedName <> 'Damage_Resistance') and 
+				(mappedName <> '\') and
 				(valuetype <> 'REM') and 
 				(mappedName <> 'Keywords_Values_Type') and 
 				(mappedName <> 'NFW') and 
 				(mappedValue <> 'NFW') then
 				loopResult := Format('%s%s', [mappedName, mappedValue]);
 
-//			AddMessage(Format('mappedName: %s', [mappedName]));
-//			AddMessage(Format('mappedValue: %s', [mappedValue]));
-//			AddMessage(Format('value1Loop1: %s', [value1Loop1]));
-//			AddMessage(Format('valuetype: %s', [valuetype]));
-//			AddMessage(Format('valuetype2: %s', [valuetype2]));
-//			AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
-//			AddMessage(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
-//			AddMessage(Format('value1Loop2: %s', [value1Loop2]));
-//			AddMessage(Format('loopResult: %s', [loopResult]));
+//        AddMessage(Format('mappedName: %s', [mappedName]));
+//        AddMessage(Format('mappedValue: %s', [mappedValue]));
+//       AddMessage(Format('value1Loop1: %s', [value1Loop1]));
+//        AddMessage(Format('valuetype: %s', [valuetype]));
+//        AddMessage(Format('valuetype2: %s', [valuetype2]));
+//        AddMessage(Format('mappedValue2: %s', [mappedValue2]));
+//        AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
+//        AddMessage(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
+//        AddMessage(Format('value1Loop2: %s', [value1Loop2]));
+//        AddMessage(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
 
