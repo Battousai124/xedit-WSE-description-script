@@ -1,12 +1,12 @@
 //
 // Ver: 3.3
-// WIP (1)
+// WIP (2)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin
 //
 
-unit MODRenamer; // FO4PatchOmodDescriptions;
+unit MODRenamerv2; // FO4PatchOmodDescriptions;
 
 // code for editing xEdit scripts with Delphi
 interface
@@ -62,7 +62,7 @@ begin
 			else if floatValue > 0.0 then
 				loopResult := IntToStr(Int(floatValue * 100))	//'+' + IntToStr(Int(floatValue * 100)) + '%'
 			else
-				loopResult := IntToStr(Int(floatValue * 100))	// + '%';
+				loopResult := IntToStr(Int(floatValue * 100));	// + '%';
 		end
 
 		else if (valuetype = 'FormID,Float') and
@@ -79,7 +79,7 @@ begin
 			if floatValue > 5.0 then
 				loopResult := FloatToStr(floatValue)			// + '%'
 			else if floatValue > 0.0 then
-				loopResult := FloatToStr(floatValue)
+				loopResult := FloatToStr(floatValue);
 		end
 
 		else if valuetype = 'FormID,Float' then
@@ -88,7 +88,7 @@ begin
 			if floatValue > 5.0 then
 				loopResult := FloatToStr(floatValue)			// + '%'
 			else if floatValue > 0.0 then
-				loopResult := FloatToStr(floatValue)
+				loopResult := FloatToStr(floatValue);
 		end
 
 		else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or
@@ -102,7 +102,7 @@ begin
 			else if floatValue > 0.0 then
 				loopResult := IntToStr(Int(floatValue * 100))	//'+' + IntToStr(Int(floatValue * 100)) + chr($00B0)
 			else
-				loopResult := IntToStr(Int(floatValue * 100)) 	//+ chr($00B0);
+				loopResult := IntToStr(Int(floatValue * 100)); 	//+ chr($00B0);
 		end
 
 //		else if (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then
@@ -124,13 +124,13 @@ begin
 			else if floatValue > 0.0 then
 				loopResult := IntToStr(Int(floatValue * 100))	//'+' + IntToStr(Int(floatValue * 100)) + '%'
 			else
-				loopResult := IntToStr(Int(floatValue * 100)) 	//+ '%';
+				loopResult := IntToStr(Int(floatValue * 100)); 	//+ '%';
 		end
 
 		else if (valuetype = 'Float') and (valuefunctiontype = 'MinRange') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
-			loopResult := FloatToStr(floatValue) 				//+ 'units';
+			loopResult := FloatToStr(floatValue); 				//+ 'units';
 		end
 
 		else if valuetype = 'Float' then
@@ -141,7 +141,7 @@ begin
 			else if floatValue > 0.0 then
 				loopResult := IntToStr(Int(floatValue * 100))	//'+' + IntToStr(Int(floatValue * 100)) + '%'
 			else
-				loopResult := IntToStr(Int(floatValue * 100)) 	//+ '%';
+				loopResult := IntToStr(Int(floatValue * 100)); 	//+ '%';
 		end
 
 		else if (valuetype = 'FormID,Int') and (valuePropertytype = 'ZoomData') then
@@ -293,9 +293,9 @@ begin
             if value1Loop2 > 1.0 then
               mappedValue2 := FloatToStr(value1Loop2) 				//+ 'x'
             else if value1Loop2 > 0.0 then
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100)		//'+' + IntToStr(Int(value1Loop2 * 100)) + '%'
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100))		//'+' + IntToStr(Int(value1Loop2 * 100)) + '%'
             else
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100)) 		//+ '%';
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100)); 		//+ '%';
           end
 
           else if (mappedName = 'Recoil (Min\Max):') then
@@ -305,7 +305,7 @@ begin
             else if value1Loop2 > 0.0 then
               mappedValue2 := IntToStr(Int(value1Loop2 * 100))		//'+' + IntToStr(Int(value1Loop2 * 100)) + chr($00B0)
             else
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100)) 		//+ chr($00B0);
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100)); 		//+ chr($00B0);
           end;
 
           if value1Loop2 = '' then continue; //not looking for a string does nothing????
