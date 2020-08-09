@@ -1,12 +1,12 @@
 //
-// Ver: 3.0
+// Ver: 3.3
 // WIP (1)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin
 //
 
-unit MODRenamerv3; // FO4PatchOmodDescriptions;
+unit MODRenamer; // FO4PatchOmodDescriptions;
 
 // code for editing xEdit scripts with Delphi
 interface
@@ -22,76 +22,62 @@ var
   slPropertyMap: TStringList;
   plugin: IInterface;
 
-
-
-
-// Property to Name Mapping Layout
-
-//procedure GetMappedDescription(rec : IInterface; mappedValues, indicesToSkip, sl: TStringList;);
-procedure GetMappedDescription(rec : IInterface; sl: TStringList;);
-//procedure	GetMappedValues(rec, mappedValues, indicesToSkip);
+procedure GetMappedValues(rec : IInterface; mappedValues, indicesToSkip : TStringList;);
 var
-  loopResult, loopResult2 : string;
-  valuetype, valuefunctiontype, valuePropertytype, value1Loop1, mappedName, mappedValue : string;
-  valuetype2, valuefunctiontype2, valuePropertytype2, value1Loop2, mappedValue2 : string;
+  valuetype, valuefunctiontype, valuePropertytype : string;
+	valuetype2, valuefunctiontype2, valuePropertytype2 : string;
+	loopResult, loopResult2 : string;
   floatValue, floatValue2: Real;
-	prop, prop2, properties: IInterface; 
-	mappedValues, indicesToSkip : TStringList;
+	prop, prop2, properties: IInterface;
 	i,j,dummyInt : Integer;
+  // OMOD Property Value Sort to %, x, deg or Value {{{THE MATHS}}}
 begin
-	mappedValues:=TStringList.Create;
-	indicesToSkip:=TStringList.Create;
-	indicesToSkip.Sorted:=true; //so that .Find() works
-
-	try
-		properties := ElementByPath(rec, 'DATA\Properties');
-		for i := 0 to Pred(ElementCount(properties)) do
-		begin
-			loopResult  := '';
-			if indicesToSkip.Find(i,dummyInt) then 
-		begin
+	properties := ElementByPath(rec, 'DATA\Properties');
+	for i := 0 to Pred(ElementCount(properties)) do
+	begin
+		if indicesToSkip.Find(i,dummyInt) then begin
 			mappedValues.Add('');//necessary, so that number of records stay the same
 			continue;
-		end
-	end;
-			prop := ElementByIndex(properties, i);
-			j := slPropertyMap.IndexOfName(valuePropertytype);
-			
-			if j = -1 then 
-		begin
+		end;
+	
+		prop := ElementByIndex(properties, i);
+		valuePropertytype := GetElementEditValues(prop, 'Property');
+		j := slPropertyMap.IndexOfName(valuePropertytype);
+		if j = -1 then begin
 			mappedValues.Add('');//necessary, so that number of records stay the same
 			Continue;
-			
-			mappedName := slPropertyMap.Values[valuePropertytype];
-			mappedValue := mappedValues[i];
-			value1Loop1 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
-			valuetype := GetElementEditValues(prop, 'Value Type');
-			valuePropertytype := GetElementEditValues(prop, 'Property');
-			valuefunctiontype := GetElementEditValues(prop, 'Function Type');
-
+		end;
+		
+		loopResult:= '';
+		
+		valuetype := GetElementEditValues(prop, 'Value Type');
+		valuePropertytype := GetElementEditValues(prop, 'Property');
+		valuefunctiontype := GetElementEditValues(prop, 'Function Type');
 
 		if (valuetype = 'FormID,Float') and (valuefunctiontype = 'MUL+ADD') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 7));
 			if floatValue > 1.0 then
-				loopResult := FloatToStr(floatValue) + 'x'
+				loopResult := FloatToStr(floatValue)			// + 'x'
 			else if floatValue > 0.0 then
-				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+				loopResult := IntToStr(Int(floatValue * 100))	//'+' + IntToStr(Int(floatValue * 100)) + '%'
 			else
-				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+				loopResult := IntToStr(Int(floatValue * 100))	// + '%';
 		end
 
-		else if (valuetype = 'FormID,Float') and (valuePropertytype = 'DamageTypeValue') then
+		else if (valuetype = 'FormID,Float') and
+			(valuePropertytype = 'DamageTypeValue') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 7));
 			loopResult := FloatToStr(floatValue);
 		end
 
-		else if (valuetype = 'FormID,Float') and (valuePropertytype = 'DamageTypeValue') then
+		else if (valuetype = 'FormID,Float') and
+			(valuePropertytype = 'DamageTypeValue') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			if floatValue > 5.0 then
-				loopResult := FloatToStr(floatValue) + '%'
+				loopResult := FloatToStr(floatValue)			// + '%'
 			else if floatValue > 0.0 then
 				loopResult := FloatToStr(floatValue)
 		end
@@ -100,48 +86,62 @@ begin
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 7));
 			if floatValue > 5.0 then
-				loopResult := FloatToStr(floatValue) + '%'
+				loopResult := FloatToStr(floatValue)			// + '%'
 			else if floatValue > 0.0 then
 				loopResult := FloatToStr(floatValue)
 		end
 
-		else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or (valuePropertytype = 'AimModelRecoilMinDegPerShot') or (valuePropertytype = 'AimModelRecoilMaxDegPerShot') or (valuePropertytype = 'AimModelRecoilArcDeg') then
+		else if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or
+			(valuePropertytype = 'AimModelRecoilMinDegPerShot') or
+			(valuePropertytype = 'AimModelRecoilMaxDegPerShot') or
+			(valuePropertytype = 'AimModelRecoilArcDeg') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			if floatValue > 1.0 then
-				loopResult := '+' + FloatToStr(floatValue) + chr($00B0)
+				loopResult := FloatToStr(floatValue)			//'+' + FloatToStr(floatValue) + chr($00B0)
 			else if floatValue > 0.0 then
-				loopResult := '+' + IntToStr(Int(floatValue * 100)) + chr($00B0)
+				loopResult := IntToStr(Int(floatValue * 100))	//'+' + IntToStr(Int(floatValue * 100)) + chr($00B0)
 			else
-				loopResult := IntToStr(Int(floatValue * 100)) + chr($00B0);
+				loopResult := IntToStr(Int(floatValue * 100)) 	//+ chr($00B0);
 		end
+
+//		else if (valuePropertytype = 'AimModelMinConeDegrees') or (valuePropertytype = 'AimModelMaxConeDegrees') then
+//		begin
+//			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+//			if floatValue > 1.0 then
+//				loopResult := FloatToStr(floatValue * 100) + '%'
+//			else if floatValue > 0.0 then
+//				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+//			else
+//				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+//		end
 
 		else if (valuetype = 'Float') and (valuefunctiontype = 'MUL+ADD') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			if floatValue > 1.0 then
-				loopResult := FloatToStr(floatValue) + 'x'
+				loopResult := FloatToStr(floatValue) 			//+ 'x'
 			else if floatValue > 0.0 then
-				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+				loopResult := IntToStr(Int(floatValue * 100))	//'+' + IntToStr(Int(floatValue * 100)) + '%'
 			else
-				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+				loopResult := IntToStr(Int(floatValue * 100)) 	//+ '%';
 		end
 
 		else if (valuetype = 'Float') and (valuefunctiontype = 'MinRange') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
-			loopResult := FloatToStr(floatValue) + 'units';
+			loopResult := FloatToStr(floatValue) 				//+ 'units';
 		end
 
 		else if valuetype = 'Float' then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			if floatValue > 1.0 then
-				loopResult := FloatToStr(floatValue) + 'x'
+				loopResult := FloatToStr(floatValue) 			//+ 'x'
 			else if floatValue > 0.0 then
-				loopResult := '+' + IntToStr(Int(floatValue * 100)) + '%'
+				loopResult := IntToStr(Int(floatValue * 100))	//'+' + IntToStr(Int(floatValue * 100)) + '%'
 			else
-				loopResult := IntToStr(Int(floatValue * 100)) + '%';
+				loopResult := IntToStr(Int(floatValue * 100)) 	//+ '%';
 		end
 
 		else if (valuetype = 'FormID,Int') and (valuePropertytype = 'ZoomData') then
@@ -159,19 +159,54 @@ begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			loopResult := FloatToStr(floatValue);
 		//AddMessage(Format('INT: %s', [loopResult]));
-		end
+		end;
 		
 		// add property index as prefix for sorting
+		mappedValues.Add(loopResult);
+	end;
+end;
 
 
+// Property to Name Mapping Layout
+
+procedure GetMappedDescription(rec : IInterface; sl : TStringList;);
+var
+  loopResult: String;
+  valuetype, valuefunctiontype, valuePropertytype, value1Loop1, mappedName, mappedValue : string;
+  valuetype2, valuefunctiontype2, valuePropertytype2, value1Loop2, mappedValue2 : string;
+  floatValue: Real;
+	prop, properties, prop2 : IInterface; 
+	mappedValues, indicesToSkip : TStringList;
+	i,j,dummyInt : Integer;
+begin
+	mappedValues:=TStringList.Create;
+	indicesToSkip:=TStringList.Create;
+	indicesToSkip.Sorted:=true; //so that .Find() works
 	
+	try
+		GetMappedValues(rec, mappedValues, indicesToSkip);
+		properties := ElementByPath(rec, 'DATA\Properties');
+		
+		for i := 0 to Pred(ElementCount(properties)) do
+		begin
+			loopResult  := '';
+			if indicesToSkip.Find(i,dummyInt) then 
+				continue;
+		
+			prop := ElementByIndex(properties, i);
+			valuePropertytype := GetElementEditValues(prop, 'Property');
+			j := slPropertyMap.IndexOfName(valuePropertytype);
+			
+			if j = -1 then
+				Continue;
+			
+			mappedName := slPropertyMap.Values[valuePropertytype];
+			mappedValue := mappedValues[i];
+			value1Loop1 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+			valuefunctiontype := GetElementEditValues(prop, 'Function Type');
+			valuetype := GetElementEditValues(prop, 'Value Type');
 
-
-
-
-
-
-		else if mappedName = 'Damage_Type' then 
+		if mappedName = 'Damage_Type' then 
 		begin
 			
 			for j := 0 to Pred(ElementCount(properties)) do
@@ -256,21 +291,21 @@ begin
           if (mappedName = 'Range (Min\Max):')  or (mappedName = 'Spread (Min\Max):') then
           begin
             if value1Loop2 > 1.0 then
-              mappedValue2 := FloatToStr(value1Loop2) + 'x'
+              mappedValue2 := FloatToStr(value1Loop2) 				//+ 'x'
             else if value1Loop2 > 0.0 then
-              mappedValue2 := '+' + IntToStr(Int(value1Loop2 * 100)) + '%'
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100)		//'+' + IntToStr(Int(value1Loop2 * 100)) + '%'
             else
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100)) + '%';
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100)) 		//+ '%';
           end
 
           else if (mappedName = 'Recoil (Min\Max):') then
           begin
             if value1Loop2 > 1.0 then
-              mappedValue2 := '+' + FloatToStr(value1Loop2) + chr($00B0)
+              mappedValue2 := FloatToStr(value1Loop2)				//'+' + FloatToStr(value1Loop2) + chr($00B0)
             else if value1Loop2 > 0.0 then
-              mappedValue2 := '+' + IntToStr(Int(value1Loop2 * 100)) + chr($00B0)
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100))		//'+' + IntToStr(Int(value1Loop2 * 100)) + chr($00B0)
             else
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100)) + chr($00B0);
+              mappedValue2 := IntToStr(Int(value1Loop2 * 100)) 		//+ chr($00B0);
           end;
 
           if value1Loop2 = '' then continue; //not looking for a string does nothing????
@@ -350,10 +385,10 @@ begin
 //        	AddMessage(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
-      mappedValues.Add(loopResult);
+
 			sl.Add(Format('%.3d', [j]) + loopResult);
+		end;
 		
-	 end;
 	finally
 		mappedValues.Free;
 		mappedValues:=nil;
