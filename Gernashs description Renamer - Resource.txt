@@ -90,6 +90,12 @@ CritPlasma [SPEL:00139F8C]=Can turn enemies into goo.
 SpellPA_CommonArm "PA Common Arm" [SPEL:0024848D]=Rate 3 points/sec for 3 sec
 {{{-------------------------Keywords_Values_Type---------------------------
 Ammo=Ammo_Type
+{{{---------------------------------------------------------------------}}}
+dn_HasReceiver_Crank1 [KYWD:002377D3]=Two crank reload maximum. | Ammo Capacity: 2
+dn_HasReceiver_Crank2 [KYWD:002377D4]=Three crank reload maximum.
+dn_HasReceiver_Crank3 [KYWD:002377D5]=Four crank reload maximum.
+dn_HasReceiver_Crank4 [KYWD:002377D6]=Five crank reload maximum.
+dn_HasReceiver_Crank5 [KYWD:002377D7]-Six crank reload maximum.
 {{-----------------------------Calibre|Ammo------------------------------}}
 ccSBJFO4001_SolarFlareProjectile [PROJ:FE000842]=NFW
 // Disabled OverrideProjectile=
@@ -416,10 +422,10 @@ ench_mod_ModLegendaryWeaponBleed "Bleed" [ENCH:001E7C21]=Targets bleed for 25 po
 ench_mod_ModLegendaryWeaponsAddDamageInverseHealthPerk [ENCH:001EC038]=Does more damage the lower your health is.
 ench_mod_ModLegendaryWeaponsDamageConsecutiveHits_Listener [ENCH:001EF48C]=Increased damage after each consecutive hit on the same target.
 mod_Lining_FieldGen_EMP_CloakEnchantment_4 "Field Gen EMP 4" [ENCH:000BA46C]=Deals Energy damage to nearby enemies.
-mod_Lining_ReinforcedLimbs_Enchantment [ENCH:000BA431]=NFW
+//mod_Lining_ReinforcedLimbs_Enchantment [ENCH:000BA431]=NFW
 mod_armor_Railroad_InstituteKille_Ench [ENCH:00226713]=Grants 10% bonus damage against Institute members and synths.
 pa_mod_Lining_FieldGen_EMP_CloakEnchantment "Field Gen EMP 4" [ENCH:00249D6B]=Deals Energy Damage to nearby enemies: 20/sec in combat
-dn_HasLining_ResistanceLimbDamage [KYWD:001FE35B]=NFW
+//dn_HasLining_ResistanceLimbDamage [KYWD:001FE35B]=NFW
 {{{-----------------------Damage/Resistance_Type------------------------}}}
 DamageTypeValue=Damage_Resistance
 DamageTypeValues=Damage_Type
