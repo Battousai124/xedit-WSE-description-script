@@ -1,6 +1,6 @@
 //
 // Ver: 3.3
-// WIP (5)
+// WIP (6)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin
@@ -134,11 +134,27 @@ begin
 		else if (valuePropertytype = 'SightedTransitionSeconds') or
 			(valuePropertytype = 'FullPowerSeconds') or
 			(valuePropertytype = 'AttackDelaySec') then
-		begin
+			begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
-			loopResult := IntToStr(Int(floatValue * 100));
-			loopResult2 := IntToStr(Int(floatValue * 100)) + ' sec';   
-		end	
+			if floatValue > 1.0 then
+				Begin
+					loopResult := FloatToStr(floatValue);
+					loopResult2 := FloatToStr(floatValue) + ' sec';
+				end else if floatValue > 0.0 then
+				begin
+					loopResult := IntToStr(Int(floatValue * 100));
+					loopResult2 := '+' + IntToStr(Int(floatValue * 100)) + '%';
+				end else
+				begin
+					loopResult := IntToStr(Int(floatValue * 100));
+					loopResult2 := IntToStr(Int(floatValue * 100)) + '%';
+				end;
+		end
+//		begin
+//			floatValue := GetNativeValue(ElementByIndex(prop, 6));
+//			loopResult := IntToStr(Int(floatValue * 100));
+//			loopResult2 := IntToStr(Int(floatValue * 100)) + ' sec';   
+//		end	
 		
 		else if (valuePropertytype = 'DamageTypeValue') or
 			(valuePropertytype = 'DamageTypeValues') then 
