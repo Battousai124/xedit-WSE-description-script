@@ -1,6 +1,6 @@
 //
 // Ver: 3.3
-// WIP (4)
+// WIP (5)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin
@@ -60,11 +60,12 @@ begin
 		valuePropertytype := GetElementEditValues(prop, 'Property');
 		valuefunctiontype := GetElementEditValues(prop, 'Function Type');
 
-		if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or
+		if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or 
 			(valuePropertytype = 'AimModelMinConeDegrees') or
 			(valuePropertytype = 'AimModelMaxConeDegrees') or  
 			(valuePropertytype = 'AimModelRecoilMinDegPerShot') or
 			(valuePropertytype = 'AimModelRecoilMaxDegPerShot') or
+			(valuePropertytype = 'AimModelRecoilHipMult') or
 			(valuePropertytype = 'AimModelRecoilArcDeg') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
@@ -88,6 +89,8 @@ begin
 			(valuePropertytype = 'MaxRange') or  
 			(valuePropertytype = 'OutOfRangeDamageMult') or
 			(valuePropertytype = 'AttackActionPointCost') or
+			(valuePropertytype = 'CriticalDamageMult') or
+			(valuePropertytype = 'MinPowerPerShot') or
 			(valuePropertytype = 'AimModelConeIronSightsMultiplier') or
 			(valuePropertytype = 'ZoomDataFOVMult') or
 			(valuePropertytype = 'SecondaryDamage') or
@@ -128,7 +131,9 @@ begin
 			loopResult2 := FloatToStr(floatValue) + ' rnd';
 		end	
 		
-		else if (valuePropertytype = 'SightedTransitionSeconds')then
+		else if (valuePropertytype = 'SightedTransitionSeconds') or
+			(valuePropertytype = 'FullPowerSeconds') or
+			(valuePropertytype = 'AttackDelaySec') then
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			loopResult := IntToStr(Int(floatValue * 100));
@@ -197,7 +202,7 @@ var
   floatValue: Real;
 	prop, properties, prop2 : IInterface; 
 	formatstrings, mappedValues, indicesToSkip : TStringList;
-	i,j,dummyInt : Integer;
+	i,j,k, dummyInt : Integer;
 begin
 	mappedValues:=TStringList.Create;
 	indicesToSkip:=TStringList.Create;
@@ -228,26 +233,14 @@ begin
 			valuefunctiontype := GetElementEditValues(prop, 'Function Type');
 			valuetype := GetElementEditValues(prop, 'Value Type');
 
-			if ((mappedName = 'Enchantments_Value') and 
-					(value1Loop1 <> 'NFW')) or 
-					((mappedName = 'Keywords_Values_Type') and 
-					(value1Loop1 <> '') and 
-					(value1Loop1 <> 'Energy') and 
-					(value1Loop1 <> 'Cold') and 
-					(value1Loop1 <> 'Radiation') and 
-					(value1Loop1 <> 'Split Beam Shotgun Energy')) then
-				begin
-					loopResult := value1Loop1;
-				end
-				
-		else if mappedName = 'Damage_Type' then 
+		if mappedName = 'Damage_Type' then 
 		begin
 			
-			for j := 0 to Pred(ElementCount(properties)) do
+			for k := 0 to Pred(ElementCount(properties)) do
 			begin
-				if (j=i) then
+				if (k=i) then
 					continue; 
-				prop2 := ElementByIndex(properties, j);
+				prop2 := ElementByIndex(properties, k);
 				
 				if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then begin
 					Continue;
@@ -262,7 +255,7 @@ begin
 
                 if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
                 begin
-                    indicesToSkip.Add(j);
+                    indicesToSkip.Add(k);
                     loopResult := Format('Additional %s damage by: %s', [value1Loop2, mappedValueFORMAT]);
                     break;
 				end;
@@ -275,13 +268,14 @@ begin
 		else if mappedName = 'Damage_Resistance' then 
 		begin
 		
-            for j := 0 to Pred(ElementCount(properties)) do
+            for k := 0 to Pred(ElementCount(properties)) do
             begin
-                if (j=i) then
+                if (k=i) then
                     continue; 
-                prop2 := ElementByIndex(properties, j);
+					prop2 := ElementByIndex(properties, k);
 
-                if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then begin
+                if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then 
+				begin
                     Continue;
                 end; 
 
@@ -294,7 +288,7 @@ begin
 
                 if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords') then
                 begin
-                    indicesToSkip.Add(j);
+                    indicesToSkip.Add(k);
                     loopResult := Format('Reduces %s damage by: %s', [value1Loop2, mappedValueFORMAT]);
                     break;
                 end;
@@ -307,11 +301,11 @@ begin
 		else if (mappedName = 'Range (Min\Max):') or (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Spread (Min\Max):') then
         begin
 		
-              for j := 0 to Pred(ElementCount(properties)) do
+              for k := 0 to Pred(ElementCount(properties)) do
               begin
-                  if (j=i) then
+                  if (k=i) then
                       continue;
-                  prop2 := ElementByIndex(properties, j);
+                  prop2 := ElementByIndex(properties, k);
 
                   if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')) = -1 then begin
                       Continue;
@@ -362,7 +356,7 @@ begin
 
          if (mappedName = 'Range (Min\Max):') and (valuePropertytype2 = 'MaxRange') then
          begin
-            indicesToSkip.Add(j);
+            indicesToSkip.Add(k);
             if (mappedValue = mappedValue2) then
               loopResult := Format('Range: %s', [mappedValueFORMAT])
             else begin
@@ -372,7 +366,7 @@ begin
 		end
         else if (mappedName = 'Recoil (Min\Max):') and (valuePropertytype2 = 'AimModelRecoilMaxDegPerShot') then
         begin
-              indicesToSkip.Add(j);
+              indicesToSkip.Add(k);
               if (mappedValue = mappedValue2) then
                 loopResult := Format('Recoil: %s', [mappedValueFORMAT])
               else begin
@@ -382,7 +376,7 @@ begin
 		end
             else if (mappedName = 'Spread (Min\Max):') and (valuePropertytype2 = 'AimModelMaxConeDegrees') then
             begin
-              indicesToSkip.Add(j);
+              indicesToSkip.Add(k);
               if (StrToFloat(mappedValue) >= StrToFloat(mappedValue2)) then
                 loopResult := Format('Spread: %s', [mappedValueFORMAT])
               else begin
@@ -429,6 +423,18 @@ begin
 					loopResult := value1Loop1;
 				end
 			
+			else if ((mappedName = 'Enchantments_Value') and 
+					(value1Loop1 <> 'NFW')) or 
+					((mappedName = 'Keywords_Values_Type') and 
+					(value1Loop1 <> '') and 
+					(value1Loop1 <> 'Energy') and 
+					(value1Loop1 <> 'Cold') and 
+					(value1Loop1 <> 'Radiation') and 
+					(value1Loop1 <> 'Split Beam Shotgun Energy')) then
+				begin
+					loopResult := value1Loop1;
+				end
+				
 			else if (value1Loop1 <> 'NFW') and 
 				(mappedName <> '\') and
 				(valuetype <> 'REM') and 
