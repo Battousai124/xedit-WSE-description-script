@@ -1,6 +1,6 @@
 //
 // Ver: 1
-// WIP (2)
+// WIP (3)
 // Author: Gernash
 // Scripting: 
 // Tester:
@@ -61,6 +61,10 @@ begin
 		loopResult:= '';
 		valuePropertytype := GetElementEditValues(prop, 'Component');
 		floatValue := GetElementEditValues(prop, 'Count');
+		
+//		if floatValue = 1 then
+//		loopResult:= ''
+//		else 
 		loopResult:= FloatToStr(floatValue);
 
 			// add property index as prefix for sorting
@@ -110,9 +114,11 @@ begin
           mappedName := slPropertyMap.Values[valuePropertytype];
           mappedValue := mappedValues[i];
 
-			if (mappedName <> '') then
-          loopResult := Format('%s (%s)', [mappedName, mappedValue]);
-			
+			if (mappedName <> '') and
+			(mappedValue <> '1')then
+          loopResult := Format('%s|%s', [mappedName, mappedValue])
+	  else
+		loopResult := Format('%s', [mappedName]);	
                 // add property index as prefix for sorting
 
           sl.Add(Format('%.3d', [j]) + loopResult);
@@ -152,7 +158,11 @@ begin
             end;
 		Result := Result + Copy(sl[i], 4, Length(sl[i]));
       end;
-	Result := GetEditValue(ElementByPath(rec, 'FULL')) +' {{{' + Result + '}}}';
+		
+		if Result = '' then
+			Result := GetEditValue(ElementByPath(rec, 'FULL'))
+		else 
+			Result := GetEditValue(ElementByPath(rec, 'FULL')) + '{{{' + Result + '}}}';
   finally
     sl.Free;
     sl := nil;
@@ -182,8 +192,8 @@ begin
     AddMessage('something went wrong when getting the override for this record.');
     Exit;
   end;
-desc:= '';
     desc := GetOmodDescription(e);
+	
   if desc = '' then
     Exit;
 
