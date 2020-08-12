@@ -2,7 +2,7 @@
 // Def_Ui_MISCRenamer
 //
 // Ver: 1
-// WIP (3)
+// WIP (4)
 // Author: Gernash
 // Scripting: 
 // Tester:
@@ -139,7 +139,7 @@ end;
 function GetOmodDescription(rec: IInterface): String;
 var
   i: Integer;
-  proprefix, prosuffix: string;
+  proprefix, remsuffix: string;
   sl: TStringList;
 
 begin
@@ -160,11 +160,15 @@ begin
             end;
 		Result := Result + Copy(sl[i], 4, Length(sl[i]));
       end;
+		remsuffix := GetEditValue(ElementByPath(rec, 'FULL'));
+		remsuffix := Copy(remsuffix, 1, Pos('{{{', remsuffix)-1);
+		AddMessage(Format('remsuffix: %s', [remsuffix]));
 		
 		if Result = '' then
 			Result := GetEditValue(ElementByPath(rec, 'FULL'))
 		else 
-			Result := GetEditValue(ElementByPath(rec, 'FULL')) + '{{{' + Result + '}}}';
+		
+			Result := remsuffix + '{{{' + Result + '}}}';
   finally
     sl.Free;
     sl := nil;
