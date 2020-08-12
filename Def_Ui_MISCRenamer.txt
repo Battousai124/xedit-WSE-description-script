@@ -1,0 +1,5 @@
+c_Aluminum "Aluminum" [CMPO:0001FA91]=Aluminum
+c_Cloth "Cloth" [CMPO:001223C7]=Cloth
+c_Plastic "Plastic" [CMPO:0001FAB7]=Plastic
+c_Oil "Oil" [CMPO:0001FAB4]=Oil
+c_Steel "Steel" [CMPO:0001FABD]=Steel
