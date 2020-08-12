@@ -1,6 +1,6 @@
 //
 // Ver: 1
-// WIP (1)
+// WIP (2)
 // Author: Gernash
 // Scripting: 
 // Tester:
@@ -62,8 +62,6 @@ begin
 		valuePropertytype := GetElementEditValues(prop, 'Component');
 		floatValue := GetElementEditValues(prop, 'Count');
 		loopResult:= FloatToStr(floatValue);
-	
-		AddMessage(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
 
@@ -97,7 +95,7 @@ begin
 
     for i := 0 to Pred(ElementCount(properties)) do
       begin
-        loopResult  := '';
+        loopResult := '';
         if indicesToSkip.Find(i,dummyInt) then
           continue;
 
@@ -107,17 +105,14 @@ begin
 
         if j = -1 then
           Continue;
+	  loopResult := '';
 
           mappedName := slPropertyMap.Values[valuePropertytype];
           mappedValue := mappedValues[i];
 
-          AddMessage(Format('mappedName: %s', [mappedName]));
-          AddMessage(Format('mappedValue: %s', [mappedValue]));
-
+			if (mappedName <> '') then
           loopResult := Format('%s (%s)', [mappedName, mappedValue]);
-
-          AddMessage(Format('loopResult: %s', [loopResult]));
-
+			
                 // add property index as prefix for sorting
 
           sl.Add(Format('%.3d', [j]) + loopResult);
@@ -151,8 +146,13 @@ begin
 
     for i := 0 to sl.Count - 1 do
       begin
-		Result := Result + Copy(sl[i], 4, Length(sl[i]))
+	  if Result <> '' then
+            begin
+              Result := Result + ', ';
+            end;
+		Result := Result + Copy(sl[i], 4, Length(sl[i]));
       end;
+	Result := GetEditValue(ElementByPath(rec, 'FULL')) +' {{{' + Result + '}}}';
   finally
     sl.Free;
     sl := nil;
@@ -182,19 +182,15 @@ begin
     AddMessage('something went wrong when getting the override for this record.');
     Exit;
   end;
+desc:= '';
     desc := GetOmodDescription(e);
-
   if desc = '' then
-	  AddMessage('No FULL - Name');
     Exit;
 
-  oldDesc := GetEditValue(GetElementNativeValues(e, 'NAME'));
-  AddMessage(Format('oldDesc: %s', [oldDesc]));
+  oldDesc := GetEditValue(ElementByPath(e, 'FULL'));
   if SameText(oldDesc, desc) then
     begin
-      AddMessage
-      (Format('description already up to date, ending script - description: "%s"',
-      [desc]));
+      AddMessage(Format('description already up to date, ending script - description: "%s"',[desc]));
       Exit;
     end;
 
@@ -230,7 +226,7 @@ begin
             Exit;
         end;
         // setting new description
-        SetElementEditValues(r, 'NAME', desc);
+        SetElementEditValues(r, 'FULL', desc);
         except
           on Ex: Exception do
             begin
