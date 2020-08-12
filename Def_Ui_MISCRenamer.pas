@@ -2,7 +2,7 @@
 // Def_Ui_MISCRenamer
 //
 // Ver: 1
-// WIP (4)
+// WIP (5)
 // Author: Gernash
 // Scripting: 
 // Tester:
@@ -26,13 +26,12 @@ var
   slPropertyMap: TStringList;
   plugin: IInterface;
 
-procedure GetMappedValues(rec : IInterface; mappedValues, indicesToSkip, formatstrings : TStringList;);
+procedure GetMappedValues(rec : IInterface; mappedValues, indicesToSkip : TStringList;);
 var
-  valuetype, valuefunctiontype, valuePropertytype : string;
-  valuetype2, valuefunctiontype2, valuePropertytype2 : string;
+  valuePropertytype : string;
   loopResult : string;
-  floatValue, floatValue2: Real;
-  prop, prop2, properties: IInterface;
+  floatValue : Real;
+  prop, properties: IInterface;
   i,j,dummyInt : Integer;
 
   // OMOD Property Value Sort to %, x, deg or Value {{{THE MATHS}}}
@@ -46,7 +45,6 @@ begin
       if indicesToSkip.Find(i,dummyInt) then 
 	  begin
         mappedValues.Add('');//necessary, so that number of records stay the same
-        formatstrings.Add('');
         continue;
        end;
 
@@ -56,7 +54,6 @@ begin
 		if j = -1 then 
 		begin
 		  mappedValues.Add('');//necessary, so that number of records stay the same
-		  formatstrings.Add('');
 		  Continue;
 		end;
 
@@ -64,9 +61,6 @@ begin
 		valuePropertytype := GetElementEditValues(prop, 'Component');
 		floatValue := GetElementEditValues(prop, 'Count');
 		
-//		if floatValue = 1 then
-//		loopResult:= ''
-//		else 
 		loopResult:= FloatToStr(floatValue);
 
 			// add property index as prefix for sorting
@@ -82,25 +76,22 @@ end;
 procedure GetMappedDescription(rec : IInterface; sl : TStringList;);
 var
   loopResult: String;
-  valuetype, valuefunctiontype, valuePropertytype, value1Loop1, mappedName, mappedValue : string;
-  valuetype2, valuefunctiontype2, valuePropertytype2, value1Loop2, mappedValue2 : string;
-  mappedValueFORMAT, mappedValue2FORMAT : string;
+  valuePropertytype, mappedName, mappedValue : string;
   floatValue: Real;
-  prop, properties, prop2 : IInterface;
-  formatstrings, mappedValues, indicesToSkip : TStringList;
-  i,j,k, dummyInt : Integer;
+  prop, properties : IInterface;
+  mappedValues, indicesToSkip : TStringList;
+  i, j, dummyInt : Integer;
 begin
   mappedValues:=TStringList.Create;
   indicesToSkip:=TStringList.Create;
-  formatstrings:=TStringList.Create;
   indicesToSkip.Sorted:=true; //so that .Find() works
 
-  try
-    GetMappedValues(rec, mappedValues, indicesToSkip, formatstrings);
-    properties := ElementBySignature(rec, 'CVPA - Components\Component');
+	try
+		GetMappedValues(rec, mappedValues, indicesToSkip);
+		properties := ElementBySignature(rec, 'CVPA - Components\Component');
 
-    for i := 0 to Pred(ElementCount(properties)) do
-      begin
+		for i := 0 to Pred(ElementCount(properties)) do
+		begin
         loopResult := '';
         if indicesToSkip.Find(i,dummyInt) then
           continue;
@@ -110,29 +101,27 @@ begin
           j := slPropertyMap.IndexOfName(valuePropertytype);
 
         if j = -1 then
-          Continue;
-	  loopResult := '';
+			Continue;
+			loopResult := '';
 
-          mappedName := slPropertyMap.Values[valuePropertytype];
-          mappedValue := mappedValues[i];
+			mappedName := slPropertyMap.Values[valuePropertytype];
+			mappedValue := mappedValues[i];
 
 			if (mappedName <> '') and
 			(mappedValue <> '1')then
-          loopResult := Format('%s|%s', [mappedName, mappedValue])
-	  else
-		loopResult := Format('%s', [mappedName]);	
-                // add property index as prefix for sorting
+				loopResult := Format('%s|%s', [mappedName, mappedValue])
+			else
+				loopResult := Format('%s', [mappedName]);	
+	// add property index as prefix for sorting
 
-          sl.Add(Format('%.3d', [j]) + loopResult);
-      end;
+			sl.Add(Format('%.3d', [j]) + loopResult);
+		end;
 	
     finally
       mappedValues.Free;
       mappedValues:=nil;
       indicesToSkip.Free;
       indicesToSkip:=nil;
-      formatstrings.Free;
-      formatstrings:=nil;
     end;
 end;
 
@@ -162,12 +151,14 @@ begin
       end;
 		remsuffix := GetEditValue(ElementByPath(rec, 'FULL'));
 		remsuffix := Copy(remsuffix, 1, Pos('{{{', remsuffix)-1);
-		AddMessage(Format('remsuffix: %s', [remsuffix]));
+		if remsuffix = '' then 
+		remsuffix := GetEditValue(ElementByPath(rec, 'FULL'));
+	
+	AddMessage(Format('remsuffix: %s', [remsuffix]));
 		
 		if Result = '' then
 			Result := GetEditValue(ElementByPath(rec, 'FULL'))
 		else 
-		
 			Result := remsuffix + '{{{' + Result + '}}}';
   finally
     sl.Free;
