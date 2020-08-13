@@ -21,7 +21,7 @@ RollingPinAluminium [MSWP:0014942C]=Aluminium
 {{{------------------------Keywords_Values_Type-------------------------}}}
 Keywords=Keywords_Values_Type
 mod_weapon_shock_fist [KYWD:001EC1FD]=+10 Energy (per installed Tesla Bracers, max. 2)
-dn_HasMisc_Unarmed [KYWD:0023841A]=15 points of damage increase per installed Hydraulic Bracers
+//dn_HasMisc_Unarmed [KYWD:0023841A]=15 points of damage increase per installed Hydraulic Bracers
 {{{---------------------------Weapon_Types------------------------------}}}
 {{-------------------------------Melee-----------------------------------}}
 dn_HasLogo_Swatter [KYWD:000B9742]=Increased damage vs armoured targets
