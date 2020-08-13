@@ -2,7 +2,7 @@
 // Def_Ui_MISCRenamer
 //
 // Ver: 1
-// WIP (5)
+// WIP (6)
 // Author: Gernash
 // Scripting: 
 // Tester:
@@ -113,7 +113,7 @@ begin
 			else
 				loopResult := Format('%s', [mappedName]);	
 	// add property index as prefix for sorting
-
+		AddMessage(Format('loopResult: %s', [loopResult]));
 			sl.Add(Format('%.3d', [j]) + loopResult);
 		end;
 	
@@ -151,13 +151,13 @@ begin
       end;
 		remsuffix := GetEditValue(ElementByPath(rec, 'FULL'));
 		remsuffix := Copy(remsuffix, 1, Pos('{{{', remsuffix)-1);
-		if remsuffix = '' then 
-		remsuffix := GetEditValue(ElementByPath(rec, 'FULL'));
+	//	if remsuffix = '' then 
+	//	remsuffix := GetEditValue(ElementByPath(rec, 'FULL'));
 	
-	AddMessage(Format('remsuffix: %s', [remsuffix]));
-		
-		if Result = '' then
-			Result := GetEditValue(ElementByPath(rec, 'FULL'))
+//	AddMessage(Format('remsuffix: %s', [remsuffix]));
+//		AddMessage(Format('Result: %s', [Result]));
+		if remsuffix  = '' then
+			Result := GetEditValue(ElementByPath(rec, 'FULL')) + '{{{' + Result + '}}}'
 		else 
 			Result := remsuffix + '{{{' + Result + '}}}';
   finally
