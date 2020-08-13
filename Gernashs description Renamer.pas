@@ -1,6 +1,6 @@
 //
 // Ver: 3.3
-// WIP (6)
+// WIP (7)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin//
@@ -456,7 +456,8 @@ begin
 			else if (value1Loop1 <> 'NFW') and 
 				(mappedName <> '\') and
 				(valuetype <> 'REM') and 
-				(mappedName <> 'Keywords_Values_Type') and 
+				(mappedName <> 'Keywords_Values_Type') and
+				(mappedName <> 'Actor_Values_Type') and 
 				(mappedName <> 'Enchantments_Value') and
 				(mappedName <> 'NFW') and 
 				(mappedValue <> 'NFW') then
