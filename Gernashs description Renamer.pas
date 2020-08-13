@@ -5,7 +5,7 @@
 // Scripting: EffEIO
 // Tester: KenShin//
 // Ver: 3.3
-// WIP (7)
+// WIP (8)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin
@@ -124,11 +124,22 @@ begin
 		
 		else if (valuePropertytype = 'Rating') or
 			(valuePropertytype = 'Health') then
-		begin
+			begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
-			loopResult := FloatToStr(floatValue);
-			loopResult2 := FloatToStr(floatValue);
-			end
+			if floatValue > 1.0 then
+				Begin
+					loopResult := FloatToStr(floatValue);
+					loopResult2 := FloatToStr(floatValue);
+				end else if floatValue > 0.0 then
+				begin
+					loopResult := IntToStr(Int(floatValue * 100));
+					loopResult2 := '+' + IntToStr(Int(floatValue * 100)) + '%';
+				end else
+				begin
+					loopResult := IntToStr(Int(floatValue * 100));
+					loopResult2 := IntToStr(Int(floatValue * 100)) + '%';
+				end;
+		end
 			
 		else if (valuePropertytype = 'NumProjectiles') or 
 			(valuePropertytype = 'AimModelRecoilShotsForRunaway')then 
