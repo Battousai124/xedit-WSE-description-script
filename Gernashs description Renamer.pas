@@ -18,7 +18,7 @@ implementation
 uses xEditAPI, Classes, SysUtils, StrUtils, Windows;
 
 const
-  sPropertiesList = wbScriptsPath + 'Gernash\Gernashs_OMOD_Resource.txt';
+  sPropertiesList = wbScriptsPath + 'Gernashs description Renamer - Resource.txt';
 
 var
   slPropertyMap: TStringList;
