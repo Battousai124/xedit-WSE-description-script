@@ -105,7 +105,9 @@ begin
 			Begin
 					loopResult := FloatToStr(floatValue);
 					loopResultFormatted := FloatToStr(floatValue) + 'x';
-					if valuePropertytype = 'AmmoCapacity' then
+					if (valuePropertytype = 'AmmoCapacity') or 
+					(valuePropertytype = 'AttackDamage') or 
+					(valuePropertytype = 'AttackActionPointCost')then
 					loopResultFormatted := FloatToStr(floatValue);
 				end else if floatValue > 0.0 then
 				begin
@@ -143,6 +145,8 @@ begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			loopResult := FloatToStr(floatValue);
 			loopResultFormatted := FloatToStr(floatValue) + ' rnd';
+			if (valuePropertytype = 'AimModelRecoilShotsForRunaway') then
+				loopResultFormatted := FloatToStr(floatValue);
 		end	
 		
 		else if (valuePropertytype = 'SightedTransitionSeconds') or
@@ -438,27 +442,29 @@ begin
 				
 			else if ((mappedName = 'MaterialSwaps_Values_Type') and
 					(valuetype <> 'REM') and 
-					(value1Loop1 <> 'NFW')) or 				
+					(value1Loop1 <> 'NFW')) or
+					(mappedName = 'Keywords_Values_Type') or
 					(mappedName = 'Ammo_Type') then
 				begin
 					loopResult := value1Loop1;
 				end
 			
-			else if  
-					(mappedName = 'Keywords_Values_Type') then
-				begin
-					loopResult := mappedValue;
-				end
+//			else if  
+//					(mappedName = 'Keywords_Values_Type') then
+//				begin
+//					loopResult := mappedName;
+//				end
 			
 			else if ((mappedName = 'Enchantments_Value') and 
-					(value1Loop1 <> 'NFW') and 
+					(value1Loop1 <> 'NFW')) or 
+					((mappedName = 'Keywords_Values_Type') and  
 					(value1Loop1 <> '') and 
 					(value1Loop1 <> 'Energy') and 
 					(value1Loop1 <> 'Cold') and 
 					(value1Loop1 <> 'Radiation') and 
 					(value1Loop1 <> 'Split Beam Shotgun Energy')) then
 				begin
-					loopResult := mappedValue;
+					loopResult := value1Loop1;
 				end
 				
 			else if (value1Loop1 <> 'NFW') and 
@@ -473,16 +479,16 @@ begin
 				loopResult := Format('%s%s', [mappedName, mappedValueFormat]);
 				end
 
-//        	AddMessage(Format('mappedName: %s', [mappedName]));
-//        	AddMessage(Format('mappedValue: %s', [mappedValue]));
-//			AddMessage(Format('value1Loop1: %s', [value1Loop1]));
+        	AddMessage(Format('mappedName: %s', [mappedName]));
+        	AddMessage(Format('mappedValue: %s', [mappedValue]));
+			AddMessage(Format('value1Loop1: %s', [value1Loop1]));
 //        	AddMessage(Format('valuetype: %s', [valuetype]));
 //        	AddMessage(Format('valuetype2: %s', [valuetype2]));
 //        	AddMessage(Format('mappedValue2: %s', [mappedValue2]));
 //        	AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
 //        	AddMessage(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
 //        	AddMessage(Format('value1Loop2: %s', [value1Loop2]));
-//        	AddMessage(Format('loopResult: %s', [loopResult]));
+        	AddMessage(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
 
