@@ -205,6 +205,7 @@ dn_HasReceiver_Converted_Syringer=Changes Ammo to Syringes.
 {{{---------------------------Actor_Values_Type-------------------------}}}
 ActorValues=Actor_Values_Type
 {{{---------------------------------------------------------------------}}}
+//ccBGSFO4116_PA_FlameResistance_AV=Fire damage reduced by: 
 //PA_KineticServos_AV=NFW
 Rating=Increase Armor Rating by: 
 Strength "Strength"=Increase STR by: 
@@ -246,7 +247,6 @@ PA_Strength_AV [AVIF:0023C9E2]=Increases Strength with all pieces wrapped by:
 PowerArmorVent "Power Armor Vent"=Impact Landing Damage: +50 | Stagger Strength: +2 | Impact Landing Aggro Radius (Base: 15): +5 | Aggro Strength: x2 (if installed in both Legs) 
 ReduceLimbDamageMod=Reduces limb damage by: 
 SpeedMult=Increases wearer's movement speed by: 
-ccBGSFO4116_PA_FlameResistance_AV=Fire damage reduced by: 
 {{{-------------------Actor_Values_Type---DUD Entries-------------------}}}
 //PA_OptimizedServos_AV=NFW
 //PA_RustyKnuckles_AV=NFW
