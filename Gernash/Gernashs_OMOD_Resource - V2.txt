@@ -76,6 +76,7 @@ HasLegendary_Armor_LockPick=Lockpicking sweet-spot increased by:
 dn_HasLining_Lighter=Reduces weight.
 ench_mod_LegendaryArmor_Chameleon=Enemies have a harder time detecting you, while you're sneaking and not moving.
 {{{-------Common legendary affix naming to LGND_WeaponAV -------}}}
+//dn_HasMuzzle_Compensator=Improved per-shot recoil | Improved recoil control
 DLC01Bot_Unstable_ChanceExplodeHead_Keyword=Adds chance to decapitate targets
 DLC03_HasLegendary_Armor_ChanceToFreezeMeleeAttacker=10% chance to freeze melee attackers, once every 20 seconds.
 DLC03_HasLegendary_Armor_LowHealthTriggersStimpak=Automatically use a Stimpak when hit while health is 25% or less, once every 60 seconds.
@@ -84,7 +85,6 @@ HasLegendary_Weapon_DamageVsAnimals=Increase damage 'vs' animals by:
 HasLegendary_Weapon_DamageVsGhouls=Increase damage 'vs' Ghouls by: 
 HasLegendary_Weapon_DamageVsRobots=Damage against robots increased by: 
 HasLegendary_Weapon_DamageVsSupermutants=Increase damage 'vs' super mutants by: 
-dn_HasMuzzle_Compensator=Improved per-shot recoil | Improved recoil control
 dn_HasReceiver_ArmorPiercing1=Has Armor Penetration
 {{{--------------------------legendary affects--------------------------}}}
 DLC01Bot_FortifyResistDamage "Fortify Damage Resist"=Increase Damage resistance by: 5
