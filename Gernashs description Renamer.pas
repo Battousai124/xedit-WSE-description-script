@@ -175,7 +175,7 @@ begin
 					loopResultFormatted := FloatToStr(floatValue);
 				end else if floatValue > 0.0 then
 				begin
-					loopResult := IntToStr(Int(floatValue * 100)) + '%';
+					loopResult := IntToStr(Int(floatValue * 100));
 					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
 				end else
 				begin
