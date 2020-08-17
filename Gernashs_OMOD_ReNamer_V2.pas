@@ -400,7 +400,7 @@ begin
          begin
             indicesToSkip.Add(k);
             if (mappedValue = mappedValue2) then
-              loopResult := Format('Range: %s', [mappedValueFORMAT])
+              loopResult := Format('Range: %s', [mappedValue])
             else begin
               loopResult := Format('%s %s\%s', [mappedName, mappedValueFORMAT, mappedValue2FORMAT]);
               break;
@@ -468,7 +468,10 @@ begin
 //				end
 			
 			else if ((mappedName = 'Enchantments_Value') and 
-					(value1Loop1 <> 'NFW')) or 
+					(value1Loop1 <> 'NFW')) or
+					((mappedName = 'Ammo_Type') and 
+					(value1Loop1 <> 'NFW')and  
+					(value1Loop1 <> ''))or 
 					((mappedName = 'Keywords_Values_Type') and  
 					(value1Loop1 <> '') and 
 					(value1Loop1 <> 'Energy') and 
