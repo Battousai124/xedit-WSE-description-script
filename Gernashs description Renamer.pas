@@ -17,7 +17,8 @@ implementation
 
 uses xEditAPI, Classes, SysUtils, StrUtils, Windows;
 uses 'Effs_Lib\EffsDebugLog';
-//uses 'Effs_Lib\EffsFormTools';
+uses 'Effs_Lib\EffsFormTools';
+uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Form';
 //uses 'Effs_Lib\EffsXEditTools';
 
 
@@ -27,8 +28,8 @@ const
 var
   slPropertyMap: TStringList;
   plugin: IInterface;
-	ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList : TStringList;
-	bChecksFailed, bAborted : Boolean;
+	ResultTextsList, ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList, BeforeChangesList, AfterChangesList : TStringList;
+	bChecksFailed, bAborted, bModificationNecessary : Boolean;
 	
 
 procedure GetMappedValues(rec : IInterface; mappedValues, indicesToSkip, mappedValuesFormat : TStringList;);
@@ -542,14 +543,18 @@ end;
 function Initialize: Integer;
 begin
 	EnableDebugLog := true; 
+	bModificationNecessary := true;
 	LogFunctionStart('Initialize');
 	
   slPropertyMap := TStringList.Create;
   slPropertyMap.LoadFromFile(sPropertiesList);
 	
+	ResultTextsList:= TStringList.Create;
 	ChecksFailedList:= TStringList.Create;
 	ChecksSuccessfulList:= TStringList.Create;
 	ModificationsDoneList:= TStringList.Create;
+	BeforeChangesList:= TStringList.Create;
+	AfterChangesList:= TStringList.Create;
 	
 	
 	LogFunctionEnd;
@@ -567,71 +572,98 @@ begin
 	else
 		LogCheckSuccessful('This record has the right signature');
 	
- 
-  // patch the winning override record
+	// patch the winning override record
 
   e := WinningOverride(e);
 
   if not Assigned(e) then
   begin
-    Log
+    LogCheckFailed
       ('something went wrong when getting the override for this record.');
-    Exit;
+    bAborted := true;
   end;
-  desc := GetOmodDescription(e);
+	
+	if not bAborted then begin
+		desc := GetOmodDescription(e);
 
-  if desc = '' then
-    Exit;
+		if desc = '' then begin
+			 LogCheckFailed('The logic would have created an empty description. Operation aborted.');
+			 bAborted := true;
+		end;
+	end;
+	
+	if not bAborted then begin
+		oldDesc := GetEditValue(ElementByPath(e, 'DESC'));
+		
+		if SameText(oldDesc, desc) then
+		begin
+			LogCheckSuccessful
+				(Format('Description already up to date. Operation aborted. - DESC: "%s"',
+				[desc]));
+			bModificationNecessary := false;
+		end else begin
+			BeforeChangesList.Add(Format('DESC: "%s"',[oldDesc]));
+		end;
+	end;
 
-  oldDesc := GetEditValue(ElementByPath(e, 'DESC'));
-  if SameText(oldDesc, desc) then
-  begin
-    Log
-      (Format('description already up to date, ending script - description: "%s"',
-      [desc]));
-    Exit;
-  end;
+	if not bAborted and bModificationNecessary then begin
+		// create new plugin
+		if not Assigned(plugin) then
+		begin
+			if MessageDlg
+				('Create new patch plugin [YES] or append to the last loaded one [NO]?',
+				mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+			begin
+				plugin := AddNewFile;
+				LogModification(Format('new plugin created: %s',[GetFileName(plugin)]));
+			end else begin
+				plugin := FileByIndex(Pred(FileCount));
+				LogCheckSuccessful(Format('Existing plugin selected to store record: %s',[GetFileName(plugin)]));
+			end;
+			if not Assigned(plugin) then
+			begin
+				Result := 1;
+				Exit;
+			end;
+		end;
 
-  // create new plugin
-  if not Assigned(plugin) then
-  begin
-    if MessageDlg
-      ('Create new patch plugin [YES] or append to the last loaded one [NO]?',
-      mtConfirmation, [mbYes, mbNo], 0) = mrYes then
-      plugin := AddNewFile
-    else
-      plugin := FileByIndex(Pred(FileCount));
-    if not Assigned(plugin) then
-    begin
-      Result := 1;
-      Exit;
-    end;
-  end;
+		// skip already copied
+		if GetFileName(e) = GetFileName(plugin) then begin
+			LogCheckFailed(Format('The plugin to store the record would overwrite the existing record. Operation aborted. - plugin: %s',[GetFileName(plugin)]));
+			bAborted := true;
+		end;
+	end;
 
-  // skip already copied
-  if GetFileName(e) = GetFileName(plugin) then
-    Exit;
+	if not bAborted and bModificationNecessary then begin
+		// add masters
+		AddRequiredElementMasters(e, plugin, False);
 
-  // add masters
-  AddRequiredElementMasters(e, plugin, False);
-
-  try
-    // copy as override
-    r := wbCopyElementToFile(e, plugin, False, true);
-    if not Assigned(r) then
-    begin
-      Log('something went wrong when creating the override record.');
-      Exit;
-    end;
-    // setting new description
-    SetElementEditValues(r, 'DESC', desc);
-  except
-    on Ex: Exception do
-    begin
-      Log('Failed to copy: ' + FullPath(e));
-      Log('    reason: ' + Ex.Message);
-    end
-  end;
+		try
+			// copy as override
+			r := wbCopyElementToFile(e, plugin, False, true);
+			if not Assigned(r) then
+			begin
+				LogCheckFailed('Something went wrong when creating the override record.');
+				bAborted := true;
+			end else begin
+				LogModification(Format('The record was copied to the selected plugin as an override. - plugin: %s',[GetFileName(plugin)]));
+				
+				// setting new description
+				SetElementEditValues(r, 'DESC', desc);
+				LogModification(Format('Description was replaced: - old DESC: "%s" - new DESC: "%s"',[oldDesc,desc]));
+				AfterChangesList.Add(Format('DESC: "%s"',[desc]));
+			end;
+		except
+			on Ex: Exception do
+			begin
+				LogCheckFailed('Failed to copy: ' + FullPath(e));
+				LogCheckFailed('    reason: ' + Ex.Message);
+			end
+		end;
+	end;
+		
+	PrepareResults(bChecksFailed, bAborted, e);
+	CreateResultsForm(bChecksFailed, bAborted, ResultTextsList);
 
 	LogFunctionEnd;
 end;
@@ -646,7 +678,13 @@ begin
 	ChecksSuccessfulList.Free;
 	ChecksSuccessfulList:=nil;
 	ModificationsDoneList.Free;
-	ModificationsDoneList:=nil;	
+	ModificationsDoneList:=nil;		
+	ResultTextsList.Free;
+	ResultTextsList:=nil;	
+	BeforeChangesList.Free;
+	BeforeChangesList:=nil;	
+	AfterChangesList.Free;
+	AfterChangesList:=nil;	
 	
   if Assigned(plugin) then
     SortMasters(plugin);
@@ -658,12 +696,12 @@ end;
 //  Pure Checks (do not contain modification)
 //=========================================================================
 
-function CheckRecordSignature(w : IInterface;) : Boolean;
+function CheckRecordSignature(rec : IInterface;) : Boolean;
 begin
 	LogFunctionStart('CheckRecordSignature');
 	Result:= true;
 	
-	if Signature(w) <> 'OMOD' then begin
+	if Signature(rec) <> 'OMOD' then begin
 		MessageDlg('The record you are trying to perform this script on has the wrong signature. It should be an OMOD.', mtWarning, [mbAbort], 0);
 		Result:=false;
 	end;
@@ -704,6 +742,82 @@ begin
 	Log('Modification performed: ' + message);
 	
 	//LogFunctionEnd;
+end;
+
+//prepare results list for output (add headers and such)
+procedure PrepareResults (bChecksFailed: boolean; bAborted : boolean; rec : IInterface;);
+const
+	headerStr = '-------------------------------------------------------------------';
+var 
+	tmpStr : String; //overwritten with every usage
+	i : Integer;
+begin
+	LogFunctionStart('PrepareResults');
+	
+	ResultTextsList.Add(FormatResultHeader('General Information:',headerStr));
+	ResultTextsList.Add('OMOD: ' + GetElementEditValues(rec, 'Record Header\FormID'));
+	ResultTextsList.Add('Created by plugin: ' + GetFileName(MasterOrSelf(rec)));
+	ResultTextsList.Add('Winning Override in plugin: ' + GetFileName(WinningOverride(rec)));
+	//ResultTextsList.Add('(EditorID and plugins of records listed below always represent the master/base version of this record - where the record is created)');
+	ResultTextsList.Add(' ');
+	
+	tmpStr:= 'Checks that failed: ';
+	if not bChecksFailed then
+		tmpStr:= tmpStr + '(No checks failed) ';
+	ResultTextsList.Add(FormatResultHeader(tmpStr,headerStr));
+	ResultTextsList.AddStrings(ChecksFailedList);
+	ResultTextsList.Add(' ');
+	
+	if bAborted then begin
+		ResultTextsList.Add('--> Operation has been aborted before completion!');		
+		ResultTextsList.Add(' ');
+	end;
+
+	tmpStr:= 'Checks that were successful: ';
+	if ChecksSuccessfulList.Count = 0 then
+		tmpStr:= tmpStr + '(No successful checks) ';
+	ResultTextsList.Add(FormatResultHeader(tmpStr,headerStr));
+	ResultTextsList.AddStrings(ChecksSuccessfulList);
+	ResultTextsList.Add(' ');
+	
+	//tmpStr:= 'Masters added: ';
+	//if AddedMastersList.Count = 0 then 
+	//	tmpStr:= tmpStr + '(no masters added) ';
+	//ResultTextsList.Add(FormatResultHeader(tmpStr,headerStr));
+	//ResultTextsList.AddStrings(AddedMastersList);
+	//ResultTextsList.Add(' ');
+	
+	tmpStr:= 'Modifications performed: ';
+	if ModificationsDoneList.Count = 0 then 
+		tmpStr:= tmpStr + '(no modifications) ';
+	ResultTextsList.Add(FormatResultHeader(tmpStr,headerStr));
+	ResultTextsList.AddStrings(ModificationsDoneList);
+	ResultTextsList.Add(' ');
+	
+	if BeforeChangesList.Count >= 1 then begin
+		ResultTextsList.Add(FormatResultHeader('Before changes: ',headerStr));
+		ResultTextsList.AddStrings(BeforeChangesList);		
+		ResultTextsList.Add(' ');
+	end;
+	
+	if AfterChangesList.Count >= 1 then begin
+		ResultTextsList.Add(FormatResultHeader('After changes: ',headerStr));
+		ResultTextsList.AddStrings(AfterChangesList);		
+		ResultTextsList.Add(' ');
+	end;
+	
+	LogFunctionEnd;
+end;
+
+function FormatResultHeader (text, headerStr : String) : String;
+begin
+	LogFunctionStart('FormatResultHeader');
+	
+	Result:= Copy(headerStr,1,5)
+		+ ' ' + text + ' '
+		+ Copy(headerStr,1,Length(headerStr)-Length(text)-2);
+	
+	LogFunctionEnd;
 end;
 
 end.
