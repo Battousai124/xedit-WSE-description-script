@@ -586,6 +586,38 @@ begin
 	//DebugLog(Format('Mode: "%d"',[GlobConfig.PluginSelectionMode]));
 	
 	if not bAborted then begin
+		// create new plugin
+		if not Assigned(plugin) then
+		begin
+			CreateMainForm;
+			
+			if GlobConfig.PluginSelectionMode = 1 then begin
+				plugin := AddNewFile;
+				LogModification(Format('new plugin created: %s',[GetFileName(plugin)]));
+			end else if GlobConfig.PluginSelectionMode = 2 then begin 
+				plugin := FileByIndex(Pred(FileCount));
+				LogCheckSuccessful(Format('Existing plugin selected to store record: %s',[GetFileName(plugin)]));
+			end else begin //also happening on "Cancel"
+				//bAborted := true;
+				Log('Operation aborted by user.');
+				Exit; //--> no result form necessary here
+			end;
+			
+			if not bAborted and not Assigned(plugin) then
+			begin
+				LogCheckFailed('The plugin selected could not be loaded. Operation aborted.');
+				bAborted := true;
+			end;
+		end;
+
+		// skip already copied
+		if (not bAborted) and (GetFileName(e) = GetFileName(plugin)) then begin
+			LogCheckFailed(Format('The plugin to store the record would overwrite the existing record. Operation aborted. - plugin: %s',[GetFileName(plugin)]));
+			bAborted := true;
+		end;
+	end;
+	
+	if not bAborted then begin
 		desc := GetOmodDescription(e);
 
 		if desc = '' then begin
@@ -606,38 +638,7 @@ begin
 		end;
 	end;
 
-	if not bAborted and bModificationNecessary then begin
-		// create new plugin
-		if not Assigned(plugin) then
-		begin
-			if MessageDlg('Create new patch plugin [YES] or append to the last loaded one [NO]?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
-				GlobConfig.PluginSelectionMode := 1
-			else
-				GlobConfig.PluginSelectionMode := 2;
-			
-			if GlobConfig.PluginSelectionMode = 1 then begin
-				plugin := AddNewFile;
-				LogModification(Format('new plugin created: %s',[GetFileName(plugin)]));
-			end else if GlobConfig.PluginSelectionMode = 2 then begin 
-				plugin := FileByIndex(Pred(FileCount));
-				LogCheckSuccessful(Format('Existing plugin selected to store record: %s',[GetFileName(plugin)]));
-			end;
-			
-			if not Assigned(plugin) then
-			begin
-				Result := 1;
-				Exit;
-			end;
-		end;
-
-		// skip already copied
-		if GetFileName(e) = GetFileName(plugin) then begin
-			LogCheckFailed(Format('The plugin to store the record would overwrite the existing record. Operation aborted. - plugin: %s',[GetFileName(plugin)]));
-			bAborted := true;
-		end;
-	end;
-
-	if not bAborted and bModificationNecessary then begin
+	if (not bAborted) and (bModificationNecessary) then begin
 		// add masters
 		AddRequiredElementMasters(e, plugin, False);
 

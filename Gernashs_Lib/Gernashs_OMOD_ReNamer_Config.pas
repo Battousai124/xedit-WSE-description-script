@@ -16,14 +16,14 @@ var
 
 implementation
 
-procedure SetDefaultConfig();
+procedure SetDefaultConfig;
 begin
 	LogFunctionStart('SetDefaultConfig');
 	//all properties of the config class need to be initialized here. 
 	//(Without initialization they do not carry their correct data type.)
 	
 	EnableDebugLog := true; //resides in its own unit
-	GlobConfig.PluginSelectionMode := 1;
+	GlobConfig.PluginSelectionMode := 2;
 	
 	LogFunctionEnd;
 end;

@@ -123,7 +123,7 @@ end;
 
 //=========================================================================
 //  creates a checkbox.
-//  Example usage: cb := ConstructCheckBox(frm, pnlBottom, 8, 8, 160, 'Setting1', cbChecked);
+//  Example usage: cb := ConstructCheckBox(frm, pnlBottom, 8, 8, 160, 'Setting1', cbChecked, '');
 //=========================================================================
 function ConstructCheckBox(frm, parent: TObject; top, left, width: Integer; caption: String; state: TCheckBoxState; hint: string): TCheckBox;
 var
@@ -139,6 +139,37 @@ begin
 	cb.Width := width;
 	cb.Caption := caption;
 	cb.State := state;
+	if (hint <> '') then begin
+		cb.ShowHint := true;
+		cb.Hint := hint;
+	end;
+
+	Result := cb;
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  creates a checkbox.
+//  Example usage: cb := ConstructCheckBox(frm, pnlBottom, 8, 8, 160, 'Setting1', true, '');
+//=========================================================================
+function ConstructCheckBox2(frm, parent: TObject; top, left, width: Integer; caption: String; checked: boolean; hint: string): TCheckBox;
+var
+	cb: TCheckBox;
+begin
+	LogFunctionStart('ConstructCheckBox');
+	DebugLog('caption: ' + caption);
+	
+	cb := TCheckBox.Create(frm);
+	cb.Parent := parent;
+	cb.Top := top;
+	cb.Left := left;
+	cb.Width := width;
+	cb.Caption := caption;
+	if checked then 
+		cb.State := cbChecked
+	else
+		cb.State := cbUnchecked;
+		
 	if (hint <> '') then begin
 		cb.ShowHint := true;
 		cb.Hint := hint;
@@ -235,7 +266,7 @@ end;
 // 	(currently only supports horizontal radio buttons
 //  Example usage: rg:=ConstructPseudoRadioGroup(frm, frm, 10,0, 20,460, 'settings', 220, '', items, 70,1);
 //=========================================================================
-function ConstructPseudoRadioGroup(frm, parent: TObject; top, left, height, width: Integer; lblText, lblWidth: Integer; hint : String; items : TStringList; itemWidth, indexChecked: Integer; disabledText : String): TRadioGroup;
+function ConstructPseudoRadioGroup(frm, parent: TObject; top, left, height, width: Integer; lblText : String; lblWidth: Integer; hint : String; items : TStringList; itemWidth, indexChecked: Integer; disabledText : String): TRadioGroup;
 var
 	pnl : TPanel;
 	rb : TRadioButton;
@@ -353,6 +384,33 @@ begin
 	LogFunctionEnd;
 end;
 
+
+//=========================================================================
+//  Read radio button configuration out of pseudo-RadioGroup
+//=========================================================================
+function GetPseudoRadioButtonGroupValue(rg: TPanel) : Integer;
+var 
+	i : Integer;
+	tmpStr : String;
+begin
+	LogFunctionStart('GetPseudoRadioButtonGroupValue');
+	
+	Result:= 0;
+	
+	if rg.ControlCount-1 > 1 then begin
+		for i := rg.ControlCount-1 downto 1 do begin
+			if rg.Controls[i].Checked then begin
+				Result:= i;
+				break;
+			end;
+		end;
+	end;
+	//(if - for any reason - no radio button is checked, function returns 0)
+	
+	DebugLog(Format('Setting for "%s": %d',[rg.Controls[0].Caption,Result]));
+	
+	LogFunctionEnd;
+end;
 
 	
 end.
