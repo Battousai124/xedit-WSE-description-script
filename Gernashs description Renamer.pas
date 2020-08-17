@@ -19,6 +19,7 @@ uses xEditAPI, Classes, SysUtils, StrUtils, Windows;
 uses 'Effs_Lib\EffsDebugLog';
 uses 'Effs_Lib\EffsFormTools';
 uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Form';
+uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Config';
 //uses 'Effs_Lib\EffsXEditTools';
 
 
@@ -542,7 +543,6 @@ end;
 
 function Initialize: Integer;
 begin
-	EnableDebugLog := true; 
 	bModificationNecessary := true;
 	LogFunctionStart('Initialize');
 	
@@ -556,6 +556,7 @@ begin
 	BeforeChangesList:= TStringList.Create;
 	AfterChangesList:= TStringList.Create;
 	
+	SetDefaultConfig;
 	
 	LogFunctionEnd;
 end;
@@ -573,8 +574,7 @@ begin
 		LogCheckSuccessful('This record has the right signature');
 	
 	// patch the winning override record
-
-  e := WinningOverride(e);
+	e := WinningOverride(e);
 
   if not Assigned(e) then
   begin
@@ -582,6 +582,8 @@ begin
       ('something went wrong when getting the override for this record.');
     bAborted := true;
   end;
+	
+	//DebugLog(Format('Mode: "%d"',[GlobConfig.PluginSelectionMode]));
 	
 	if not bAborted then begin
 		desc := GetOmodDescription(e);
@@ -597,9 +599,7 @@ begin
 		
 		if SameText(oldDesc, desc) then
 		begin
-			LogCheckSuccessful
-				(Format('Description already up to date. Operation aborted. - DESC: "%s"',
-				[desc]));
+			LogCheckSuccessful(Format('Description already up to date. Operation aborted. - DESC: "%s"',[desc]));
 			bModificationNecessary := false;
 		end else begin
 			BeforeChangesList.Add(Format('DESC: "%s"',[oldDesc]));
@@ -610,16 +610,19 @@ begin
 		// create new plugin
 		if not Assigned(plugin) then
 		begin
-			if MessageDlg
-				('Create new patch plugin [YES] or append to the last loaded one [NO]?',
-				mtConfirmation, [mbYes, mbNo], 0) = mrYes then
-			begin
+			if MessageDlg('Create new patch plugin [YES] or append to the last loaded one [NO]?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+				GlobConfig.PluginSelectionMode := 1
+			else
+				GlobConfig.PluginSelectionMode := 2;
+			
+			if GlobConfig.PluginSelectionMode = 1 then begin
 				plugin := AddNewFile;
 				LogModification(Format('new plugin created: %s',[GetFileName(plugin)]));
-			end else begin
+			end else if GlobConfig.PluginSelectionMode = 2 then begin 
 				plugin := FileByIndex(Pred(FileCount));
 				LogCheckSuccessful(Format('Existing plugin selected to store record: %s',[GetFileName(plugin)]));
 			end;
+			
 			if not Assigned(plugin) then
 			begin
 				Result := 1;
@@ -667,6 +670,7 @@ begin
 
 	LogFunctionEnd;
 end;
+
 
 function Finalize: Integer;
 begin
