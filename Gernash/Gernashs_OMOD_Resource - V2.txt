@@ -94,6 +94,8 @@ SpellPA_CommonArm "PA Common Arm"=Rate 3 points/sec for 3 sec
 {{{-------------------------Keywords_Values_Type---------------------------
 Ammo=Ammo_Type
 {{{---------------------------------------------------------------------}}}
+AmmoAlienBlaster "Alien Blaster Round"=Changes ammo type to Alien Blaster Round
+AmmoFusionCell "Fusion Cell"=Changes ammo type to Fusion Cells.
 dn_HasReceiver_Crank1=Two crank reload maximum. | Ammo Capacity: 2
 dn_HasReceiver_Crank2=Three crank reload maximum.
 dn_HasReceiver_Crank3=Four crank reload maximum.
