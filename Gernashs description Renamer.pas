@@ -16,13 +16,20 @@ interface
 implementation
 
 uses xEditAPI, Classes, SysUtils, StrUtils, Windows;
+uses 'Effs_Lib\EffsDebugLog';
+//uses 'Effs_Lib\EffsFormTools';
+//uses 'Effs_Lib\EffsXEditTools';
+
 
 const
-  sPropertiesList = wbScriptsPath + 'Gernashs description Renamer - Resource.txt';
+  sPropertiesList = wbScriptsPath + 'Gernashs_Lib\Gernashs description Renamer - Resource.txt';
 
 var
   slPropertyMap: TStringList;
   plugin: IInterface;
+	ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList : TStringList;
+	bChecksFailed, bAborted : Boolean;
+	
 
 procedure GetMappedValues(rec : IInterface; mappedValues, indicesToSkip, mappedValuesFormat : TStringList;);
 var
@@ -36,6 +43,7 @@ var
   
   
 begin
+	LogFunctionStart('GetMappedValues');
 	properties := ElementByPath(rec, 'DATA\Properties');
 	for i := 0 to Pred(ElementCount(properties)) do
 	begin
@@ -197,14 +205,15 @@ begin
 		  loopResultFormatted := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
 		end;
 	
-     // AddMessage(Format('loopResultFormatted: %s', [loopResultFormatted]));
-     //   AddMessage(Format('loopResult: %s', [loopResult]));
+     // DebugLog(Format('loopResultFormatted: %s', [loopResultFormatted]));
+     //   DebugLog(Format('loopResult: %s', [loopResult]));
 		
 		// add property index as prefix for sorting
 		
 		mappedValues.Add(loopResult);
 		mappedValuesFormat.Add(loopResultFormatted);
 	end;
+	LogFunctionEnd;
 end;
 
 
@@ -222,6 +231,7 @@ var
 	mappedValuesFormat, mappedValues, indicesToSkip : TStringList;
 	i,j,k, dummyInt : Integer;
 begin
+	LogFunctionStart('GetMappedDescription');
 	mappedValues:=TStringList.Create;
 	indicesToSkip:=TStringList.Create;
 	mappedValuesFormat:=TStringList.Create;
@@ -463,16 +473,16 @@ begin
 				loopResult := Format('%s%s', [mappedName, mappedValueFormat]);
 				end
 
-//        	AddMessage(Format('mappedName: %s', [mappedName]));
-//        	AddMessage(Format('mappedValue: %s', [mappedValue]));
-//       	AddMessage(Format('value1Loop1: %s', [value1Loop1]));
-//        	AddMessage(Format('valuetype: %s', [valuetype]));
-//        	AddMessage(Format('valuetype2: %s', [valuetype2]));
-//        	AddMessage(Format('mappedValue2: %s', [mappedValue2]));
-//        	AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
-//        	AddMessage(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
-//        	AddMessage(Format('value1Loop2: %s', [value1Loop2]));
-//        	AddMessage(Format('loopResult: %s', [loopResult]));
+//        	DebugLog(Format('mappedName: %s', [mappedName]));
+//        	DebugLog(Format('mappedValue: %s', [mappedValue]));
+//       	DebugLog(Format('value1Loop1: %s', [value1Loop1]));
+//        	DebugLog(Format('valuetype: %s', [valuetype]));
+//        	DebugLog(Format('valuetype2: %s', [valuetype2]));
+//        	DebugLog(Format('mappedValue2: %s', [mappedValue2]));
+//        	DebugLog(Format('valuePropertytype2: %s', [valuePropertytype2]));
+//        	DebugLog(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
+//        	DebugLog(Format('value1Loop2: %s', [value1Loop2]));
+//        	DebugLog(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
 
@@ -487,6 +497,7 @@ begin
 		mappedValuesFormat.Free;
 		mappedValuesFormat:=nil;
 	end;
+	LogFunctionEnd;
 end;
 
 function GetOmodDescription(rec: IInterface): String;
@@ -496,6 +507,7 @@ var
   sl: TStringList;
 
 begin
+	LogFunctionStart('GetOmodDescription');
   sl := TStringList.Create;
   sl.Sorted := true; // sorting automatically happens at insert
 
@@ -524,12 +536,23 @@ begin
     sl.Free;
     sl := nil;
   end;
+	LogFunctionEnd;
 end;
 
 function Initialize: Integer;
 begin
+	EnableDebugLog := true; 
+	LogFunctionStart('Initialize');
+	
   slPropertyMap := TStringList.Create;
   slPropertyMap.LoadFromFile(sPropertiesList);
+	
+	ChecksFailedList:= TStringList.Create;
+	ChecksSuccessfulList:= TStringList.Create;
+	ModificationsDoneList:= TStringList.Create;
+	
+	
+	LogFunctionEnd;
 end;
 
 function Process(e: IInterface): Integer;
@@ -537,16 +560,21 @@ var
   desc, oldDesc: string;
   r: IInterface;
 begin
-  if Signature(e) <> 'OMOD' then
-    Exit;
-
+	LogFunctionStart('Process');
+	
+	if not CheckRecordSignature(e) then
+		Exit
+	else
+		LogCheckSuccessful('This record has the right signature');
+	
+ 
   // patch the winning override record
 
   e := WinningOverride(e);
 
   if not Assigned(e) then
   begin
-    AddMessage
+    Log
       ('something went wrong when getting the override for this record.');
     Exit;
   end;
@@ -558,7 +586,7 @@ begin
   oldDesc := GetEditValue(ElementByPath(e, 'DESC'));
   if SameText(oldDesc, desc) then
   begin
-    AddMessage
+    Log
       (Format('description already up to date, ending script - description: "%s"',
       [desc]));
     Exit;
@@ -592,7 +620,7 @@ begin
     r := wbCopyElementToFile(e, plugin, False, true);
     if not Assigned(r) then
     begin
-      AddMessage('something went wrong when creating the override record.');
+      Log('something went wrong when creating the override record.');
       Exit;
     end;
     // setting new description
@@ -600,19 +628,82 @@ begin
   except
     on Ex: Exception do
     begin
-      AddMessage('Failed to copy: ' + FullPath(e));
-      AddMessage('    reason: ' + Ex.Message);
+      Log('Failed to copy: ' + FullPath(e));
+      Log('    reason: ' + Ex.Message);
     end
   end;
 
+	LogFunctionEnd;
 end;
 
 function Finalize: Integer;
 begin
+	LogFunctionStart('Finalize');
   slPropertyMap.Free;
   slPropertyMap := nil;
+	ChecksFailedList.Free;
+	ChecksFailedList:=nil;	
+	ChecksSuccessfulList.Free;
+	ChecksSuccessfulList:=nil;
+	ModificationsDoneList.Free;
+	ModificationsDoneList:=nil;	
+	
   if Assigned(plugin) then
     SortMasters(plugin);
+	LogFunctionEnd;
+end;
+
+
+//=========================================================================
+//  Pure Checks (do not contain modification)
+//=========================================================================
+
+function CheckRecordSignature(w : IInterface;) : Boolean;
+begin
+	LogFunctionStart('CheckRecordSignature');
+	Result:= true;
+	
+	if Signature(w) <> 'OMOD' then begin
+		MessageDlg('The record you are trying to perform this script on has the wrong signature. It should be an OMOD.', mtWarning, [mbAbort], 0);
+		Result:=false;
+	end;
+	
+	LogFunctionEnd;
+end;
+
+
+//=========================================================================
+//  Logs and output beautification
+//=========================================================================
+procedure LogCheckFailed (message : string;);
+begin
+	//LogFunctionStart('LogCheckFailed');
+	
+	bChecksFailed := true;
+	ChecksFailedList.Add(message);
+	Log('Check failed: ' + message);
+	
+	//LogFunctionEnd;
+end;
+
+procedure LogCheckSuccessful (message : string;);
+begin
+	//LogFunctionStart('LogCheckSuccessful');
+	
+	ChecksSuccessfulList.Add(message);
+	Log('Check successful: ' + message);
+	
+	//LogFunctionEnd;
+end;
+
+procedure LogModification (message : string;);
+begin
+	//LogFunctionStart('LogModification');
+	
+	ModificationsDoneList.Add(message);
+	Log('Modification performed: ' + message);
+	
+	//LogFunctionEnd;
 end;
 
 end.
