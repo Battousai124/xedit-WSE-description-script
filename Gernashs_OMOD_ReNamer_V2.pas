@@ -2,7 +2,7 @@
 // Gernashs_OMOD_ReNamer
 //
 // Ver: 4
-// WIP (1)
+// WIP (2)
 // Author: Gernash
 // Scripting: EffEIO
 // Tester: KenShin
@@ -202,10 +202,17 @@ begin
 			 end;
 		end
 	
-		else if	(valuePropertytype = 'Enchantments') then 
+		else if	(valuePropertytype = 'Enchantments') or (valuePropertytype = 'ZoomData') then 
 		begin	
-		  loopResult := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
-		  loopResultFormatted := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+		  loopResult := GetElementEditValues(prop, 'Value 1');
+		  // loopResultFormatted := Copy(loopResult, 1, Pos(' [', loopResult)-1);
+		loopResultFormatted := RegExReplace('cc.*?_', '', (Copy(loopResult, 1, Pos(' [', loopResult)-1)));
+		  // RegExReplace('cc.*?_', '', (Copy(loopResult, 1, Pos(' [', loopResult)-1));
+		  // AddMessage(Format('value1Loop1: %s', [value1Loop1]));
+		  AddMessage(Format('loopResult: %s', [loopResult]));
+		   AddMessage(Format('loopResultFormatted: %s', [loopResultFormatted]));
+		  
+		  AddMessage(Format('valuePropertytype: %s', [GetElementEditValues(prop, 'Value 1')]));
 		end;
 	
      // AddMessage(Format('loopResultFormatted: %s', [loopResultFormatted]));
@@ -260,6 +267,11 @@ begin
 			mappedValue := mappedValues[i];
 			mappedValueFormat := mappedValuesFormat[i];
 			value1Loop1 := slPropertyMap.Values[Copy(GetElementEditValues(prop, 'Value 1'), 1, Pos(' [', GetElementEditValues(prop, 'Value 1'))-1)];
+			AddMessage(Format('value1Loop1: %s', [value1Loop1]));
+			
+			//RegExReplace('cc.*?_', '', value1Loop1);
+			
+			
 			valuefunctiontype := GetElementEditValues(prop, 'Function Type');
 			valuetype := GetElementEditValues(prop, 'Value Type');
 
@@ -479,16 +491,16 @@ begin
 				loopResult := Format('%s%s', [mappedName, mappedValueFormat]);
 				end
 
-        	AddMessage(Format('mappedName: %s', [mappedName]));
-        	AddMessage(Format('mappedValue: %s', [mappedValue]));
-			AddMessage(Format('value1Loop1: %s', [value1Loop1]));
+//        	AddMessage(Format('mappedName: %s', [mappedName]));
+ //       	AddMessage(Format('mappedValue: %s', [mappedValue]));
+//			AddMessage(Format('value1Loop1: %s', [value1Loop1]));
 //        	AddMessage(Format('valuetype: %s', [valuetype]));
 //        	AddMessage(Format('valuetype2: %s', [valuetype2]));
 //        	AddMessage(Format('mappedValue2: %s', [mappedValue2]));
 //        	AddMessage(Format('valuePropertytype2: %s', [valuePropertytype2]));
 //        	AddMessage(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
 //        	AddMessage(Format('value1Loop2: %s', [value1Loop2]));
-        	AddMessage(Format('loopResult: %s', [loopResult]));
+//        	AddMessage(Format('loopResult: %s', [loopResult]));
 
 			// add property index as prefix for sorting
 
@@ -539,6 +551,26 @@ begin
   finally
     sl.Free;
     sl := nil;
+  end;
+end;
+
+function RegExReplace(const asExpression, asReplacement, asSubject : String) : String;
+var
+  re     : TPerlRegEx;
+  output : String;
+begin
+  re := TPerlRegEx.Create;
+  try
+    re.RegEx := asExpression;
+    re.Options := [];
+    re.Subject := asSubject;
+    re.Replacement := asReplacement;
+    re.ReplaceAll;
+    output := re.Subject;
+  finally
+    re.Free;
+    Result := output;
+	AddMessage(Format('output: %s', [output]));
   end;
 end;
 
