@@ -14,15 +14,15 @@ uses Windows;
 procedure CreateMainForm ();
 var 
 	lbl: TLabel; //label object - re-used/overwritten for every label
-	i , curTopPos : Integer; //re-used/overwritten every time
+	i, tmpInt, curTopPos : Integer; //re-used/overwritten every time
 	tmpStringList : TStringList; //re-used/overwritten every time
 	tmpStr : String; //re-used/overwritten every time
 	tmpCbState : TCheckBoxState; //re-used/overwritten every time
 	frm : TForm;
-	gbGeneral, gbMainSettings : TGroupBox;
+	gbGeneral, gbMainSettings, gbTranslateResourceFile : TGroupBox;
 	cbGeneralWriteDebugLog : TCheckBox; 
-	pnlButtons, rgPluginSelectionMode : TPanel;
-	btnCancel, btnOk : TButton;
+	pnlButtons, rgPluginSelectionMode, pnlTranslate : TPanel;
+	btnCancel, btnOk, btnTranslate : TButton;
 begin
 	LogFunctionStart('CreateMainForm');
 	frm := TForm.Create(nil);
@@ -44,8 +44,12 @@ begin
 			, '');
 		curTopPos := lbl.Top + lbl.Height + 12;
 		
-		gbGeneral := ConstructGroupBox(frm, frm, curTopPos, 10, frm.Height-curTopPos-65, (frm.Width-20)/4, 'General Settings ', '');
-		cbGeneralWriteDebugLog := ConstructCheckBox2(frm, gbGeneral, 18, 10, 200, 
+		//general settings
+		tmpInt := frm.Height-curTopPos-65;
+		if GlobConfig.ShowResourceFileTranslationOption then
+			tmpInt := (tmpInt/2) + 6;
+		gbGeneral := ConstructGroupBox(frm, frm, curTopPos, 10, tmpInt, (frm.Width-20)/4, 'General Settings ', '');
+		cbGeneralWriteDebugLog := ConstructCheckBox2(frm, gbGeneral, 18, 10, gbGeneral.Width-18, 
 			'Write Debug Log', EnableDebugLog, 
 			'if checked: will write a detailed debug log into the Messages tab of xEdit - else only relevant outputs will be logged there'
 			+ chr(13) + chr(10)
@@ -54,11 +58,23 @@ begin
 			+ '(At the end of the operation there will always be a result-window displayed.)'
 			);
 		
+		//special stuff 
+		if GlobConfig.ShowResourceFileTranslationOption then begin
+			gbTranslateResourceFile := ConstructGroupBox(frm, frm, gbGeneral.Top + gbGeneral.Height, 10, frm.Height-gbGeneral.Height-gbGeneral.Top-65, (frm.Width-20)/4, 'Translate File ', '');
+			pnlTranslate := ConstructPanel(frm, gbTranslateResourceFile, 20, 0, gbTranslateResourceFile.Height, gbTranslateResourceFile.Width, '', '');
+			pnlTranslate.BevelOuter := bvNone;
+			lbl := ConstructLabel(frm, pnlTranslate, 10, 10, 0, pnlTranslate.Width, 'create backup & then translate resorce'+ chr(13) + chr(10), '');
+			btnTranslate:= ConstructButton(frm, pnlTranslate, pnlTranslate.Height-55, 10, 0, 0, 'Translate File');
+			btnTranslate.OnClick:=OnClickTranslate;
+			btnTranslate.ModalResult:= mrCancel;
+		
+		end;
+		
 		//main settings
 		gbMainSettings := ConstructGroupBox(frm, frm, gbGeneral.Top, gbGeneral.Width+16, frm.Height-gbGeneral.Top-65, frm.Width-gbGeneral.Width-25, 'Check / Modification Settings ', '');
 		
-		//Weapon Name and Class
-		lbl := ConstructLabel(frm, gbMainSettings, 20, 10, 16, gbMainSettings.Width - 30, 'Plugin Settings:', '');
+		//Plugin and Records
+		lbl := ConstructLabel(frm, gbMainSettings, 20, 10, 16, gbMainSettings.Width - 30, 'Plugin and Records:', '');
 		curTopPos := lbl.Top + 16;
 		
 		tmpStringList.Clear;
@@ -68,6 +84,14 @@ begin
 			'defines where changes are stored - e.g. a new plugin can be created at the end of the load order or an existing plugin can be used'
 			, tmpStringList, (gbMainSettings.Width-16)*2/3/tmpStringList.Count, GlobConfig.PluginSelectionMode, '');
 		
+		
+		
+		
+		
+		
+		
+		
+		
 		//Buttons at the bottom
 		pnlButtons:=ConstructPanel(frm, frm, frm.Height - 75, -5, 75, frm.Width + 10, '', '');
 		
@@ -75,8 +99,8 @@ begin
 		btnCancel.OnClick:=OnClickCancel;
 		btnCancel.ModalResult:= mrCancel;
 		
-		btnCancel:= ConstructButton(frm, pnlButtons, 6, btnCancel.Left - btnCancel.Width - 5, 0, 0, 'Next');
-		btnCancel.ModalResult:= mrOk;
+		btnOk:= ConstructButton(frm, pnlButtons, 6, btnCancel.Left - btnCancel.Width - 5, 0, 0, 'Next');
+		btnOk.ModalResult:= mrOk;
 		
 		//lbl := ConstructLabel(frm, pnlButtons, 12, 14, 0, frm.Width - 30, 
 		//	'(When you press "Next" an analysis of the OMOD is conducted to create a new description mirroring your personal load order.)'
@@ -131,6 +155,19 @@ begin
 	LogFunctionEnd;
 end;
 
+
+//=========================================================================
+//  Event when Translate is clicked
+//=========================================================================
+procedure OnClickTranslate(Sender: TObject;);
+begin
+	LogFunctionStart('OnClickTranslate');
+	
+	GlobConfig.MainAction := 2;
+	GlobConfig.Cancelled := true;
+	
+	LogFunctionEnd;
+end;
 
 //=========================================================================
 //  results form used to visualize whatever the script did

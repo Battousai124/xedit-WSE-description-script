@@ -20,7 +20,7 @@ uses 'Effs_Lib\EffsDebugLog';
 uses 'Effs_Lib\EffsFormTools';
 uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Form';
 uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Config';
-//uses 'Effs_Lib\EffsXEditTools';
+uses 'Effs_Lib\EffsXEditTools';
 
 
 const
@@ -31,6 +31,7 @@ var
   plugin: IInterface;
 	ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList, BeforeChangesList, AfterChangesList : TStringList;
 	bChecksFailed, bAborted, bRecordSkipped, bModificationNecessary : Boolean;
+	bSlPropertyMapTranslated : Boolean;
 	
 
 procedure GetMappedValues(rec : IInterface; mappedValues, indicesToSkip, mappedValuesFormat : TStringList;);
@@ -83,15 +84,15 @@ begin
 			if floatValue > 1.0 then
 			begin
 				loopResult := FloatToStr(floatValue);
-				loopResultFormatted := '+' + FloatToStr(floatValue) + chr($00B0);
+				loopResultFormatted := '+' + loopResult + chr($00B0);
 			end else if floatValue > 0.0 then
 			begin
 				loopResult := IntToStr(Int(floatValue * 100));
-				loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + chr($00B0);
+				loopResultFormatted := '+' + loopResult + chr($00B0);
 			end else
 			begin
 				loopResult := IntToStr(Int(floatValue * 100));
-				loopResultFormatted := IntToStr(Int(floatValue * 100))+ chr($00B0);
+				loopResultFormatted := loopResult + chr($00B0);
 			end;
 		end
 		
@@ -114,17 +115,17 @@ begin
 			if floatValue > 1.0 then
 			Begin
 					loopResult := FloatToStr(floatValue);
-					loopResultFormatted := FloatToStr(floatValue) + 'x';
+					loopResultFormatted := loopResult + 'x';
 					if valuePropertytype = 'AmmoCapacity' then
-					loopResultFormatted := FloatToStr(floatValue);
+					loopResultFormatted := loopResult;
 				end else if floatValue > 0.0 then
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := '+' + loopResult + '%';
 				end else
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := loopResult + '%';
 				end;
 		end
 		
@@ -135,15 +136,15 @@ begin
 			if floatValue > 1.0 then
 				Begin
 					loopResult := FloatToStr(floatValue);
-					loopResultFormatted := FloatToStr(floatValue);
+					loopResultFormatted := loopResult;
 				end else if floatValue > 0.0 then
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := '+' + loopResult + '%';
 				end else
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := loopResult + '%';
 				end;
 		end
 			
@@ -152,7 +153,7 @@ begin
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			loopResult := FloatToStr(floatValue);
-			loopResultFormatted := FloatToStr(floatValue) + ' rnd';
+			loopResultFormatted := loopResult + ' rnd';
 		end	
 		
 		else if (valuePropertytype = 'SightedTransitionSeconds') or
@@ -163,15 +164,15 @@ begin
 			if floatValue > 1.0 then
 				Begin
 					loopResult := FloatToStr(floatValue);
-					loopResultFormatted := FloatToStr(floatValue) + ' sec';
+					loopResultFormatted := loopResult + ' sec';
 				end else if floatValue > 0.0 then
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := '+' + loopResult + '%';
 				end else
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := loopResult + '%';
 				end;
 		end
 		
@@ -182,15 +183,15 @@ begin
 				if floatValue > 1.0 then
 				begin
 					loopResult := FloatToStr(floatValue);
-					loopResultFormatted := FloatToStr(floatValue);
+					loopResultFormatted := loopResult;
 				end else if floatValue > 0.0 then
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := '+' + loopResult + '%';
 				end else
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := loopResult + '%';
 				end;
 		end
 		
@@ -198,13 +199,13 @@ begin
 		begin
 			floatValue := GetElementEditValues(prop, 'Value 2'); // Value 2
 			loopResult := IntToStr(floatValue);
-			loopResultFormatted := IntToStr(floatValue);
+			loopResultFormatted := loopResult;
 			end
 	
 		else if	(valuePropertytype = 'Enchantments') then 
 		begin	
-		  loopResult := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
-		  loopResultFormatted := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+		  loopResult := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop, 6)))];
+		  loopResultFormatted := loopResult;
 		end;
 	
      // DebugLog(Format('loopResultFormatted: %s', [loopResultFormatted]));
@@ -232,6 +233,7 @@ var
 	prop, properties, prop2 : IInterface; 
 	mappedValuesFormat, mappedValues, indicesToSkip : TStringList;
 	i,j,k, dummyInt : Integer;
+	lookupStr : String;
 begin
 	LogFunctionStart('GetMappedDescription');
 	mappedValues:=TStringList.Create;
@@ -259,7 +261,7 @@ begin
 			mappedName := slPropertyMap.Values[valuePropertytype];
 			mappedValue := mappedValues[i];
 			mappedValueFormat := mappedValuesFormat[i];
-			value1Loop1 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+			value1Loop1 := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop, 6)))];
 			valuefunctiontype := GetElementEditValues(prop, 'Function Type');
 			valuetype := GetElementEditValues(prop, 'Value Type');
 
@@ -279,7 +281,7 @@ begin
 				valuetype2 := GetElementEditValues(prop2, 'Value Type');
 				valuePropertytype2 := GetElementEditValues(prop2, 'Property');
 				valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
-				value1Loop2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
+				value1Loop2 := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop2, 6)))];
 			
 				if value1Loop2 = '' then continue;
 
@@ -312,7 +314,7 @@ begin
                 valuetype2 := GetElementEditValues(prop2, 'Value Type');
                 valuePropertytype2 := GetElementEditValues(prop2, 'Property');
                 valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
-                value1Loop2 := slPropertyMap.Values[GetEditValue(ElementByIndex(prop2, 6))];
+                value1Loop2 := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop2, 6)))];
 
                 if value1Loop2 = '' then continue;
 
@@ -353,15 +355,15 @@ begin
                     if value1Loop2 > 1.0 then
                     begin
 						mappedValue2 := FloatToStr(value1Loop2);
-						mappedValue2FORMAT := format('%sx',[FloatToStr(value1Loop2)]);
+						mappedValue2FORMAT := format('%sx',[mappedValue2]);
                     end else if value1Loop2 > 0.0 then
                     begin
 						mappedValue2 := IntToStr(Int(value1Loop2 * 100));
-						mappedValue2FORMAT := format('+%s%', [IntToStr(Int(value1Loop2 * 100))]);
+						mappedValue2FORMAT := format('+%s%', [mappedValue2]);
                     end else
 					begin
 						mappedValue2 := IntToStr(Int(value1Loop2 * 100));
-						mappedValue2FORMAT := IntToStr(Int(value1Loop2 * 100)) + '%';
+						mappedValue2FORMAT := mappedValue2 + '%';
 					end;
 			end 
 
@@ -370,15 +372,15 @@ begin
                     if value1Loop2 > 1.0 then
                     begin
 						mappedValue2 := FloatToStr(value1Loop2);
-						mappedValue2FORMAT := '+' + FloatToStr(value1Loop2) + chr($00B0);
+						mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
                     end else if value1Loop2 > 0.0 then
                     begin
 						mappedValue2 := IntToStr(Int(value1Loop2 * 100));
-						mappedValue2FORMAT := '+' + IntToStr(Int(value1Loop2 * 100)) + chr($00B0);
+						mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
                     end else
 					begin
 						mappedValue2 := IntToStr(Int(value1Loop2 * 100));
-						mappedValue2FORMAT := IntToStr(Int(value1Loop2 * 100)) + chr($00B0);
+						mappedValue2FORMAT := mappedValue2 + chr($00B0);
 					end;
 			end ;
 
@@ -543,10 +545,9 @@ end;
 
 function Initialize: Integer;
 begin
-	LogFunctionStart('Initialize');
+	SetDefaultConfig;
 	
-  slPropertyMap := TStringList.Create;
-  slPropertyMap.LoadFromFile(sPropertiesList);
+	LogFunctionStart('Initialize');
 	
 	RecordsHeadersList:= TStringList.Create;
 	ResultTextsList:= TStringList.Create;
@@ -556,7 +557,10 @@ begin
 	BeforeChangesList:= TStringList.Create;
 	AfterChangesList:= TStringList.Create;
 	
-	SetDefaultConfig;
+  slPropertyMap := TStringList.Create;
+	slPropertyMap.LoadFromFile(sPropertiesList);
+	if GlobConfig.AlwaysTranslateResourceFileAfterLoading then 
+		TranslateDescriptionConfigurationFile;
 	
 	LogFunctionEnd;
 end;
@@ -594,6 +598,11 @@ begin
 		if not Assigned(plugin) then
 		begin
 			CreateMainForm;
+			
+			if GlobConfig.MainAction = 2 then begin
+				OverwriteDescriptionConfigurationFile;
+				Exit;
+			end;
 			
 			if GlobConfig.PluginSelectionMode = 1 then 
 			begin
@@ -725,6 +734,77 @@ end;
 
 
 //=========================================================================
+//  Translate the resource file / configuration file 
+//=========================================================================
+procedure OverwriteDescriptionConfigurationFile();
+var
+	slCurrentFile : TStringList; 
+	backupFileName : String;
+begin
+	LogFunctionStart('OverwriteDescriptionConfigurationFile');
+	slCurrentFile := TStringList.Create;
+	
+	if not bSlPropertyMapTranslated then 
+		TranslateDescriptionConfigurationFile;
+	
+	try
+		slCurrentFile.LoadFromFile(sPropertiesList);
+		backupFileName := StringReplace(sPropertiesList, '.txt', FormatDateTime('yyyymmdd_hhnnss',Now) + '_backup.txt', [rfIgnoreCase]);
+		slCurrentFile.SaveToFile(backupFileName);
+		
+		slPropertyMap.SaveToFile(sPropertiesList);
+	finally
+		slCurrentFile.Free;
+		slCurrentFile:=nil;	
+	end;
+	
+	LogFunctionEnd;
+end;
+
+
+//=========================================================================
+//  Translate the resource file / configuration file 
+//=========================================================================
+procedure TranslateDescriptionConfigurationFile();
+var
+	i, delimPos : Integer;
+	line, potentialRecord, newRecordStr : String;
+	rec : IInterface; 
+begin
+	LogFunctionStart('TranslateDescriptionConfigurationFile');
+	
+	for i := 0 to slPropertyMap.Count-1 do begin
+		line := slPropertyMap[i];
+		delimPos := Pos('=',line);
+		
+		if delimPos > 0 then begin
+			potentialRecord := Copy(line,1,delimPos-1);
+			//DebugLog(Format('Test2: %s',[potentialRecord]));
+			if Pos('[',potentialRecord) > 0 then begin 
+				rec := StringToRecord(potentialRecord);
+				if Assigned(rec) then begin
+					//DebugLog(Format('Test5: %s',[potentialRecord]));
+					newRecordStr := RecordToString(rec);
+					//DebugLog(Format('Test6: %s',[newRecordStr]));
+					slPropertyMap[i] := newRecordStr + Copy(line,delimPos,Length(line)-Length(potentialRecord));
+					//DebugLog(Format('Test7: %s',[newRecordStr]));
+					LogCheckSuccessful(Format('Translated load order dependent record notation in resource file to new notation: line-No.: %d - old notation: %s - new notation: %s',[i,potentialRecord,newRecordStr]));
+					//DebugLog(Format('Test8: %s',[newRecordStr]));
+				end else begin 
+					//DebugLog(Format('Test9: %s',[newRecordStr]));
+					LogCheckFailed(Format('Error translating the resource file: could not load record: %s',[potentialRecord]));
+				end;
+			end;
+		end;
+	end;
+	
+	bSlPropertyMapTranslated := true;
+	
+	LogFunctionEnd;
+end;
+
+
+//=========================================================================
 //  Pure Checks (do not contain modification)
 //=========================================================================
 
@@ -742,7 +822,6 @@ begin
 	
 	LogFunctionEnd;
 end;
-
 
 //=========================================================================
 //  Logs and output beautification
