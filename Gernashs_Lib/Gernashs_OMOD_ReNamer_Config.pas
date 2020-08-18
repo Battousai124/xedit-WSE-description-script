@@ -9,6 +9,7 @@ interface
 type 
 	TDescRenamerConfig = record
 		PluginSelectionMode : Integer;
+		Cancelled : Boolean;
 	end;
 
 var
@@ -22,8 +23,9 @@ begin
 	//all properties of the config class need to be initialized here. 
 	//(Without initialization they do not carry their correct data type.)
 	
-	EnableDebugLog := false; //resides in its own unit
+	EnableDebugLog := true; //resides in its own unit
 	GlobConfig.PluginSelectionMode := 2;
+	GlobConfig.Cancelled := false;
 	
 	LogFunctionEnd;
 end;

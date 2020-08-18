@@ -94,7 +94,7 @@ begin
 			DebugLog('MainForm: OK');
 			
 			//Remember Settings in Global Variables
-			if not bAborted then begin
+			if (not bAborted) and (not GlobConfig.Cancelled) then begin
 				//General
 				EnableDebugLog := (cbGeneralWriteDebugLog.State = cbChecked);
 			
@@ -125,6 +125,7 @@ begin
 	LogFunctionStart('OnClickCancel');
 	
 	GlobConfig.PluginSelectionMode := 0;
+	GlobConfig.Cancelled := true;
 	bAborted := true;
 	
 	LogFunctionEnd;
