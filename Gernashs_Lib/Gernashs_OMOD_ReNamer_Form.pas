@@ -151,7 +151,7 @@ begin
 	
 		frm.Caption := 'Gernash''s OMOD description renamer';
 		frm.Width := 800;
-		frm.Height := 800;
+		frm.Height := 650;
 		frm.Position := poScreenCenter;
 		
 		lblCaption := 'Results:';
