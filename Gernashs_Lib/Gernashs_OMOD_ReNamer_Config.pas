@@ -22,7 +22,7 @@ begin
 	//all properties of the config class need to be initialized here. 
 	//(Without initialization they do not carry their correct data type.)
 	
-	EnableDebugLog := true; //resides in its own unit
+	EnableDebugLog := false; //resides in its own unit
 	GlobConfig.PluginSelectionMode := 2;
 	
 	LogFunctionEnd;

@@ -82,6 +82,11 @@ begin
 		//	'(When you press "Next" an analysis of the OMOD is conducted to create a new description mirroring your personal load order.)'
 		//	, '');
 		
+		if GlobIndentLvl = 0 then begin
+			GlobIndentLvl := 2;
+			CachedIndention := GetIndention;
+		end;
+		
 		if frm.ShowModal = mrOk then begin
 			//set back time counter
 			GlobLogStart := Now;

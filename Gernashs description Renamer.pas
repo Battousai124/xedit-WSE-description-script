@@ -667,8 +667,7 @@ begin
 	end;
 		
 	PrepareResults(bChecksFailed, bAborted, e);
-	CreateResultsForm(bChecksFailed, bAborted, ResultTextsList);
-
+	
 	LogFunctionEnd;
 end;
 
@@ -676,7 +675,10 @@ end;
 function Finalize: Integer;
 begin
 	LogFunctionStart('Finalize');
-  slPropertyMap.Free;
+  
+	CreateResultsForm(bChecksFailed, bAborted, ResultTextsList);
+
+	slPropertyMap.Free;
   slPropertyMap := nil;
 	ChecksFailedList.Free;
 	ChecksFailedList:=nil;	
@@ -693,6 +695,7 @@ begin
 	
   if Assigned(plugin) then
     SortMasters(plugin);
+		
 	LogFunctionEnd;
 end;
 
@@ -810,6 +813,13 @@ begin
 		ResultTextsList.AddStrings(AfterChangesList);		
 		ResultTextsList.Add(' ');
 	end;
+	
+	ChecksFailedList.Clear;
+	ChecksSuccessfulList.Clear;
+	ModificationsDoneList.Clear;
+	BeforeChangesList.Clear;
+	AfterChangesList.Clear;
+	
 	
 	LogFunctionEnd;
 end;
