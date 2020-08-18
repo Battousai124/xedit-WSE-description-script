@@ -83,15 +83,15 @@ begin
 			if floatValue > 1.0 then
 			begin
 				loopResult := FloatToStr(floatValue);
-				loopResultFormatted := '+' + FloatToStr(floatValue) + chr($00B0);
+				loopResultFormatted := '+' + loopResult + chr($00B0);
 			end else if floatValue > 0.0 then
 			begin
 				loopResult := IntToStr(Int(floatValue * 100));
-				loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + chr($00B0);
+				loopResultFormatted := '+' + loopResult + chr($00B0);
 			end else
 			begin
 				loopResult := IntToStr(Int(floatValue * 100));
-				loopResultFormatted := IntToStr(Int(floatValue * 100))+ chr($00B0);
+				loopResultFormatted := loopResult + chr($00B0);
 			end;
 		end
 		
@@ -114,17 +114,17 @@ begin
 			if floatValue > 1.0 then
 			Begin
 					loopResult := FloatToStr(floatValue);
-					loopResultFormatted := FloatToStr(floatValue) + 'x';
+					loopResultFormatted := loopResult + 'x';
 					if valuePropertytype = 'AmmoCapacity' then
-					loopResultFormatted := FloatToStr(floatValue);
+					loopResultFormatted := loopResult;
 				end else if floatValue > 0.0 then
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := '+' + loopResult + '%';
 				end else
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := loopResult + '%';
 				end;
 		end
 		
@@ -135,15 +135,15 @@ begin
 			if floatValue > 1.0 then
 				Begin
 					loopResult := FloatToStr(floatValue);
-					loopResultFormatted := FloatToStr(floatValue);
+					loopResultFormatted := loopResult;
 				end else if floatValue > 0.0 then
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := '+' + loopResult + '%';
 				end else
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := loopResult + '%';
 				end;
 		end
 			
@@ -152,7 +152,7 @@ begin
 		begin
 			floatValue := GetNativeValue(ElementByIndex(prop, 6));
 			loopResult := FloatToStr(floatValue);
-			loopResultFormatted := FloatToStr(floatValue) + ' rnd';
+			loopResultFormatted := loopResult + ' rnd';
 		end	
 		
 		else if (valuePropertytype = 'SightedTransitionSeconds') or
@@ -163,15 +163,15 @@ begin
 			if floatValue > 1.0 then
 				Begin
 					loopResult := FloatToStr(floatValue);
-					loopResultFormatted := FloatToStr(floatValue) + ' sec';
+					loopResultFormatted := loopResult + ' sec';
 				end else if floatValue > 0.0 then
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := '+' + loopResult + '%';
 				end else
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := loopResult + '%';
 				end;
 		end
 		
@@ -182,15 +182,15 @@ begin
 				if floatValue > 1.0 then
 				begin
 					loopResult := FloatToStr(floatValue);
-					loopResultFormatted := FloatToStr(floatValue);
+					loopResultFormatted := loopResult;
 				end else if floatValue > 0.0 then
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := '+' + IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := '+' + loopResult + '%';
 				end else
 				begin
 					loopResult := IntToStr(Int(floatValue * 100));
-					loopResultFormatted := IntToStr(Int(floatValue * 100)) + '%';
+					loopResultFormatted := loopResult + '%';
 				end;
 		end
 		
@@ -198,13 +198,13 @@ begin
 		begin
 			floatValue := GetElementEditValues(prop, 'Value 2'); // Value 2
 			loopResult := IntToStr(floatValue);
-			loopResultFormatted := IntToStr(floatValue);
+			loopResultFormatted := loopResult;
 			end
 	
 		else if	(valuePropertytype = 'Enchantments') then 
 		begin	
 		  loopResult := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
-		  loopResultFormatted := slPropertyMap.Values[GetEditValue(ElementByIndex(prop, 6))];
+		  loopResultFormatted := loopResult;
 		end;
 	
      // DebugLog(Format('loopResultFormatted: %s', [loopResultFormatted]));
@@ -353,15 +353,15 @@ begin
                     if value1Loop2 > 1.0 then
                     begin
 						mappedValue2 := FloatToStr(value1Loop2);
-						mappedValue2FORMAT := format('%sx',[FloatToStr(value1Loop2)]);
+						mappedValue2FORMAT := format('%sx',[mappedValue2]);
                     end else if value1Loop2 > 0.0 then
                     begin
 						mappedValue2 := IntToStr(Int(value1Loop2 * 100));
-						mappedValue2FORMAT := format('+%s%', [IntToStr(Int(value1Loop2 * 100))]);
+						mappedValue2FORMAT := format('+%s%', [mappedValue2]);
                     end else
 					begin
 						mappedValue2 := IntToStr(Int(value1Loop2 * 100));
-						mappedValue2FORMAT := IntToStr(Int(value1Loop2 * 100)) + '%';
+						mappedValue2FORMAT := mappedValue2 + '%';
 					end;
 			end 
 
@@ -370,15 +370,15 @@ begin
                     if value1Loop2 > 1.0 then
                     begin
 						mappedValue2 := FloatToStr(value1Loop2);
-						mappedValue2FORMAT := '+' + FloatToStr(value1Loop2) + chr($00B0);
+						mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
                     end else if value1Loop2 > 0.0 then
                     begin
 						mappedValue2 := IntToStr(Int(value1Loop2 * 100));
-						mappedValue2FORMAT := '+' + IntToStr(Int(value1Loop2 * 100)) + chr($00B0);
+						mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
                     end else
 					begin
 						mappedValue2 := IntToStr(Int(value1Loop2 * 100));
-						mappedValue2FORMAT := IntToStr(Int(value1Loop2 * 100)) + chr($00B0);
+						mappedValue2FORMAT := mappedValue2 + chr($00B0);
 					end;
 			end ;
 
