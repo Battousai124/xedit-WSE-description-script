@@ -66,7 +66,7 @@ begin
 		if i > 0 then 
 			inBracket := Copy(inBracket, 1, i-1);
 		//DebugLog(Format('Test4 - inBracket: "%s"',[inBracket]));
-		i:=StrToInt('$' + Copy(inBracket, 1, 2));
+		i:=StrToInt('$' + Copy(inBracket, 2, 2));
 		//DebugLog(Format('Test9 - inBracket: %s, i: %d',[inBracket,i]));
 		if i <= Pred(FileCount) then begin
 			f := FileByIndex(i);
