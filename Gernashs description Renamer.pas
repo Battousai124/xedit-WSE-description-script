@@ -61,14 +61,15 @@ var
   desc, oldDesc: string;
   r, tmpEntry : IInterface;
 	tmpBool : Boolean;
-	recordNameForOutput : String;
+	recordNameForOutput, tmpStr : String;
 begin
 	if GlobConfig.Cancelled then 
-		Exit;
+		raise Exception.Create('Execution intentionally disrupted with an error (saves time when millions of records would be processed, because you executed the script on files, or even worse on Fallout4.esm)');
+	//tmpStr := Signature(e);
+	//DebugLog(Format('Sig: %s',[tmpStr]));
 	
 	bRecordSkipped := false;
 	bModificationNecessary := true;
-	//recordNameForOutput := RecordToString(e);
 	bRecordSkipped := (not CheckIfRecordShouldBeSkipped(e));
 	
 	if bRecordSkipped then
@@ -76,6 +77,11 @@ begin
 	
 	LogFunctionStart('Process');
 	
+	//if TypeOf (GetFile(e)) = TypeOf (e) then  { True }
+		//DebugLog(Format('Sig: %s',[tmpStr]));
+		//DebugLog(Signature(e));
+	
+	//raise Exception.Create('Variable has no value');
 	//DebugLog(Format('Mode: "%d"',[GlobConfig.PluginSelectionMode]));
 
 	if not bRecordSkipped then begin
