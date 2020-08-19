@@ -32,7 +32,7 @@ var
 	ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList, BeforeChangesList, AfterChangesList : TStringList;
 	bChecksFailed, bAborted, bRecordSkipped, bModificationNecessary : Boolean;
 	bSlPropertyMapTranslated : Boolean;
-	
+	lastFileProcessed : String;
 
 function Initialize: Integer;
 begin
@@ -63,13 +63,25 @@ var
 	tmpBool : Boolean;
 	recordNameForOutput : String;
 begin
-	LogFunctionStart('Process');
+	if GlobConfig.Cancelled then 
+		Exit;
+	
 	bRecordSkipped := false;
 	bModificationNecessary := true;
+	//recordNameForOutput := RecordToString(e);
+	bRecordSkipped := (not CheckIfRecordShouldBeSkipped(e));
 	
-	if not GlobConfig.Cancelled then begin 
+	if bRecordSkipped then
+		Exit;
+	
+	LogFunctionStart('Process');
+	
+	//DebugLog(Format('Mode: "%d"',[GlobConfig.PluginSelectionMode]));
+
+	if not bRecordSkipped then begin
 		// patch the winning override record
 		e := WinningOverride(e);
+		
 		recordNameForOutput := RecordToString(e);
 		
 		if not Assigned(e) then
@@ -77,14 +89,9 @@ begin
 			LogCheckFailed(Format('Something went wrong when getting the override for this record. Record skipped. - record: %s',[recordNameForOutput]));
 			bRecordSkipped := true;
 		end;
-		
-		if not bRecordSkipped then 
-			bRecordSkipped := (not CheckRecordSignature(e, recordNameForOutput));
 	end;
-	
-	//DebugLog(Format('Mode: "%d"',[GlobConfig.PluginSelectionMode]));
-	
-	if (not GlobConfig.Cancelled) and (not bAborted) then begin
+
+	if (not GlobConfig.Cancelled) and (not bAborted) and (not bRecordSkipped) then begin
 		// create new plugin
 		if not Assigned(plugin) then
 		begin
@@ -186,6 +193,8 @@ begin
 			end
 		end;
 	end;
+	
+	lastFileProcessed := GetFileName(e);
 	
 	LogFunctionEnd;
 end;
@@ -299,19 +308,20 @@ end;
 //  Pure Checks (do not contain modification)
 //=========================================================================
 
-function CheckRecordSignature(rec : IInterface; recordNameForOutput : String;) : Boolean;
+function CheckIfRecordShouldBeSkipped(rec : IInterface;) : Boolean;
 begin
-	LogFunctionStart('CheckRecordSignature');
+	//no logging in here due to performance reasons
+	//LogFunctionStart('CheckIfRecordShouldBeSkipped');
 	Result:= true;
 	
 	if Signature(rec) <> 'OMOD' then begin
-		LogCheckFailed(Format('Record has the wrong signature. Record skipped. - record: %s',[FullPath(rec)]));
+		//DebugLog(Format('Record has the wrong signature. Record skipped. - record: %s',[FullPath(rec)]));
 		Result:=false;
 	end else begin
-		LogCheckSuccessful(Format('Record has the right signature. - record: %s',[recordNameForOutput]));
+		//DebugLog(Format('Record has the right signature. - record: %s',[recordNameForOutput]));
 	end;
 	
-	LogFunctionEnd;
+	//LogFunctionEnd;
 end;
 
 //=========================================================================
