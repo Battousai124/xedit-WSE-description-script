@@ -112,7 +112,9 @@ begin
 		pnlPluginNameDisplay := ConstructPanel(frm, gbMainSettings, rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 21, rgPluginSelectionMode.Width, '', '');
 		pnlPluginNameDisplay.BevelOuter := bvNone;
 		lbl := ConstructLabel(frm, pnlPluginNameDisplay, 3, 10, 16, (gbMainSettings.Width-16)/3, 'Plugin Name', '');
+		lbl.Font.color := clGray;
 		lbl := ConstructLabel(frm, pnlPluginNameDisplay, lbl.Top, lbl.Left + lbl.Width, 16, pnlPluginNameDisplay.Width-lbl.Left-lbl.Width, GlobConfig.LastPluginInLoadOrder, '');
+		lbl.Font.color := clGray;
 		if not (GlobConfig.PluginSelectionMode = 2) then begin
 			pnlPluginNameDisplay.Visible := false;
 		end
