@@ -98,7 +98,7 @@ dn_HasReceiver_Crank1[Fallout4.esm]:KYWD=Two crank reload maximum. | Ammo Capaci
 dn_HasReceiver_Crank2[Fallout4.esm]:KYWD=Three crank reload maximum.
 dn_HasReceiver_Crank3[Fallout4.esm]:KYWD=Four crank reload maximum.
 dn_HasReceiver_Crank4[Fallout4.esm]:KYWD=Five crank reload maximum.
-dn_HasReceiver_Crank5 [KYWD:002377D7]-Six crank reload maximum.
+dn_HasReceiver_Crank5[Fallout4.esm]:KYWD=Six crank reload maximum.
 {{-----------------------------Calibre|Ammo------------------------------}}
 // Disabled OverrideProjectile=
 {{{---------------------------------------------------------------------}}}
@@ -204,7 +204,6 @@ dn_HasReceiver_Converted_Syringer[ArmorKeywords.esm]:KYWD=Changes Ammo to Syring
 {{{---------------------------Actor_Values_Type-------------------------}}}
 ActorValues=Actor_Values_Type
 {{{---------------------------------------------------------------------}}}
-Rating=Increase Armor Rating by: 
 Strength[Fallout4.esm]:AVIF=Increase STR by: 
 Perception[Fallout4.esm]:AVIF=Increase PER by: 
 Endurance[Fallout4.esm]:AVIF=Increase END by: 
@@ -230,13 +229,10 @@ Mod_ReducedPowerAttack_AV[Fallout4.esm]:AVIF=AP Drain from Power attacks reduced
 Mod_ReducedSprint_AV[Fallout4.esm]:AVIF=AP Drain from Sprinting reduced by: 
 Mod_Stabilized_AV[Fallout4.esm]:AVIF=Base stability increased by: 
 Mod_StealthMove_AV[Fallout4.esm]:AVIF=Increased Movement Speed while sneaking by: 
-PA_Charisma_AV[Fallout4.esm]:AVIF=NFW
 PA_Explosives_AV[Fallout4.esm]:AVIF=Reduce Damage from explosions by: 
-PA_KineticServos_AV[Fallout4.esm]:AVIF=NFW
 PA_OptimizedBracers_AV[Fallout4.esm]:AVIF=AP Drain from Power attacks reduced by: 
 PA_OptimizedServos_AV[Fallout4.esm]:AVIF=AP Drain from Sprinting reduced by: 
 PA_OverdriveServos_AV[Fallout4.esm]:AVIF=Sprint speed Boosted, AP Drain increased by: 
-PA_Strength_AV[Fallout4.esm]:AVIF=NFW
 PowerArmorVent[Fallout4.esm]:AVIF=Impact Landing Damage: +50 | Stagger Strength: +2 | Impact Landing Aggro Radius (Base: 15): +5 | Aggro Strength: x2 (if installed in both Legs) 
 ReduceLimbDamageMod[Fallout4.esm]:AVIF=Reduces limb damage by: 
 SpeedMult[Fallout4.esm]:AVIF=Increases wearer's movement speed by: 
@@ -244,12 +240,16 @@ ccBGSFO4116_PA_FlameResistance_AV [AVIF:FE06A826]=Fire damage reduced by:
 {{{-------------------Actor_Values_Type---DUD Entries-------------------}}}
 PA_Intelligence_AV[Fallout4.esm]:AVIF=NFW
 PA_OptimizedServos_AV[Fallout4.esm]:AVIF=NFW
+PA_KineticServos_AV[Fallout4.esm]:AVIF=NFW
+PA_Charisma_AV[Fallout4.esm]:AVIF=NFW
+PA_Strength_AV[Fallout4.esm]:AVIF=NFW
 PA_RustyKnuckles_AV[Fallout4.esm]:AVIF=NFW
 PA_ShockDmg_AV[Fallout4.esm]:AVIF=NFW
 mat_PA_X01_Institute[Fallout4.esm]:MSWP=NFW
 {{{--------------------------Enchantments_Value-------------------------}}}
 Enchantments=Enchantments_Value
 {{{---------------------------------------------------------------------}}}
+EnchPA_WaterBreathTime[Fallout4.esm]:ENCH=Increases time underwater by: 5x
 EnchPA_Charisma[Fallout4.esm]:ENCH=Increases Charisma with all pieces painted by: 1
 EnchPA_Strength[Fallout4.esm]:ENCH=Increases Strength with all pieces painted by: 1
 DLC01Bot_CommonArmorEnch[DLCRobot.esm]:ENCH=Rate 3 points/sec for 3 sec
@@ -376,8 +376,8 @@ EnchPA_PhotovotaicCoating[Fallout4.esm]:ENCH=Increases Action Point refresh spee
 EnchPA_RadScrubbers[Fallout4.esm]:ENCH=Removes radiation from consumed food and water.
 EnchPA_RadScrubbers[Fallout4.esm]:ENCH=Removes radiation from water when drinking.
 EnchPA_ReactivePlates[Fallout4.esm]:ENCH=Reflects 50% of melee damage back on attacker.
-EnchPA_ReducePADamageMult[Fallout4.esm]:ENCH=NFW
-EnchPA_ReducePARadResistMult[Fallout4.esm]:ENCH=NFW
+EnchPA_ReducePADamageMult[Fallout4.esm]:ENCH=Reduce physical damage by: 5%
+EnchPA_ReducePARadResistMult[Fallout4.esm]:ENCH=Increase Radiation resistance by:14%
 EnchPA_StealthScript[Fallout4.esm]:ENCH=Activates stealth field while crouched.
 EnchPA_TargetingHUD[Fallout4.esm]:ENCH=Visor highlights living targets.
 EnchPA_UnarmedDamage[Fallout4.esm]:ENCH=Increase Unarmed Damage: +15
@@ -467,6 +467,7 @@ ZM_Recon_Scope_x10[Fallout4.esm]:ZOOM=x10 Recon Scope
 {{{---------------------Show Additional Properties----------------------}}}
 Health=Increases Item Health by: 
 {{{---------------------------Better_Naming-----------------------------}}}
+Rating=Increase Armor Rating by: 
 ZoomDataFOVMult=Zoom: 
 AttackDamage=Damage: 
 CriticalDamageMult=Crit. Damage: 
