@@ -28,12 +28,11 @@ const
 
 var
   slPropertyMap: TStringList;
-  plugin: IInterface;
+  targetPlugin: IInterface;
 	ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList, BeforeChangesList, AfterChangesList : TStringList;
 	bChecksFailed, bAborted, bModificationNecessary : Boolean;
 	bSlPropertyMapTranslated, bThisIsTheFirstExecution: Boolean;
 	lastFileProcessed : String;
-	executionCounter : Integer;
 
 function Initialize: Integer;
 begin
@@ -54,7 +53,6 @@ begin
 	if GlobConfig.AlwaysTranslateResourceFileAfterLoading then 
 		TranslateDescriptionConfigurationFile;
 	
-	executionCounter := 0;
 	bThisIsTheFirstExecution := true;
 	
 	LogFunctionEnd;
@@ -64,23 +62,15 @@ function Process(e: IInterface): Integer;
 begin
 	if GlobConfig.Cancelled then 
 		raise Exception.Create('Execution intentionally disrupted with an error (saves time when millions of records would be processed, because you executed the script on files, or even worse on Fallout4.esm)');
-	//tmpStr := Signature(e);
-	//DebugLog(Format('Sig: %s',[tmpStr]));
-	
-	//executionCounter := executionCounter + 1; //TODO: needs to be removed again: increases processing time of skipped records by 20%
-	
 	
 	if CheckIfRecordShouldBeSkipped(e) then
 		Exit;
 	
 	LogFunctionStart('Process');
 	
-	// create new plugin
 	if bThisIsTheFirstExecution then
 	begin
 		bThisIsTheFirstExecution := false;
-		
-		DebugLog(Format('File of Record: %s',[GetFileName(e)]));
 		
 		CreateMainForm;
 		
@@ -90,41 +80,9 @@ begin
 			Exit;
 		end;
 		
-		if GlobConfig.PluginSelectionMode = 1 then 
-		begin
-			plugin := AddNewFile;
-			//plugin := AddNewFileName('asdf');
-			SetEditValue(ElementByPath(ElementByIndex(plugin, 0), 'CNAM'), 'Gernash');
-			SetElementEditValues(ElementByIndex(plugin, 0),'SNAM', 'Automatically created via Gernashs_OMOD_ReNamer script (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
-			LogModification(Format('new plugin created: %s',[GetFileName(plugin)]));
-		end 
-		else if GlobConfig.PluginSelectionMode = 2 then 
-		begin 
-			plugin := FileByIndex(Pred(FileCount));
-			LogCheckSuccessful(Format('Existing plugin selected to store records: %s',[GetFileName(plugin)]));
-		end 
-		else 
-		begin //also happening on "Cancel"
-			Log('Operation aborted by user.');
-			Exit; //--> no result form necessary here
-		end;
-		
-		if not bAborted then
-		begin
-			if not Assigned(plugin) then begin
-				LogCheckFailed('The plugin selected could not be loaded. Operation aborted.');
-				bAborted := true;
-			end;
-		end;
+		// create new plugin
+		GetTargetPlugin;
 	end;
-	
-	//if TypeOf (GetFile(e)) = TypeOf (e) then  { True }
-		//DebugLog(Format('Sig: %s',[tmpStr]));
-		//DebugLog(Signature(e));
-	
-	//DebugLog(Format('Mode: "%d"',[GlobConfig.PluginSelectionMode]));
-
-	
 	
 	if (not GlobConfig.Cancelled) and (not bAborted) then begin
 		ProcessOneRecord(e);
@@ -162,12 +120,48 @@ begin
 	AfterChangesList.Free;
 	AfterChangesList:=nil;	
 	
-  if Assigned(plugin) then
-    SortMasters(plugin);
+  if Assigned(targetPlugin) then
+    SortMasters(targetPlugin);
 		
 	LogFunctionEnd;
 end;
 
+//=========================================================================
+//  get target Plugin - where to store new record overwrites to
+//=========================================================================
+procedure GetTargetPlugin();
+begin
+	LogFunctionStart('GetTargetPlugin');
+	
+	if GlobConfig.PluginSelectionMode = 1 then 
+	begin
+		targetPlugin := AddNewFile;
+		//targetPlugin := AddNewFileName('asdf');
+		SetEditValue(ElementByPath(ElementByIndex(targetPlugin, 0), 'CNAM'), 'Gernash');
+		SetElementEditValues(ElementByIndex(targetPlugin, 0),'SNAM', 'Automatically created via Gernashs_OMOD_ReNamer script (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
+		LogModification(Format('new plugin created: %s',[GetFileName(targetPlugin)]));
+	end 
+	else if GlobConfig.PluginSelectionMode = 2 then 
+	begin 
+		targetPlugin := FileByIndex(Pred(FileCount));
+		LogCheckSuccessful(Format('Existing plugin selected to store records: %s',[GetFileName(targetPlugin)]));
+	end 
+	else 
+	begin //also happening on "Cancel"
+		Log('Operation aborted by user.');
+		Exit; //--> no result form necessary here
+	end;
+	
+	if not bAborted then
+	begin
+		if not Assigned(targetPlugin) then begin
+			LogCheckFailed('The plugin selected could not be loaded. Operation aborted.');
+			bAborted := true;
+		end;
+	end;
+	
+	LogFunctionEnd;
+end;
 
 //=========================================================================
 //  processes a single record
@@ -179,6 +173,8 @@ var
 	tmpBool : Boolean;
 	recordNameForOutput, tmpStr : String;
 begin
+	LogFunctionStart('ProcessOneRecord');
+	
 	bModificationNecessary := true;
 	
 	// patch the winning override record
@@ -189,6 +185,7 @@ begin
 	if not Assigned(e) then
 	begin
 		LogCheckFailed(Format('Something went wrong when getting the override for this record. Record skipped. - record: %s',[recordNameForOutput]));
+		LogFunctionEnd;
 		Exit;
 	end;
 
@@ -196,8 +193,9 @@ begin
 		RecordsHeadersList.Add(Format('record: %s - created by plugin: %s - winning override in: %s',[recordNameForOutput,GetFileName(MasterOrSelf(e)),GetFileName(WinningOverride(e))]));
 		
 		// skip already copied
-		if GetFileName(e) = GetFileName(plugin) then begin
-			LogCheckFailed(Format('The plugin selected already carries an override of the record. Record skipped. - record: %s - plugin: %s',[recordNameForOutput, GetFileName(plugin)]));
+		if GetFileName(e) = GetFileName(targetPlugin) then begin
+			LogCheckFailed(Format('The plugin selected already carries an override of the record. Record skipped. - record: %s - plugin: %s',[recordNameForOutput, GetFileName(targetPlugin)]));
+			LogFunctionEnd;
 			Exit;
 		end;
 	end;
@@ -205,8 +203,9 @@ begin
 	desc := GetOmodDescription(e);
 
 	if desc = '' then begin
-		 LogCheckFailed(Format('The logic would have created an empty description. Record skipped. - record: %s',[recordNameForOutput]));
-		 Exit;
+		LogCheckFailed(Format('The logic would have created an empty description. Record skipped. - record: %s',[recordNameForOutput]));
+		LogFunctionEnd;
+		Exit;
 	end;
 
 	
@@ -224,17 +223,18 @@ begin
 
 	if (not bAborted) and (bModificationNecessary) then begin
 		// add masters
-		AddRequiredElementMasters(e, plugin, False);
+		AddRequiredElementMasters(e, targetPlugin, False);
 
 		try
 			// copy as override
-			r := wbCopyElementToFile(e, plugin, False, true);
+			r := wbCopyElementToFile(e, targetPlugin, False, true);
 			if not Assigned(r) then begin
 				LogCheckFailed(Format('Something went wrong when creating the override record. Record skipped. - record: %s',[recordNameForOutput]));
+				LogFunctionEnd;
 				Exit;
 			end else 
 			begin
-				LogModification(Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',[recordNameForOutput,GetFileName(plugin)]));
+				LogModification(Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',[recordNameForOutput,GetFileName(targetPlugin)]));
 				
 				// setting new description
 				SetElementEditValues(r, 'DESC', desc);
@@ -248,6 +248,8 @@ begin
 			end;
 		end;
 	end;
+	
+	LogFunctionEnd;
 end;
 
 
