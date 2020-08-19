@@ -579,7 +579,7 @@ begin
 	if not GlobConfig.Cancelled then begin 
 		// patch the winning override record
 		e := WinningOverride(e);
-		recordNameForOutput := GetElementEditValues(e, 'Record Header\FormID');
+		recordNameForOutput := RecordToString(e);
 		
 		if not Assigned(e) then
 		begin
