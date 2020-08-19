@@ -30,7 +30,7 @@ var
   slPropertyMap: TStringList;
   plugin: IInterface;
 	ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList, BeforeChangesList, AfterChangesList : TStringList;
-	bChecksFailed, bAborted, bRecordSkipped, bModificationNecessary : Boolean;
+	bChecksFailed, bAborted, bModificationNecessary : Boolean;
 	bSlPropertyMapTranslated, bThisIsTheFirstExecution: Boolean;
 	lastFileProcessed : String;
 	executionCounter : Integer;
@@ -61,11 +61,6 @@ begin
 end;
 
 function Process(e: IInterface): Integer;
-var
-  desc, oldDesc: string;
-  r, tmpEntry : IInterface;
-	tmpBool : Boolean;
-	recordNameForOutput, tmpStr : String;
 begin
 	if GlobConfig.Cancelled then 
 		raise Exception.Create('Execution intentionally disrupted with an error (saves time when millions of records would be processed, because you executed the script on files, or even worse on Fallout4.esm)');
@@ -75,11 +70,7 @@ begin
 	//executionCounter := executionCounter + 1; //TODO: needs to be removed again: increases processing time of skipped records by 20%
 	
 	
-	
-	bRecordSkipped := false;
-	bRecordSkipped := (not CheckIfRecordShouldBeSkipped(e));
-	
-	if bRecordSkipped then
+	if CheckIfRecordShouldBeSkipped(e) then
 		Exit;
 	
 	LogFunctionStart('Process');
@@ -102,6 +93,7 @@ begin
 		if GlobConfig.PluginSelectionMode = 1 then 
 		begin
 			plugin := AddNewFile;
+			//plugin := AddNewFileName('asdf');
 			SetEditValue(ElementByPath(ElementByIndex(plugin, 0), 'CNAM'), 'Gernash');
 			SetElementEditValues(ElementByIndex(plugin, 0),'SNAM', 'Automatically created via Gernashs_OMOD_ReNamer script (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
 			LogModification(Format('new plugin created: %s',[GetFileName(plugin)]));
@@ -126,88 +118,16 @@ begin
 		end;
 	end;
 	
-	bModificationNecessary := true;
-	
 	//if TypeOf (GetFile(e)) = TypeOf (e) then  { True }
 		//DebugLog(Format('Sig: %s',[tmpStr]));
 		//DebugLog(Signature(e));
 	
-	//raise Exception.Create('Variable has no value');
 	//DebugLog(Format('Mode: "%d"',[GlobConfig.PluginSelectionMode]));
 
-	if not bRecordSkipped then begin
-		// patch the winning override record
-		e := WinningOverride(e);
-		
-		recordNameForOutput := RecordToString(e);
-		
-		if not Assigned(e) then
-		begin
-			LogCheckFailed(Format('Something went wrong when getting the override for this record. Record skipped. - record: %s',[recordNameForOutput]));
-			bRecordSkipped := true;
-		end;
-	end;
-
-	if (not GlobConfig.Cancelled) and (not bAborted) and (not bRecordSkipped) then begin
-		if (not GlobConfig.Cancelled) and (not bAborted) then
-		begin
-			RecordsHeadersList.Add(Format('record: %s - created by plugin: %s - winning override in: %s',[recordNameForOutput,GetFileName(MasterOrSelf(e)),GetFileName(WinningOverride(e))]));
-			
-			// skip already copied
-			if GetFileName(e) = GetFileName(plugin) then begin
-				LogCheckFailed(Format('The plugin selected already carries an override of the record. Record skipped. - record: %s - plugin: %s',[recordNameForOutput, GetFileName(plugin)]));
-				bRecordSkipped := true;
-			end;
-		end;
-	end;
 	
-	if (not GlobConfig.Cancelled) and (not bAborted) and (not bRecordSkipped) then begin
-		desc := GetOmodDescription(e);
-
-		if desc = '' then begin
-			 LogCheckFailed(Format('The logic would have created an empty description. Record skipped. - record: %s',[recordNameForOutput]));
-			 bRecordSkipped := true;
-		end;
-	end;
 	
-	if (not GlobConfig.Cancelled) and (not bAborted) and (not bRecordSkipped) then begin
-		oldDesc := GetEditValue(ElementByPath(e, 'DESC'));
-		
-		if SameText(oldDesc, desc) then
-		begin
-			LogCheckSuccessful(Format('Description already up to date. - record: %s - DESC: "%s"',[recordNameForOutput,desc]));
-			bModificationNecessary := false;
-		end else begin
-			BeforeChangesList.Add(Format('before: %s - DESC: "%s"',[recordNameForOutput, oldDesc]));
-		end;
-	end;
-
-	if (not GlobConfig.Cancelled) and (not bAborted) and (not bRecordSkipped) and (bModificationNecessary) then begin
-		// add masters
-		AddRequiredElementMasters(e, plugin, False);
-
-		try
-			// copy as override
-			r := wbCopyElementToFile(e, plugin, False, true);
-			if not Assigned(r) then
-			begin
-				LogCheckFailed(Format('Something went wrong when creating the override record. Record skipped. - record: %s',[recordNameForOutput]));
-				bRecordSkipped := true;
-			end else begin
-				LogModification(Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',[recordNameForOutput,GetFileName(plugin)]));
-				
-				// setting new description
-				SetElementEditValues(r, 'DESC', desc);
-				LogModification(Format('Description was replaced: - record: %s - old DESC: "%s" - new DESC: "%s"',[recordNameForOutput,oldDesc,desc]));
-				AfterChangesList.Add(Format('after: %s - DESC: "%s"',[recordNameForOutput, desc]));
-			end;
-		except
-			on Ex: Exception do
-			begin
-				LogCheckFailed(Format('Failed to copy: %s',[FullPath(e)]));
-				LogCheckFailed('    reason: ' + Ex.Message);
-			end
-		end;
+	if (not GlobConfig.Cancelled) and (not bAborted) then begin
+		ProcessOneRecord(e);
 	end;
 	
 	lastFileProcessed := GetFileName(e);
@@ -246,6 +166,88 @@ begin
     SortMasters(plugin);
 		
 	LogFunctionEnd;
+end;
+
+
+//=========================================================================
+//  processes a single record
+//=========================================================================
+procedure ProcessOneRecord(e: IInterface);
+var
+  desc, oldDesc: string;
+  r, tmpEntry : IInterface;
+	tmpBool : Boolean;
+	recordNameForOutput, tmpStr : String;
+begin
+	bModificationNecessary := true;
+	
+	// patch the winning override record
+	e := WinningOverride(e);
+	
+	recordNameForOutput := RecordToString(e);
+	
+	if not Assigned(e) then
+	begin
+		LogCheckFailed(Format('Something went wrong when getting the override for this record. Record skipped. - record: %s',[recordNameForOutput]));
+		Exit;
+	end;
+
+	if (not bAborted) then begin
+		RecordsHeadersList.Add(Format('record: %s - created by plugin: %s - winning override in: %s',[recordNameForOutput,GetFileName(MasterOrSelf(e)),GetFileName(WinningOverride(e))]));
+		
+		// skip already copied
+		if GetFileName(e) = GetFileName(plugin) then begin
+			LogCheckFailed(Format('The plugin selected already carries an override of the record. Record skipped. - record: %s - plugin: %s',[recordNameForOutput, GetFileName(plugin)]));
+			Exit;
+		end;
+	end;
+	
+	desc := GetOmodDescription(e);
+
+	if desc = '' then begin
+		 LogCheckFailed(Format('The logic would have created an empty description. Record skipped. - record: %s',[recordNameForOutput]));
+		 Exit;
+	end;
+
+	
+	if (not bAborted) then begin
+		oldDesc := GetEditValue(ElementByPath(e, 'DESC'));
+		
+		if SameText(oldDesc, desc) then
+		begin
+			LogCheckSuccessful(Format('Description already up to date. - record: %s - DESC: "%s"',[recordNameForOutput,desc]));
+			bModificationNecessary := false;
+		end else begin
+			BeforeChangesList.Add(Format('before: %s - DESC: "%s"',[recordNameForOutput, oldDesc]));
+		end;
+	end;
+
+	if (not bAborted) and (bModificationNecessary) then begin
+		// add masters
+		AddRequiredElementMasters(e, plugin, False);
+
+		try
+			// copy as override
+			r := wbCopyElementToFile(e, plugin, False, true);
+			if not Assigned(r) then begin
+				LogCheckFailed(Format('Something went wrong when creating the override record. Record skipped. - record: %s',[recordNameForOutput]));
+				Exit;
+			end else 
+			begin
+				LogModification(Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',[recordNameForOutput,GetFileName(plugin)]));
+				
+				// setting new description
+				SetElementEditValues(r, 'DESC', desc);
+				LogModification(Format('Description was replaced: - record: %s - old DESC: "%s" - new DESC: "%s"',[recordNameForOutput,oldDesc,desc]));
+				AfterChangesList.Add(Format('after: %s - DESC: "%s"',[recordNameForOutput, desc]));
+			end;
+		except on Ex: Exception do 
+			begin
+				LogCheckFailed(Format('Failed to copy: %s',[FullPath(e)]));
+				LogCheckFailed('    reason: ' + Ex.Message);
+			end;
+		end;
+	end;
 end;
 
 
@@ -328,11 +330,11 @@ function CheckIfRecordShouldBeSkipped(rec : IInterface;) : Boolean;
 begin
 	//no logging in here due to performance reasons
 	//LogFunctionStart('CheckIfRecordShouldBeSkipped');
-	Result:= true;
+	Result:= false;
 	
 	if Signature(rec) <> 'OMOD' then begin
 		//DebugLog(Format('Record has the wrong signature. Record skipped. - record: %s',[FullPath(rec)]));
-		Result:=false;
+		Result:=true;
 	end else begin
 		//DebugLog(Format('Record has the right signature. - record: %s',[recordNameForOutput]));
 	end;
