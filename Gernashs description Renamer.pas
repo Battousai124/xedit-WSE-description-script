@@ -32,7 +32,7 @@ var
 	ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList, BeforeChangesList, AfterChangesList : TStringList;
 	bChecksFailed, bAborted, bModificationNecessary : Boolean;
 	bSlPropertyMapTranslated, bThisIsTheFirstExecution: Boolean;
-	lastFileProcessed : String;
+	lastFileProcessed, targetPluginName : String;
 
 function Initialize: Integer;
 begin
@@ -58,12 +58,12 @@ begin
 	LogFunctionEnd;
 end;
 
-function Process(e: IInterface): Integer;
+function Process(rec: IInterface): Integer;
 begin
 	if GlobConfig.Cancelled then 
 		raise Exception.Create('Execution intentionally disrupted with an error (saves time when millions of records would be processed, because you executed the script on files, or even worse on Fallout4.esm)');
 	
-	if CheckIfRecordShouldBeSkipped(e) then
+	if CheckIfRecordShouldBeSkipped(rec) then
 		Exit;
 	
 	LogFunctionStart('Process');
@@ -85,10 +85,10 @@ begin
 	end;
 	
 	if (not GlobConfig.Cancelled) and (not bAborted) then begin
-		ProcessOneRecord(e);
+		ProcessOneRecord(rec);
 	end;
 	
-	lastFileProcessed := GetFileName(e);
+	lastFileProcessed := GetFileName(rec);
 	
 	LogFunctionEnd;
 end;
@@ -160,17 +160,19 @@ begin
 		end;
 	end;
 	
+	targetPluginName := GetFileName(targetPlugin);
+	
 	LogFunctionEnd;
 end;
 
 //=========================================================================
 //  processes a single record
 //=========================================================================
-procedure ProcessOneRecord(e: IInterface);
+procedure ProcessOneRecord(rec: IInterface);
 var
-  desc, oldDesc: string;
-  r, tmpEntry : IInterface;
-	tmpBool : Boolean;
+  desc, oldDesc, recordPluginName: string;
+  newRec, tmpEntry : IInterface;
+	bRecordAlreadyPresent : Boolean;
 	recordNameForOutput, tmpStr : String;
 begin
 	LogFunctionStart('ProcessOneRecord');
@@ -178,11 +180,12 @@ begin
 	bModificationNecessary := true;
 	
 	// patch the winning override record
-	e := WinningOverride(e);
+	rec := WinningOverride(rec);
 	
-	recordNameForOutput := RecordToString(e);
+	recordNameForOutput := RecordToString(rec);
+	recordPluginName := GetFileName(rec);
 	
-	if not Assigned(e) then
+	if not Assigned(rec) then
 	begin
 		LogCheckFailed(Format('Something went wrong when getting the override for this record. Record skipped. - record: %s',[recordNameForOutput]));
 		LogFunctionEnd;
@@ -190,27 +193,28 @@ begin
 	end;
 
 	if (not bAborted) then begin
-		RecordsHeadersList.Add(Format('record: %s - created by plugin: %s - winning override in: %s',[recordNameForOutput,GetFileName(MasterOrSelf(e)),GetFileName(WinningOverride(e))]));
+		RecordsHeadersList.Add(Format('record: %s - created by plugin: %s - winning override in: %s',[recordNameForOutput,GetFileName(MasterOrSelf(rec)),GetFileName(WinningOverride(rec))]));
 		
-		// skip already copied
-		if GetFileName(e) = GetFileName(targetPlugin) then begin
-			LogCheckFailed(Format('The plugin selected already carries an override of the record. Record skipped. - record: %s - plugin: %s',[recordNameForOutput, GetFileName(targetPlugin)]));
-			LogFunctionEnd;
-			Exit;
+		if GlobConfig.DoNotManipulateMasterRecords then begin 
+			if SameText(GetFileName(MasterOrSelf(rec)),targetPluginName) then begin
+				LogCheckFailed(Format('The plugin selected is the master plugin for this record. Record skipped. - record: %s - plugin: %s',[recordNameForOutput, targetPluginName]));
+				LogFunctionEnd;
+				Exit;
+			end;
 		end;
 	end;
 	
-	desc := GetOmodDescription(e);
+	//call actual logic for generating the description
+	desc := GetOmodDescription(rec);
 
 	if desc = '' then begin
 		LogCheckFailed(Format('The logic would have created an empty description. Record skipped. - record: %s',[recordNameForOutput]));
 		LogFunctionEnd;
 		Exit;
 	end;
-
 	
 	if (not bAborted) then begin
-		oldDesc := GetEditValue(ElementByPath(e, 'DESC'));
+		oldDesc := GetEditValue(ElementByPath(rec, 'DESC'));
 		
 		if SameText(oldDesc, desc) then
 		begin
@@ -222,28 +226,34 @@ begin
 	end;
 
 	if (not bAborted) and (bModificationNecessary) then begin
-		// add masters
-		AddRequiredElementMasters(e, targetPlugin, False);
-
 		try
-			// copy as override
-			r := wbCopyElementToFile(e, targetPlugin, False, true);
-			if not Assigned(r) then begin
+			if SameText(recordPluginName,targetPluginName) then begin
+				newRec:= rec;
+			end 
+			else 
+			begin
+				// add masters
+				AddRequiredElementMasters(rec, targetPlugin, False);
+
+				// copy as override
+				newRec := wbCopyElementToFile(rec, targetPlugin, False, true);
+				LogModification(Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',[recordNameForOutput,targetPluginName]));
+			end;
+			
+			if not Assigned(newRec) then begin
 				LogCheckFailed(Format('Something went wrong when creating the override record. Record skipped. - record: %s',[recordNameForOutput]));
 				LogFunctionEnd;
 				Exit;
 			end else 
 			begin
-				LogModification(Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',[recordNameForOutput,GetFileName(targetPlugin)]));
-				
 				// setting new description
-				SetElementEditValues(r, 'DESC', desc);
+				SetElementEditValues(newRec, 'DESC', desc);
 				LogModification(Format('Description was replaced: - record: %s - old DESC: "%s" - new DESC: "%s"',[recordNameForOutput,oldDesc,desc]));
 				AfterChangesList.Add(Format('after: %s - DESC: "%s"',[recordNameForOutput, desc]));
 			end;
 		except on Ex: Exception do 
 			begin
-				LogCheckFailed(Format('Failed to copy: %s',[FullPath(e)]));
+				LogCheckFailed(Format('Failed to copy: %s',[FullPath(rec)]));
 				LogCheckFailed('    reason: ' + Ex.Message);
 			end;
 		end;

@@ -13,6 +13,7 @@ type
 		ShowResourceFileTranslationOption : Boolean;
 		MainAction : Integer;
 		AlwaysTranslateResourceFileAfterLoading : Boolean;
+		DoNotManipulateMasterRecords : Boolean;
 	end;
 
 var
@@ -32,6 +33,7 @@ begin
 	GlobConfig.ShowResourceFileTranslationOption := false;
 	GlobConfig.AlwaysTranslateResourceFileAfterLoading := false;
 	GlobConfig.MainAction := 1; //1: normal stuff, rest is super special stuff, like translating a file or so
+	GlobConfig.DoNotManipulateMasterRecords := true;
 	
 	LogFunctionEnd;
 end;
