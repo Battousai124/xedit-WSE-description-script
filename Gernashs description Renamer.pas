@@ -31,8 +31,9 @@ var
   plugin: IInterface;
 	ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList, BeforeChangesList, AfterChangesList : TStringList;
 	bChecksFailed, bAborted, bRecordSkipped, bModificationNecessary : Boolean;
-	bSlPropertyMapTranslated : Boolean;
+	bSlPropertyMapTranslated, bThisIsTheFirstExecution: Boolean;
 	lastFileProcessed : String;
+	executionCounter : Integer;
 
 function Initialize: Integer;
 begin
@@ -53,6 +54,9 @@ begin
 	if GlobConfig.AlwaysTranslateResourceFileAfterLoading then 
 		TranslateDescriptionConfigurationFile;
 	
+	executionCounter := 0;
+	bThisIsTheFirstExecution := true;
+	
 	LogFunctionEnd;
 end;
 
@@ -68,14 +72,61 @@ begin
 	//tmpStr := Signature(e);
 	//DebugLog(Format('Sig: %s',[tmpStr]));
 	
+	//executionCounter := executionCounter + 1; //TODO: needs to be removed again: increases processing time of skipped records by 20%
+	
+	
+	
 	bRecordSkipped := false;
-	bModificationNecessary := true;
 	bRecordSkipped := (not CheckIfRecordShouldBeSkipped(e));
 	
 	if bRecordSkipped then
 		Exit;
 	
 	LogFunctionStart('Process');
+	
+	// create new plugin
+	if bThisIsTheFirstExecution then
+	begin
+		bThisIsTheFirstExecution := false;
+		
+		DebugLog(Format('File of Record: %s',[GetFileName(e)]));
+		
+		CreateMainForm;
+		
+		if GlobConfig.MainAction = 2 then begin
+			OverwriteDescriptionConfigurationFile; 
+			//(Cancelled is set by the button itself, therefore doesn't need to be set here)
+			Exit;
+		end;
+		
+		if GlobConfig.PluginSelectionMode = 1 then 
+		begin
+			plugin := AddNewFile;
+			SetEditValue(ElementByPath(ElementByIndex(plugin, 0), 'CNAM'), 'Gernash');
+			SetElementEditValues(ElementByIndex(plugin, 0),'SNAM', 'Automatically created via Gernashs_OMOD_ReNamer script (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
+			LogModification(Format('new plugin created: %s',[GetFileName(plugin)]));
+		end 
+		else if GlobConfig.PluginSelectionMode = 2 then 
+		begin 
+			plugin := FileByIndex(Pred(FileCount));
+			LogCheckSuccessful(Format('Existing plugin selected to store records: %s',[GetFileName(plugin)]));
+		end 
+		else 
+		begin //also happening on "Cancel"
+			Log('Operation aborted by user.');
+			Exit; //--> no result form necessary here
+		end;
+		
+		if not bAborted then
+		begin
+			if not Assigned(plugin) then begin
+				LogCheckFailed('The plugin selected could not be loaded. Operation aborted.');
+				bAborted := true;
+			end;
+		end;
+	end;
+	
+	bModificationNecessary := true;
 	
 	//if TypeOf (GetFile(e)) = TypeOf (e) then  { True }
 		//DebugLog(Format('Sig: %s',[tmpStr]));
@@ -98,47 +149,6 @@ begin
 	end;
 
 	if (not GlobConfig.Cancelled) and (not bAborted) and (not bRecordSkipped) then begin
-		// create new plugin
-		if not Assigned(plugin) then
-		begin
-			CreateMainForm;
-			
-			if GlobConfig.MainAction = 2 then begin
-				OverwriteDescriptionConfigurationFile;
-				Exit;
-			end;
-			
-			if GlobConfig.PluginSelectionMode = 1 then 
-			begin
-				plugin := AddNewFile;
-				//tmpEntry:= Add(plugin, 'CNAM', True);
-				//tmpEntry := ElementAssign(tmpEntry, HighInteger, nil, False);
-				//SetEditValue(tmpEntry, 'Gernash');
-				//tmpEntry:= Add(plugin, 'SNAM', True);
-				//SetElementEditValues(plugin, 'CNAM', 'Gernash');
-				//SetElementEditValues(plugin, 'SNAM', 'Automatically created via Gernashs_OMOD_ReNamer script');
-				LogModification(Format('new plugin created: %s',[GetFileName(plugin)]));
-			end 
-			else if GlobConfig.PluginSelectionMode = 2 then 
-			begin 
-				plugin := FileByIndex(Pred(FileCount));
-				LogCheckSuccessful(Format('Existing plugin selected to store records: %s',[GetFileName(plugin)]));
-			end 
-			else 
-			begin //also happening on "Cancel"
-				Log('Operation aborted by user.');
-				Exit; //--> no result form necessary here
-			end;
-			
-			if not bAborted then
-			begin
-				if not Assigned(plugin) then begin
-					LogCheckFailed('The plugin selected could not be loaded. Operation aborted.');
-					bAborted := true;
-				end;
-			end;
-		end;
-			
 		if (not GlobConfig.Cancelled) and (not bAborted) then
 		begin
 			RecordsHeadersList.Add(Format('record: %s - created by plugin: %s - winning override in: %s',[recordNameForOutput,GetFileName(MasterOrSelf(e)),GetFileName(WinningOverride(e))]));
