@@ -8,6 +8,13 @@ uses ClipBrd;
 uses StdCtrls;
 uses Windows;
 
+
+var
+	rgPluginSelectionMode, pnlPluginNameNew, pnlPluginNameDisplay : TPanel;
+	tbFileName : TEdit;
+	btnOk : TButton;
+	lblPluginNameNotAllowed : TLabel;
+
 //=========================================================================
 //  configuration form, opened as first form when the script is started - before any modifications
 //=========================================================================
@@ -21,8 +28,8 @@ var
 	frm : TForm;
 	gbGeneral, gbMainSettings, gbTranslateResourceFile : TGroupBox;
 	cbGeneralWriteDebugLog : TCheckBox; 
-	pnlButtons, rgPluginSelectionMode, pnlTranslate : TPanel;
-	btnCancel, btnOk, btnTranslate : TButton;
+	pnlButtons, pnlTranslate : TPanel;
+	btnCancel, btnTranslate : TButton;
 begin
 	LogFunctionStart('CreateMainForm');
 	frm := TForm.Create(nil);
@@ -77,6 +84,7 @@ begin
 		lbl := ConstructLabel(frm, gbMainSettings, 20, 10, 16, gbMainSettings.Width - 30, 'Plugin and Records:', '');
 		curTopPos := lbl.Top + 16;
 		
+		//plugin selection mode
 		tmpStringList.Clear;
 		tmpStringList.Add('create new');
 		tmpStringList.Add('last in load order');
@@ -84,12 +92,30 @@ begin
 			'defines where changes are stored - e.g. a new plugin can be created at the end of the load order or an existing plugin can be used'
 			, tmpStringList, (gbMainSettings.Width-16)*2/3/tmpStringList.Count, GlobConfig.PluginSelectionMode, '');
 		
+		for i := 1 to tmpStringList.Count do begin 
+			rgPluginSelectionMode.Controls[i].OnClick:=OnChangePluginSelectionMode;
+		end;
 		
-		
-		
-		
-		
-		
+		//plugin name
+		pnlPluginNameNew := ConstructPanel(frm, gbMainSettings, rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 21, rgPluginSelectionMode.Width, '', '');
+		pnlPluginNameNew.BevelOuter := bvNone;
+		lbl := ConstructLabel(frm, pnlPluginNameNew, 3, 10, 16, (gbMainSettings.Width-16)/3, 'Plugin Name', '');
+		tbFileName := ConstructEdit(frm, pnlPluginNameNew, 0, lbl.Left + lbl.Width, 18, (gbMainSettings.Width-16)/3, GlobConfig.NewPluginName, 'name for new ESP to be created');
+		tbFileName.OnKeyUp := OnChangePluginName;
+		lbl := ConstructLabel(frm, pnlPluginNameNew, lbl.Top, tbFileName.Left+tbFileName.Width, 16, 20, '.esp', '');
+		lblPluginNameNotAllowed := ConstructLabel(frm, pnlPluginNameNew, lbl.Top, lbl.Left+lbl.Width+20, 16, pnlPluginNameNew.Width-lbl.Left-lbl.Width, 'not allowed', '');
+		lblPluginNameNotAllowed.Font.color := clRed;
+		lblPluginNameNotAllowed.Visible := false; //the suggestion is always allowed, because it is validated before showing the GUI
+		if not (GlobConfig.PluginSelectionMode = 1) then begin
+			pnlPluginNameNew.Visible := false;
+		end
+		pnlPluginNameDisplay := ConstructPanel(frm, gbMainSettings, rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 21, rgPluginSelectionMode.Width, '', '');
+		pnlPluginNameDisplay.BevelOuter := bvNone;
+		lbl := ConstructLabel(frm, pnlPluginNameDisplay, 3, 10, 16, (gbMainSettings.Width-16)/3, 'Plugin Name', '');
+		lbl := ConstructLabel(frm, pnlPluginNameDisplay, lbl.Top, lbl.Left + lbl.Width, 16, pnlPluginNameDisplay.Width-lbl.Left-lbl.Width, GlobConfig.LastPluginInLoadOrder, '');
+		if not (GlobConfig.PluginSelectionMode = 2) then begin
+			pnlPluginNameDisplay.Visible := false;
+		end
 		
 		
 		//Buttons at the bottom
@@ -102,9 +128,9 @@ begin
 		btnOk:= ConstructButton(frm, pnlButtons, 6, btnCancel.Left - btnCancel.Width - 5, 0, 0, 'Next');
 		btnOk.ModalResult:= mrOk;
 		
-		//lbl := ConstructLabel(frm, pnlButtons, 12, 14, 0, frm.Width - 30, 
-		//	'(When you press "Next" an analysis of the OMOD is conducted to create a new description mirroring your personal load order.)'
-		//	, '');
+		// lbl := ConstructLabel(frm, pnlButtons, 12, 14, 0, frm.Width - 30, 
+			// '(When you press "Next" an analysis of the OMOD is conducted to create a new description mirroring your personal load order.)'
+			// , '');
 		
 		if GlobIndentLvl = 0 then begin
 			GlobIndentLvl := 2;
@@ -124,6 +150,7 @@ begin
 			
 				//main settings
 				GlobConfig.PluginSelectionMode:=GetPseudoRadioButtonGroupValue(rgPluginSelectionMode);
+				GlobConfig.NewPluginName := tbFileName.Text;
 			end;
 		end else begin
 			//set back time counter
@@ -135,7 +162,92 @@ begin
 		tmpStringList.Free;
 		tmpStringList:=nil;
 		rgPluginSelectionMode:=nil;
+		pnlPluginNameNew:=nil;
+		pnlPluginNameDisplay:=nil;
 		frm.Free;
+	end;
+	
+	LogFunctionEnd;
+end;
+
+
+
+//=========================================================================
+//  Event when the plugin name is edited in the textbox
+// (needs to be fast in order to be usable - hence written code-heavy with performance in mind)
+//=========================================================================
+procedure OnChangePluginName(Sender: TObject;);
+const
+  badChars = '<>:"/\|?*';
+var
+  ch: char; 
+	i, tmpInt : Integer;
+	tmpStr : String;
+	forbidden : Boolean;
+begin
+	LogFunctionStart('OnChangePluginName');
+	
+	forbidden := false;
+	tmpStr := tbFileName.Text;
+	if tmpStr = '' then 
+		forbidden := true;
+	
+	if not forbidden then begin
+		if Copy(tmpStr,Length(tmpStr),1) = ' ' then 
+			forbidden := true;
+			
+		if not forbidden then begin
+			if Copy(tmpStr,1,1) = ' ' then 
+				forbidden := true;
+				
+			if not forbidden then begin
+				if Length(tmpStr) > 50 then 
+					forbidden := true;
+				
+				if not forbidden then begin
+					for i := Length(tmpStr) - 1 downto 0 do begin
+						ch := Copy(tmpStr,i,1);
+						if (Pos(ch, badChars) > 0) or (Ord(ch) < 32) then begin
+							forbidden := true;
+							break;
+						end;
+					end;
+					
+					if not forbidden then 
+						if GlobConfig.NotAllowedPluginNames.Find(tmpStr,tmpInt) then 
+							forbidden := true;
+				end;
+			end;
+		end;
+	end;
+	
+	if forbidden then begin
+		btnOk.Enabled := false;
+		lblPluginNameNotAllowed.Visible := true;
+	end else begin
+		btnOk.Enabled := true;
+		lblPluginNameNotAllowed.Visible := false;
+		GlobConfig.NewPluginName := tmpStr;
+	end;
+	
+	LogFunctionEnd;
+end;
+
+
+//=========================================================================
+//  Event when the plugin selection mode is changed
+//=========================================================================
+procedure OnChangePluginSelectionMode(Sender: TObject;);
+begin
+	LogFunctionStart('OnChangePluginSelectionMode');
+	
+	GlobConfig.PluginSelectionMode := GetPseudoRadioButtonGroupValue(rgPluginSelectionMode);
+	if GlobConfig.PluginSelectionMode = 1 then begin
+		pnlPluginNameNew.Visible := true;
+		pnlPluginNameDisplay.Visible := false;
+	end else if GlobConfig.PluginSelectionMode = 2 then begin
+		pnlPluginNameNew.Visible := false;
+		pnlPluginNameDisplay.Visible := true;
 	end;
 	
 	LogFunctionEnd;

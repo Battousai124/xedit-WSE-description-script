@@ -25,14 +25,14 @@ uses 'Effs_Lib\EffsXEditTools';
 
 const
   sPropertiesList = wbScriptsPath + 'Gernashs_Lib\Gernashs description Renamer - Resource.txt';
-
+	automaticPluginDescriptionStartStr = 'Automatically created via Gernashs_OMOD_ReNamer script';
 var
   slPropertyMap: TStringList;
-  targetPlugin: IInterface;
+  targetPlugin: IwbFile;
 	ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList, ChecksSuccessfulList, BeforeChangesList, AfterChangesList : TStringList;
-	bChecksFailed, bAborted, bModificationNecessary : Boolean;
+	bChecksFailed, bAborted, bModificationNecessary, bTargetPluginLoaded : Boolean;
 	bSlPropertyMapTranslated, bThisIsTheFirstExecution: Boolean;
-	lastFileProcessed, targetPluginName : String;
+	{lastFileProcessed, }targetPluginName : String;
 
 function Initialize: Integer;
 begin
@@ -52,6 +52,8 @@ begin
 	slPropertyMap.LoadFromFile(sPropertiesList);
 	if GlobConfig.AlwaysTranslateResourceFileAfterLoading then 
 		TranslateDescriptionConfigurationFile;
+	
+	ReadLoadOrder;
 	
 	bThisIsTheFirstExecution := true;
 	
@@ -88,7 +90,7 @@ begin
 		ProcessOneRecord(rec);
 	end;
 	
-	lastFileProcessed := GetFileName(rec);
+	//lastFileProcessed := GetFileName(rec);
 	
 	LogFunctionEnd;
 end;
@@ -119,6 +121,10 @@ begin
 	BeforeChangesList:=nil;	
 	AfterChangesList.Free;
 	AfterChangesList:=nil;	
+	GlobConfig.NotAllowedPluginNames.Free;
+	GlobConfig.NotAllowedPluginNames:=nil;
+	GlobConfig.ExistingGernashsDescrPlugins.Free;
+	GlobConfig.ExistingGernashsDescrPlugins:=nil;
 	
   if Assigned(targetPlugin) then
     SortMasters(targetPlugin);
@@ -126,19 +132,137 @@ begin
 	LogFunctionEnd;
 end;
 
+
+//=========================================================================
+//  read the load order and store certain things in the config for later usage
+//=========================================================================
+procedure ReadLoadOrder();
+const 
+	basicPluginNameSuggestion = 'Gernashs_OMODDescr';
+var
+	i, j, tmpInt : Integer;
+	tmpStr, pluginNameWithoutExtension : String;
+	plugin : IInterface;
+	existsAlready, isNewName : Boolean;
+begin
+	LogFunctionStart('ReadLoadOrder');
+	
+	GlobConfig.LastPluginInLoadOrder := GetFileName(FileByIndex(Pred(FileCount)));
+	
+	//read the load order 
+	for i := 0 to Pred(FileCount) do begin
+		plugin := FileByIndex(i);
+		pluginNameWithoutExtension := GetFileName(plugin);
+		pluginNameWithoutExtension := Copy(pluginNameWithoutExtension,1,Length(pluginNameWithoutExtension)-4);
+		
+		GlobConfig.NotAllowedPluginNames.Add(pluginNameWithoutExtension);
+		
+		tmpStr := GetElementEditValues(ElementByIndex(plugin, 0),'SNAM');
+		if Length(tmpStr) >= Length(automaticPluginDescriptionStartStr) then begin
+			if SameText(automaticPluginDescriptionStartStr,Copy(tmpStr,1,Length(automaticPluginDescriptionStartStr))) then begin
+				GlobConfig.ExistingGernashsDescrPlugins.Add(pluginNameWithoutExtension);
+			end
+		end;
+	end;
+	
+	//cross check with the data folder, not to create files that already exist there
+	AddPluginsInDataFolderWithoutExtension(GlobConfig.NotAllowedPluginNames);
+	
+	//generate a new suggestion for a filename
+	existsAlready := false;
+	isNewName := false;
+	pluginNameWithoutExtension := basicPluginNameSuggestion;
+	i := 1;
+	while not isNewName do begin
+		existsAlready := false;
+	
+		if i > 1 then begin
+			pluginNameWithoutExtension := Format('%s_%d',[basicPluginNameSuggestion,i]);
+		end;
+			
+		for j := 0 to GlobConfig.ExistingGernashsDescrPlugins.Count-1 do begin
+			if SameText(pluginNameWithoutExtension,GlobConfig.ExistingGernashsDescrPlugins[j]) then begin
+				existsAlready := true;
+				break;
+			end;
+		end;
+		
+		if not existsAlready then
+			isNewName := true;
+		
+		i := i + 1;
+	end;
+	
+	GlobConfig.NewPluginName := pluginNameWithoutExtension;
+	
+	LogFunctionEnd;
+end;
+
+procedure AddPluginsInDataFolderWithoutExtension(notAllowedFilesWithoutExtension : TStringList;);
+var 
+	tmpStringList : TStringList;
+	i, tmpInt : Integer;
+  searchRec: TSearchRec;
+	dataPath, tmpStr : String;
+begin
+	LogFunctionStart('AddPluginsInDataFolderWithoutExtension');
+	
+	tmpStringList := TStringList.Create;
+	tmpStringList.Sorted := true;
+	tmpStringList.Duplicates := dupIgnore;
+	
+	try
+		//fist copy the existing list over to one that does not grow when there are a lot of files
+		for i: = 0 to notAllowedFilesWithoutExtension.Count-1 do begin
+			tmpStringList.Add(notAllowedFilesWithoutExtension[i])
+		end;
+		
+		//now go through all files in the data directory and add them to the forbidden-List
+		dataPath := wbDataPath;
+		if FindFirst(dataPath + '*.esp', faAnyFile, searchRec) = 0 then begin
+			repeat
+				if SameText(searchRec.Name, '.') then 
+					continue;
+				if SameText(searchRec.Name, '..') then
+					continue;
+				
+				tmpStr := Copy(searchRec.Name,1,Length(searchRec.Name)-4);
+				
+				if not tmpStringList.Find(tmpStr,tmpInt) then
+					notAllowedFilesWithoutExtension.Add(tmpStr);
+			until FindNext(searchRec) <> 0;
+			
+			FindClose(searchRec);
+		end;
+		
+	finally
+		tmpStringList.Free;
+		tmpStringList:=nil;
+	end;
+	
+	LogFunctionEnd;
+end;
+
+
+
 //=========================================================================
 //  get target Plugin - where to store new record overwrites to
 //=========================================================================
 procedure GetTargetPlugin();
+var 
+	tmpRec : IInterface;
+	
 begin
 	LogFunctionStart('GetTargetPlugin');
 	
 	if GlobConfig.PluginSelectionMode = 1 then 
 	begin
-		targetPlugin := AddNewFile;
-		//targetPlugin := AddNewFileName('asdf');
+		targetPlugin := AddNewFileName(GlobConfig.NewPluginName+'.esp',true);
+		ResultTextsList.Add(GetFileName(FileByIndex(0)));
+		
 		SetEditValue(ElementByPath(ElementByIndex(targetPlugin, 0), 'CNAM'), 'Gernash');
-		SetElementEditValues(ElementByIndex(targetPlugin, 0),'SNAM', 'Automatically created via Gernashs_OMOD_ReNamer script (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
+		SetElementEditValues(ElementByIndex(targetPlugin, 0),'SNAM', automaticPluginDescriptionStartStr + ' (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
+		
 		LogModification(Format('new plugin created: %s',[GetFileName(targetPlugin)]));
 	end 
 	else if GlobConfig.PluginSelectionMode = 2 then 
@@ -148,7 +272,7 @@ begin
 	end 
 	else 
 	begin //also happening on "Cancel"
-		Log('Operation aborted by user.');
+		LogCheckFailed('Could not read configuration how to select the target plugin.');
 		Exit; //--> no result form necessary here
 	end;
 	
@@ -229,8 +353,7 @@ begin
 		try
 			if SameText(recordPluginName,targetPluginName) then begin
 				newRec:= rec;
-			end 
-			else 
+			end else 
 			begin
 				// add masters
 				AddRequiredElementMasters(rec, targetPlugin, False);

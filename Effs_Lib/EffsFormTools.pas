@@ -206,6 +206,34 @@ begin
 end;
 
 //=========================================================================
+//  construct an edit field.  
+//  Example usage:  ed3 := ConstructEdit(frm, frm, 100, 8, 0, 0, 'Edit me!');
+//=========================================================================
+function ConstructEdit(frm, parent: TObject; top, left, height, 
+  width: Integer; text, hint: String): TEdit;
+var
+  ed: TEdit;
+begin
+	LogFunctionStart('ConstructEdit');
+	
+  ed := TEdit.Create(frm);
+  ed.Parent := parent;
+  ed.Top := top;
+  ed.Left := left;
+  if height > 0 then ed.Height := height;
+  if width > 0 then ed.Width := width;
+  if (height = 0) and (width = 0) then ed.AutoSize := true;
+  ed.Text := text;
+  if (hint <> '') then begin
+    ed.ShowHint := true;
+    ed.Hint := hint;
+  end;
+  
+  Result := ed;
+	LogFunctionEnd;
+end;
+
+//=========================================================================
 //  create a GroupBox.  
 //  Example usage: groupbox := ConstructGroup(frm, frm, 8, 8, 300, 300, 'general settings:','');
 //=========================================================================

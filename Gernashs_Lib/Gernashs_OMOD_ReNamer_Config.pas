@@ -14,6 +14,10 @@ type
 		MainAction : Integer;
 		AlwaysTranslateResourceFileAfterLoading : Boolean;
 		DoNotManipulateMasterRecords : Boolean;
+		NewPluginName : String;
+		NotAllowedPluginNames : TStringList; //should be sorted, so that .Find() works to compare it efficiently
+		ExistingGernashsDescrPlugins : TStringList; //may not be sorted, else we do not know what the last such plugin is in the load order
+		LastPluginInLoadOrder : String;
 	end;
 
 var
@@ -34,6 +38,11 @@ begin
 	GlobConfig.AlwaysTranslateResourceFileAfterLoading := false;
 	GlobConfig.MainAction := 1; //1: normal stuff, rest is super special stuff, like translating a file or so
 	GlobConfig.DoNotManipulateMasterRecords := true;
+	GlobConfig.NewPluginName := ''; //will be set depending on the load order
+	GlobConfig.NotAllowedPluginNames := TStringList.Create; //will be set depending on the load order
+	GlobConfig.NotAllowedPluginNames.Sorted := true; //so that .Find() works
+	GlobConfig.ExistingGernashsDescrPlugins := TStringList.Create; //will be set depending on the load order
+	GlobConfig.LastPluginInLoadOrder := ''; //will be set depending on the load order
 	
 	LogFunctionEnd;
 end;
