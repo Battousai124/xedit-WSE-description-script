@@ -81,9 +81,6 @@ begin
 			//(Cancelled is set by the button itself, therefore doesn't need to be set here)
 			Exit;
 		end;
-		
-		// create new plugin
-		GetTargetPlugin;
 	end;
 	
 	if (not GlobConfig.Cancelled) and (not bAborted) then begin
@@ -258,12 +255,12 @@ end;
 //=========================================================================
 //  get target Plugin - where to store new record overwrites to
 //=========================================================================
-procedure GetTargetPlugin();
+procedure GetOrCreateTargetPlugin();
 var 
 	tmpRec : IInterface;
 	tmpStr : String;
 begin
-	LogFunctionStart('GetTargetPlugin');
+	LogFunctionStart('GetOrCreateTargetPlugin');
 	
 	if GlobConfig.PluginSelectionMode = 1 then //automatic
 	begin
@@ -314,6 +311,7 @@ begin
 	end;
 	
 	targetPluginName := GetFileName(targetPlugin);
+	bTargetPluginLoaded := true;
 	
 	LogFunctionEnd;
 end;
@@ -344,18 +342,6 @@ begin
 		LogFunctionEnd;
 		Exit;
 	end;
-
-	if (not bAborted) then begin
-		RecordsHeadersList.Add(Format('record: %s - created by plugin: %s - winning override in: %s',[recordNameForOutput,GetFileName(MasterOrSelf(rec)),GetFileName(WinningOverride(rec))]));
-		
-		if GlobConfig.DoNotManipulateMasterRecords then begin 
-			if SameText(GetFileName(MasterOrSelf(rec)),targetPluginName) then begin
-				LogCheckFailed(Format('The plugin selected is the master plugin for this record. Record skipped. - record: %s - plugin: %s',[recordNameForOutput, targetPluginName]));
-				LogFunctionEnd;
-				Exit;
-			end;
-		end;
-	end;
 	
 	//call actual logic for generating the description
 	desc := GetOmodDescription(rec);
@@ -379,34 +365,50 @@ begin
 	end;
 
 	if (not bAborted) and (bModificationNecessary) then begin
-		try
-			if SameText(recordPluginName,targetPluginName) then begin
-				newRec:= rec;
-			end else 
-			begin
-				// add masters
-				AddRequiredElementMasters(rec, targetPlugin, False);
+		// create new plugin
+		if not bTargetPluginLoaded then
+			GetOrCreateTargetPlugin;
+		
+		if (not bAborted) then begin
+			if GlobConfig.DoNotManipulateMasterRecords then begin 
+				if SameText(GetFileName(MasterOrSelf(rec)),targetPluginName) then begin
+					LogCheckFailed(Format('The plugin selected is the master plugin for this record. Record skipped. - record: %s - plugin: %s',[recordNameForOutput, targetPluginName]));
+					LogFunctionEnd;
+					//--> this will not result in an empty plugin being created, as it can only happen, if an existing plugin is selected
+					Exit;
+				end;
+			end;
+	
+			RecordsHeadersList.Add(Format('record: %s - created by plugin: %s - winning override in: %s',[recordNameForOutput,GetFileName(MasterOrSelf(rec)),GetFileName(WinningOverride(rec))]));
+			try
+				if SameText(recordPluginName,targetPluginName) then begin
+					newRec:= rec;
+				end else 
+				begin
+					// add masters
+					AddRequiredElementMasters(rec, targetPlugin, False);
 
-				// copy as override
-				newRec := wbCopyElementToFile(rec, targetPlugin, False, true);
-				LogModification(Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',[recordNameForOutput,targetPluginName]));
-			end;
-			
-			if not Assigned(newRec) then begin
-				LogCheckFailed(Format('Something went wrong when creating the override record. Record skipped. - record: %s',[recordNameForOutput]));
-				LogFunctionEnd;
-				Exit;
-			end else 
-			begin
-				// setting new description
-				SetElementEditValues(newRec, 'DESC', desc);
-				LogModification(Format('Description was replaced: - record: %s - old DESC: "%s" - new DESC: "%s"',[recordNameForOutput,oldDesc,desc]));
-				AfterChangesList.Add(Format('after: %s - DESC: "%s"',[recordNameForOutput, desc]));
-			end;
-		except on Ex: Exception do 
-			begin
-				LogCheckFailed(Format('Failed to copy: %s',[FullPath(rec)]));
-				LogCheckFailed('    reason: ' + Ex.Message);
+					// copy as override
+					newRec := wbCopyElementToFile(rec, targetPlugin, False, true);
+					LogModification(Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',[recordNameForOutput,targetPluginName]));
+				end;
+				
+				if not Assigned(newRec) then begin
+					LogCheckFailed(Format('Something went wrong when creating the override record. Record skipped. - record: %s',[recordNameForOutput]));
+					LogFunctionEnd;
+					Exit;
+				end else 
+				begin
+					// setting new description
+					SetElementEditValues(newRec, 'DESC', desc);
+					LogModification(Format('Description was replaced: - record: %s - old DESC: "%s" - new DESC: "%s"',[recordNameForOutput,oldDesc,desc]));
+					AfterChangesList.Add(Format('after: %s - DESC: "%s"',[recordNameForOutput, desc]));
+				end;
+			except on Ex: Exception do 
+				begin
+					LogCheckFailed(Format('Failed to copy: %s',[FullPath(rec)]));
+					LogCheckFailed('    reason: ' + Ex.Message);
+				end;
 			end;
 		end;
 	end;
