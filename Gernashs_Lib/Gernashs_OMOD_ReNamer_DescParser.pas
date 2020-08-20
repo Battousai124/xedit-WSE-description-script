@@ -446,7 +446,7 @@ begin
 				(mappedValue <> 'NFW') then
 				begin
 				loopResult := Format('%s%s', [mappedName, mappedValueFormat]);
-				end
+				end;
 
 //        	DebugLog(Format('mappedName: %s', [mappedName]));
 //        	DebugLog(Format('mappedValue: %s', [mappedValue]));
