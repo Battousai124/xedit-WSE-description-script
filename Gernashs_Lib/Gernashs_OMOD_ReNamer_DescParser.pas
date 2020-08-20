@@ -4,6 +4,8 @@ interface
 
 implementation
 
+uses xEditAPI, Classes, SysUtils, StrUtils, Windows;
+
 procedure GetMappedValues(rec: IInterface; mappedValues, indicesToSkip,
   mappedValuesFormat: TStringList;);
 var
@@ -57,17 +59,17 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
       if floatValue > 1.0 then
       begin
-        loopResult := FloatToStr(floatValue);
+        loopResult := FloatToStr(round(floatValue*10)/10);
         loopResultFormatted := '+' + loopResult + chr($00B0);
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := '+' + loopResult + chr($00B0);
       end
       else
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := loopResult + chr($00B0);
       end;
     end
@@ -89,19 +91,19 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
       if floatValue > 1.0 then
       Begin
-        loopResult := FloatToStr(floatValue);
+        loopResult := FloatToStr(round(floatValue*10)/10);  
         loopResultFormatted := loopResult + 'x';
         if valuePropertytype = 'AmmoCapacity' then
           loopResultFormatted := loopResult;
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := '+' + loopResult + '%';
       end
       else
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := loopResult + '%';
       end;
     end
@@ -112,17 +114,17 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
       if floatValue > 1.0 then
       Begin
-        loopResult := FloatToStr(floatValue);
+        loopResult := FloatToStr(round(floatValue*10)/10);  
         loopResultFormatted := loopResult;
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := '+' + loopResult + '%';
       end
       else
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := loopResult + '%';
       end;
     end
@@ -131,7 +133,7 @@ begin
       (valuePropertytype = 'AimModelRecoilShotsForRunaway') then
     begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
-      loopResult := FloatToStr(floatValue);
+      loopResult := FloatToStr(round(floatValue*10)/10);
       loopResultFormatted := loopResult + ' rnd';
     end
 
@@ -142,17 +144,17 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
       if floatValue > 1.0 then
       Begin
-        loopResult := FloatToStr(floatValue);
+        loopResult := FloatToStr(round(floatValue*10)/10);
         loopResultFormatted := loopResult + ' sec';
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := '+' + loopResult + '%';
       end
       else
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := loopResult + '%';
       end;
     end
@@ -163,17 +165,17 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 7)); // Value 2
       if floatValue > 1.0 then
       begin
-        loopResult := FloatToStr(floatValue);
+        loopResult := FloatToStr(round(floatValue*10)/10);
         loopResultFormatted := loopResult;
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := '+' + loopResult + '%';
       end
       else
       begin
-        loopResult := IntToStr(Int(floatValue * 100));
+        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
         loopResultFormatted := loopResult + '%';
       end;
     end
@@ -356,17 +358,17 @@ begin
           begin
             if value1Loop2 > 1.0 then
             begin
-              mappedValue2 := FloatToStr(value1Loop2);
+              mappedValue2 := FloatToStr(round(value1Loop2*10)/10);
               mappedValue2FORMAT := Format('%sx', [mappedValue2]);
             end
             else if value1Loop2 > 0.0 then
             begin
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100));
+              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000)/10)); //(round(floatValue * 1000)/10));
               mappedValue2FORMAT := Format('+%s%', [mappedValue2]);
             end
             else
             begin
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100));
+              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000)/10));
               mappedValue2FORMAT := mappedValue2 + '%';
             end;
           end
@@ -376,17 +378,17 @@ begin
           begin
             if value1Loop2 > 1.0 then
             begin
-              mappedValue2 := FloatToStr(value1Loop2);
+              mappedValue2 := FloatToStr(round(value1Loop2*10)/10);
               mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
             end
             else if value1Loop2 > 0.0 then
             begin
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100));
+              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000)/10));
               mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
             end
             else
             begin
-              mappedValue2 := IntToStr(Int(value1Loop2 * 100));
+              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000)/10));
               mappedValue2FORMAT := mappedValue2 + chr($00B0);
             end;
           end;
