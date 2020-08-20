@@ -17,6 +17,7 @@ type
 		NewPluginName : String;
 		NotAllowedPluginNames : TStringList; //should be sorted, so that .Find() works to compare it efficiently
 		ExistingGernashsDescrPlugins : TStringList; //may not be sorted, else we do not know what the last such plugin is in the load order
+		ExistingGernashsDescrPluginsSelectedIndex : Integer; 
 		LastPluginInLoadOrder : String;
 	end;
 
@@ -32,7 +33,7 @@ begin
 	//(Without initialization they do not carry their correct data type.)
 	
 	EnableDebugLog := true; //resides in its own unit
-	GlobConfig.PluginSelectionMode := 2;
+	GlobConfig.PluginSelectionMode := 1;
 	GlobConfig.Cancelled := false;
 	GlobConfig.ShowResourceFileTranslationOption := false;
 	GlobConfig.AlwaysTranslateResourceFileAfterLoading := false;
@@ -42,6 +43,7 @@ begin
 	GlobConfig.NotAllowedPluginNames := TStringList.Create; //will be set depending on the load order
 	GlobConfig.NotAllowedPluginNames.Sorted := true; //so that .Find() works
 	GlobConfig.ExistingGernashsDescrPlugins := TStringList.Create; //will be set depending on the load order
+	GlobConfig.ExistingGernashsDescrPluginsSelectedIndex := 0; //will be set depending on the load order
 	GlobConfig.LastPluginInLoadOrder := ''; //will be set depending on the load order
 	
 	LogFunctionEnd;

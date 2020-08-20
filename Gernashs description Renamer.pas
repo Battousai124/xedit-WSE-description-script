@@ -141,7 +141,7 @@ const
 	basicPluginNameSuggestion = 'Gernashs_OMODDescr';
 var
 	i, j, tmpInt : Integer;
-	tmpStr, pluginNameWithoutExtension : String;
+	tmpStr, pluginName, pluginNameWithoutExtension : String;
 	plugin : IInterface;
 	existsAlready, isNewName : Boolean;
 begin
@@ -152,40 +152,46 @@ begin
 	//read the load order 
 	for i := 0 to Pred(FileCount) do begin
 		plugin := FileByIndex(i);
-		pluginNameWithoutExtension := GetFileName(plugin);
-		pluginNameWithoutExtension := Copy(pluginNameWithoutExtension,1,Length(pluginNameWithoutExtension)-4);
+		pluginName := GetFileName(plugin);
+		pluginNameWithoutExtension := Copy(pluginName,1,Length(pluginName)-4);
 		
 		GlobConfig.NotAllowedPluginNames.Add(pluginNameWithoutExtension);
 		
 		tmpStr := GetElementEditValues(ElementByIndex(plugin, 0),'SNAM');
 		if Length(tmpStr) >= Length(automaticPluginDescriptionStartStr) then begin
 			if SameText(automaticPluginDescriptionStartStr,Copy(tmpStr,1,Length(automaticPluginDescriptionStartStr))) then begin
-				GlobConfig.ExistingGernashsDescrPlugins.Add(pluginNameWithoutExtension);
+				GlobConfig.ExistingGernashsDescrPlugins.Add(pluginName);
 			end
 		end;
 	end;
 	
 	//cross check with the data folder, not to create files that already exist there
-	AddPluginsInDataFolderWithoutExtension(GlobConfig.NotAllowedPluginNames);
+	AddPluginsInDataFolderToNotAllowedList(GlobConfig.NotAllowedPluginNames);
 	
 	//generate a new suggestion for a filename
 	existsAlready := false;
 	isNewName := false;
 	pluginNameWithoutExtension := basicPluginNameSuggestion;
+	pluginName:=pluginNameWithoutExtension+'.esp';
 	i := 1;
 	while not isNewName do begin
 		existsAlready := false;
 	
 		if i > 1 then begin
 			pluginNameWithoutExtension := Format('%s_%d',[basicPluginNameSuggestion,i]);
+			pluginName:=pluginNameWithoutExtension+'.esp';
 		end;
 			
 		for j := 0 to GlobConfig.ExistingGernashsDescrPlugins.Count-1 do begin
-			if SameText(pluginNameWithoutExtension,GlobConfig.ExistingGernashsDescrPlugins[j]) then begin
+			if SameText(pluginName,GlobConfig.ExistingGernashsDescrPlugins[j]) then begin
 				existsAlready := true;
 				break;
 			end;
 		end;
+		
+		if not existsAlready then
+			if GlobConfig.NotAllowedPluginNames.Find(pluginNameWithoutExtension,tmpInt) then
+				existsAlready := true;
 		
 		if not existsAlready then
 			isNewName := true;
@@ -194,18 +200,22 @@ begin
 	end;
 	
 	GlobConfig.NewPluginName := pluginNameWithoutExtension;
+	GlobConfig.ExistingGernashsDescrPluginsSelectedIndex := GlobConfig.ExistingGernashsDescrPlugins.Count-1;
 	
 	LogFunctionEnd;
 end;
 
-procedure AddPluginsInDataFolderWithoutExtension(notAllowedFilesWithoutExtension : TStringList;);
+//=========================================================================
+//  add ESPs residing in the Game's Data folder to the not allowed list, if they are not in there already
+//=========================================================================
+procedure AddPluginsInDataFolderToNotAllowedList(notAllowedFilesWithoutExtension : TStringList;);
 var 
 	tmpStringList : TStringList;
 	i, tmpInt : Integer;
   searchRec: TSearchRec;
 	dataPath, tmpStr : String;
 begin
-	LogFunctionStart('AddPluginsInDataFolderWithoutExtension');
+	LogFunctionStart('AddPluginsInDataFolderToNotAllowedList');
 	
 	tmpStringList := TStringList.Create;
 	tmpStringList.Sorted := true;
@@ -251,21 +261,40 @@ end;
 procedure GetTargetPlugin();
 var 
 	tmpRec : IInterface;
-	
+	tmpStr : String;
 begin
 	LogFunctionStart('GetTargetPlugin');
 	
-	if GlobConfig.PluginSelectionMode = 1 then 
+	if GlobConfig.PluginSelectionMode = 1 then //automatic
 	begin
-		targetPlugin := AddNewFileName(GlobConfig.NewPluginName+'.esp',true);
-		ResultTextsList.Add(GetFileName(FileByIndex(0)));
+		if GlobConfig.ExistingGernashsDescrPluginsSelectedIndex < 0 then begin
+			tmpStr:= GlobConfig.NewPluginName;
+			if not SameText(Copy(tmpStr,Length(tmpStr)-4,4),'.esp') then
+				tmpStr := tmpStr + '.esp';
+			targetPlugin := AddNewFileName(tmpStr,true);
+			
+			SetEditValue(ElementByPath(ElementByIndex(targetPlugin, 0), 'CNAM'), 'Gernash');
+			SetElementEditValues(ElementByIndex(targetPlugin, 0),'SNAM', automaticPluginDescriptionStartStr + ' (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
+			
+			LogModification(Format('new plugin created: %s',[GetFileName(targetPlugin)]));
+		end else begin
+			targetPlugin := FileByName(GlobConfig.ExistingGernashsDescrPlugins[GlobConfig.ExistingGernashsDescrPluginsSelectedIndex]);
+			LogCheckSuccessful(Format('Existing plugin selected to store records: %s',[GetFileName(targetPlugin)]));
+		end;
+	end 
+	else if GlobConfig.PluginSelectionMode = 2 then 
+	begin
+		tmpStr:= GlobConfig.NewPluginName;
+		if not SameText(Copy(tmpStr,Length(tmpStr)-4,4),'.esp') then
+			tmpStr := tmpStr + '.esp';
+		targetPlugin := AddNewFileName(tmpStr,true);
 		
 		SetEditValue(ElementByPath(ElementByIndex(targetPlugin, 0), 'CNAM'), 'Gernash');
 		SetElementEditValues(ElementByIndex(targetPlugin, 0),'SNAM', automaticPluginDescriptionStartStr + ' (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
 		
 		LogModification(Format('new plugin created: %s',[GetFileName(targetPlugin)]));
 	end 
-	else if GlobConfig.PluginSelectionMode = 2 then 
+	else if GlobConfig.PluginSelectionMode = 3 then 
 	begin 
 		targetPlugin := FileByIndex(Pred(FileCount));
 		LogCheckSuccessful(Format('Existing plugin selected to store records: %s',[GetFileName(targetPlugin)]));

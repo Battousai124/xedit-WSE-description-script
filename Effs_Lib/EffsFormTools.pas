@@ -215,6 +215,7 @@ var
   ed: TEdit;
 begin
 	LogFunctionStart('ConstructEdit');
+	DebugLog('text: ' + text);
 	
   ed := TEdit.Create(frm);
   ed.Parent := parent;
@@ -330,7 +331,8 @@ begin
 		lbl.ShowHint := true;
 		lbl.Hint := hint;
 	end;
-	
+	// lbl.Transparent := false;
+	// lbl.Color := clRed;
 	
 	if disabledText <> '' then begin
 		disabledLbl := TLabel.Create(frm);
@@ -386,7 +388,7 @@ begin
 	//pnl.ClientHeight := height;
 	//pnl.Height := height+20;
 	
-	lbl := ConstructLabel(frm, pnl, 0, 0, height, width, disabledText, hint);
+	lbl := ConstructLabel(frm, pnl, 4, 4, height, width, disabledText, hint);
 	lbl.Font.color := clGray;
 	  
 	cb := TComboBox.Create(frm);
@@ -398,13 +400,14 @@ begin
 	cb.Style := csDropDownList;
 	cb.Items := items;
 	cb.ItemIndex := selectedItemIndex;
-		
+	//cb.ItemHeight := 16;
+	
 	if disabledText = '' then begin
 		cb.Top := 0;
 		lbl.Top := -100;
 	end else begin
 		cb.Top := -100;
-		lbl.Top := 0;
+		lbl.Top := 4;
 	end;
 	
 	Result := pnl;

@@ -10,7 +10,7 @@ uses Windows;
 
 
 var
-	rgPluginSelectionMode, pnlPluginNameNew, pnlPluginNameDisplay : TPanel;
+	rgPluginSelectionMode, pnlPluginNameNew, pnlPluginNameDisplay, pnlPluginNameSelect, ddlPluginNameSelect : TPanel;
 	tbFileName : TEdit;
 	btnOk : TButton;
 	lblPluginNameNotAllowed : TLabel;
@@ -37,7 +37,7 @@ begin
 	
 	try
 		frm.Caption := 'Gernash''s OMOD description renamer';
-		frm.Width := 600;
+		frm.Width := 650;
 		frm.Height := 400;
 		frm.Position := poScreenCenter;
 		
@@ -86,36 +86,57 @@ begin
 		
 		//plugin selection mode
 		tmpStringList.Clear;
+		tmpStringList.Add('automatic');
 		tmpStringList.Add('create new');
 		tmpStringList.Add('last in load order');
-		rgPluginSelectionMode:=ConstructPseudoRadioGroup(frm, gbMainSettings, curTopPos, 10, 20, gbMainSettings.Width-16, 'Plugin to store changes', (gbMainSettings.Width-16)/3, 
+		rgPluginSelectionMode:=ConstructPseudoRadioGroup(frm, gbMainSettings, curTopPos, 10, 20, gbMainSettings.Width-12, 'Plugin to store changes', (gbMainSettings.Width-12)/3, 
 			'defines where changes are stored - e.g. a new plugin can be created at the end of the load order or an existing plugin can be used'
-			, tmpStringList, (gbMainSettings.Width-16)*2/3/tmpStringList.Count, GlobConfig.PluginSelectionMode, '');
+			, tmpStringList, (gbMainSettings.Width-(gbMainSettings.Width-12)/3-20)/tmpStringList.Count, GlobConfig.PluginSelectionMode, '');
 		
 		for i := 1 to tmpStringList.Count do begin 
 			rgPluginSelectionMode.Controls[i].OnClick:=OnChangePluginSelectionMode;
 		end;
 		
 		//plugin name
+		pnlPluginNameSelect := ConstructPanel(frm, gbMainSettings, rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 22, rgPluginSelectionMode.Width, '', '');
+		pnlPluginNameSelect.BevelOuter := bvNone;
+		lbl := ConstructLabel(frm, pnlPluginNameSelect, 3, 10, 16, (gbMainSettings.Width-16)/3, 'Select from found plugins', 'Lists all plugins that were automatically created by this script before. The one lowest in the load order is selected by default.');
+		if GlobConfig.ExistingGernashsDescrPlugins.Count>0 then 
+			tmpStr:=''
+		else
+			tmpStr:=GlobConfig.NewPluginName+'.esp';
+		ddlPluginNameSelect := ConstructDropdown(frm, pnlPluginNameSelect, 0, lbl.Left + lbl.Width, 26, (gbMainSettings.Width-(gbMainSettings.Width-12)/3-20)*2/3, GlobConfig.ExistingGernashsDescrPlugins.Count-1, GlobConfig.ExistingGernashsDescrPlugins,lbl.Hint,tmpStr);
+		ddlPluginNameSelect.Controls[1].OnChange := OnChangeExistingPluginDropdown;
+		if GlobConfig.ExistingGernashsDescrPlugins.Count = 0 then begin
+			lbl.Caption :='New plugin name';
+			lbl.Hint := 'There was no plugin found in the current load order that was automatically created by this script. Therefore a new plugin will be created with a default name.';
+			lbl.Font.color := clGray;
+			ddlPluginNameSelect.Controls[0].Top := ddlPluginNameSelect.Controls[0].Top - 1;
+			ddlPluginNameSelect.Hint := lbl.Hint;
+			ddlPluginNameSelect.Controls[0].Hint := lbl.Hint;
+		end;
+		if not (GlobConfig.PluginSelectionMode = 1) then begin
+			pnlPluginNameSelect.Visible := false;
+		end
 		pnlPluginNameNew := ConstructPanel(frm, gbMainSettings, rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 21, rgPluginSelectionMode.Width, '', '');
 		pnlPluginNameNew.BevelOuter := bvNone;
-		lbl := ConstructLabel(frm, pnlPluginNameNew, 3, 10, 16, (gbMainSettings.Width-16)/3, 'Plugin Name', '');
-		tbFileName := ConstructEdit(frm, pnlPluginNameNew, 0, lbl.Left + lbl.Width, 18, (gbMainSettings.Width-16)/3, GlobConfig.NewPluginName, 'name for new ESP to be created');
+		lbl := ConstructLabel(frm, pnlPluginNameNew, 3, 10, 16, (gbMainSettings.Width-16)/3, 'New plugin name', 'Enter a plugin name for the new plugin (without file extension).');
+		tbFileName := ConstructEdit(frm, pnlPluginNameNew, 0, lbl.Left + lbl.Width, 21, (gbMainSettings.Width-(gbMainSettings.Width-12)/3-20)*2/3, GlobConfig.NewPluginName, 'name for new ESP to be created');
 		tbFileName.OnKeyUp := OnChangePluginName;
 		lbl := ConstructLabel(frm, pnlPluginNameNew, lbl.Top, tbFileName.Left+tbFileName.Width, 16, 20, '.esp', '');
-		lblPluginNameNotAllowed := ConstructLabel(frm, pnlPluginNameNew, lbl.Top, lbl.Left+lbl.Width+20, 16, pnlPluginNameNew.Width-lbl.Left-lbl.Width, 'not allowed', '');
+		lblPluginNameNotAllowed := ConstructLabel(frm, pnlPluginNameNew, lbl.Top, lbl.Left+lbl.Width+20, 16, pnlPluginNameNew.Width-lbl.Left-lbl.Width, 'not allowed', 'The name you entered is not allowed (e.g. because it starts or ends with a space, contains forbidden characters or it already exists in the load order or the game''s Data folder).');
 		lblPluginNameNotAllowed.Font.color := clRed;
 		lblPluginNameNotAllowed.Visible := false; //the suggestion is always allowed, because it is validated before showing the GUI
-		if not (GlobConfig.PluginSelectionMode = 1) then begin
+		if not (GlobConfig.PluginSelectionMode = 2) then begin
 			pnlPluginNameNew.Visible := false;
 		end
 		pnlPluginNameDisplay := ConstructPanel(frm, gbMainSettings, rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 21, rgPluginSelectionMode.Width, '', '');
 		pnlPluginNameDisplay.BevelOuter := bvNone;
-		lbl := ConstructLabel(frm, pnlPluginNameDisplay, 3, 10, 16, (gbMainSettings.Width-16)/3, 'Plugin Name', '');
-		lbl.Font.color := clGray;
-		lbl := ConstructLabel(frm, pnlPluginNameDisplay, lbl.Top, lbl.Left + lbl.Width, 16, pnlPluginNameDisplay.Width-lbl.Left-lbl.Width, GlobConfig.LastPluginInLoadOrder, '');
-		lbl.Font.color := clGray;
-		if not (GlobConfig.PluginSelectionMode = 2) then begin
+		lbl := ConstructLabel(frm, pnlPluginNameDisplay, 3, 10, 16, (gbMainSettings.Width-16)/3, 'Plugin name', 'automatically selects the last plugin in your load order'+ chr(13) + chr(10)+'ATTENTION: this could be a master or a vanilla plugin or something you do not want to overwrite!'+ chr(13) + chr(10)+'Don''t use this option if you are not sure.');
+		lbl.Font.color := $0080FF; //darker orange
+		lbl := ConstructLabel(frm, pnlPluginNameDisplay, lbl.Top, lbl.Left + lbl.Width, 16, pnlPluginNameDisplay.Width-lbl.Left-lbl.Width, GlobConfig.LastPluginInLoadOrder, lbl.Hint);
+		lbl.Font.color := $0080FF; //darker orange
+		if not (GlobConfig.PluginSelectionMode = 3) then begin
 			pnlPluginNameDisplay.Visible := false;
 		end
 		
@@ -164,6 +185,8 @@ begin
 		tmpStringList.Free;
 		tmpStringList:=nil;
 		rgPluginSelectionMode:=nil;
+		pnlPluginNameSelect:=nil;
+		ddlPluginNameSelect:=nil;
 		pnlPluginNameNew:=nil;
 		pnlPluginNameDisplay:=nil;
 		frm.Free;
@@ -173,6 +196,18 @@ begin
 end;
 
 
+//=========================================================================
+//  Event when the plugin selection mode is changed
+//=========================================================================
+procedure OnChangeExistingPluginDropdown(Sender: TObject;);
+begin
+	LogFunctionStart('OnChangeExistingPluginDropdown');
+	
+	if GlobConfig.ExistingGernashsDescrPlugins.Count > 0 then
+		GlobConfig.ExistingGernashsDescrPluginsSelectedIndex := ddlPluginNameSelect.Controls[1].ItemIndex;
+	
+	LogFunctionEnd;
+end;
 
 //=========================================================================
 //  Event when the plugin name is edited in the textbox
@@ -245,11 +280,24 @@ begin
 	
 	GlobConfig.PluginSelectionMode := GetPseudoRadioButtonGroupValue(rgPluginSelectionMode);
 	if GlobConfig.PluginSelectionMode = 1 then begin
+		pnlPluginNameSelect.Visible := true;
+		pnlPluginNameNew.Visible := false;
+		pnlPluginNameDisplay.Visible := false;
+		
+		if GlobConfig.ExistingGernashsDescrPluginsSelectedIndex = 0 then begin
+			GlobConfig.NewPluginName:= ddlPluginNameSelect.Controls[0].Text;
+		end;
+		btnOk.Enabled := true;
+	end else if GlobConfig.PluginSelectionMode = 2 then begin
+		pnlPluginNameSelect.Visible := false;
 		pnlPluginNameNew.Visible := true;
 		pnlPluginNameDisplay.Visible := false;
-	end else if GlobConfig.PluginSelectionMode = 2 then begin
+		btnOk.Enabled := not lblPluginNameNotAllowed.Visible;
+	end else if GlobConfig.PluginSelectionMode = 3 then begin
+		pnlPluginNameSelect.Visible := false;
 		pnlPluginNameNew.Visible := false;
 		pnlPluginNameDisplay.Visible := true;
+		btnOk.Enabled := true;
 	end;
 	
 	LogFunctionEnd;
