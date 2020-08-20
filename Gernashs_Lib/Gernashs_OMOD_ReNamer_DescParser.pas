@@ -1,10 +1,27 @@
+//
+
+// Gernashs_OMOD_ReNamer_DescParser
+//
+// Ver: 1
+// WIP (2)
+//
+// Scripting: EffEIO
+// Tester: KenShin, Gernash
+//
+
 unit Gernashs_OMOD_ReNamer_DescParser;
+
 
 interface
 
 implementation
 
-uses xEditAPI, Classes, SysUtils, StrUtils, Windows;
+uses
+  xEditAPI,
+  Classes,
+  SysUtils,
+  StrUtils,
+  Windows;
 
 procedure GetMappedValues(rec: IInterface; mappedValues, indicesToSkip,
   mappedValuesFormat: TStringList;);
@@ -59,17 +76,17 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
       if floatValue > 1.0 then
       begin
-        loopResult := FloatToStr(round(floatValue*10)/10);
+        loopResult := FloatToStr(round(floatValue * 10) / 10);
         loopResultFormatted := '+' + loopResult + chr($00B0);
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := '+' + loopResult + chr($00B0);
       end
       else
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := loopResult + chr($00B0);
       end;
     end
@@ -91,19 +108,19 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
       if floatValue > 1.0 then
       Begin
-        loopResult := FloatToStr(round(floatValue*10)/10);  
+        loopResult := FloatToStr(round(floatValue * 10) / 10);
         loopResultFormatted := loopResult + 'x';
         if valuePropertytype = 'AmmoCapacity' then
           loopResultFormatted := loopResult;
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := '+' + loopResult + '%';
       end
       else
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := loopResult + '%';
       end;
     end
@@ -114,17 +131,17 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
       if floatValue > 1.0 then
       Begin
-        loopResult := FloatToStr(round(floatValue*10)/10);  
+        loopResult := FloatToStr(round(floatValue * 10) / 10);
         loopResultFormatted := loopResult;
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := '+' + loopResult + '%';
       end
       else
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := loopResult + '%';
       end;
     end
@@ -133,8 +150,11 @@ begin
       (valuePropertytype = 'AimModelRecoilShotsForRunaway') then
     begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
-      loopResult := FloatToStr(round(floatValue*10)/10);
+      loopResult := FloatToStr(round(floatValue * 10) / 10);
       loopResultFormatted := loopResult + ' rnd';
+      if (valuePropertytype = 'AimModelRecoilShotsForRunaway') then
+        loopResultFormatted := loopResult;
+
     end
 
     else if (valuePropertytype = 'SightedTransitionSeconds') or
@@ -144,17 +164,17 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 6));
       if floatValue > 1.0 then
       Begin
-        loopResult := FloatToStr(round(floatValue*10)/10);
+        loopResult := FloatToStr(round(floatValue * 10) / 10);
         loopResultFormatted := loopResult + ' sec';
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := '+' + loopResult + '%';
       end
       else
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := loopResult + '%';
       end;
     end
@@ -165,17 +185,17 @@ begin
       floatValue := GetNativeValue(ElementByIndex(prop, 7)); // Value 2
       if floatValue > 1.0 then
       begin
-        loopResult := FloatToStr(round(floatValue*10)/10);
+        loopResult := FloatToStr(round(floatValue * 10) / 10);
         loopResultFormatted := loopResult;
       end
       else if floatValue > 0.0 then
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := '+' + loopResult + '%';
       end
       else
       begin
-        loopResult := IntToStr(Int(round(floatValue * 1000)/10));
+        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
         loopResultFormatted := loopResult + '%';
       end;
     end
@@ -187,7 +207,8 @@ begin
       loopResultFormatted := loopResult;
     end
 
-    else if (valuePropertytype = 'Enchantments') then
+    else if (valuePropertytype = 'Enchantments') or
+      (valuePropertytype = 'ZoomData') then
     begin
       loopResult := slPropertyMap.Values
         [RecordToString(LinksTo(ElementByIndex(prop, 6)))];
@@ -262,8 +283,8 @@ begin
             continue;
           prop2 := ElementByIndex(properties, k);
 
-          if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property'))
-            = -1 then
+          if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')
+            ) = -1 then
           begin
             continue;
           end;
@@ -342,8 +363,8 @@ begin
             continue;
           prop2 := ElementByIndex(properties, k);
 
-          if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property'))
-            = -1 then
+          if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')
+            ) = -1 then
           begin
             continue;
           end;
@@ -358,17 +379,18 @@ begin
           begin
             if value1Loop2 > 1.0 then
             begin
-              mappedValue2 := FloatToStr(round(value1Loop2*10)/10);
+              mappedValue2 := FloatToStr(round(value1Loop2 * 10) / 10);
               mappedValue2FORMAT := Format('%sx', [mappedValue2]);
             end
             else if value1Loop2 > 0.0 then
             begin
-              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000)/10)); //(round(floatValue * 1000)/10));
+              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000) / 10));
+              // (round(floatValue * 1000)/10));
               mappedValue2FORMAT := Format('+%s%', [mappedValue2]);
             end
             else
             begin
-              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000)/10));
+              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000) / 10));
               mappedValue2FORMAT := mappedValue2 + '%';
             end;
           end
@@ -378,17 +400,17 @@ begin
           begin
             if value1Loop2 > 1.0 then
             begin
-              mappedValue2 := FloatToStr(round(value1Loop2*10)/10);
+              mappedValue2 := FloatToStr(round(value1Loop2 * 10) / 10);
               mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
             end
             else if value1Loop2 > 0.0 then
             begin
-              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000)/10));
+              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000) / 10));
               mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
             end
             else
             begin
-              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000)/10));
+              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000) / 10));
               mappedValue2FORMAT := mappedValue2 + chr($00B0);
             end;
           end;
@@ -472,10 +494,14 @@ begin
         or ((mappedName = 'Keywords_Values_Type') and (value1Loop1 <> '') and
         (value1Loop1 <> 'Energy') and (value1Loop1 <> 'Cold') and
         (value1Loop1 <> 'Radiation') and
-        (value1Loop1 <> 'Split Beam Shotgun Energy')) then
+        (value1Loop1 <> 'Split Beam Shotgun Energy')) or
+        (valuePropertytype = 'ZoomData') then
       begin
         loopResult := value1Loop1;
       end
+
+      // else if (valuePropertytype = 'ZoomData') then
+      // loopResult := mappedValueFORMAT
 
       else if (value1Loop1 <> 'NFW') and (mappedName <> '\') and
         (valuetype <> 'REM') and (mappedName <> 'Keywords_Values_Type') and
