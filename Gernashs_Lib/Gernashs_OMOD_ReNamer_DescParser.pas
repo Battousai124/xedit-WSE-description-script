@@ -21,12 +21,6 @@ uses
   SysUtils,
   StrUtils,
   Windows;
-uses 'Effs_Lib\EffsDebugLog';
-uses 'Effs_Lib\EffsFormTools';
-uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Form';
-uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Config';
-uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_DescParser';
-uses 'Effs_Lib\EffsXEditTools';
 
 const
   sPropertiesList = wbScriptsPath +
