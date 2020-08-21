@@ -8,7 +8,7 @@
 // Tester: KenShin, Gernash
 //
 
-unit Gernashs_description_Renamer; // FO4PatchOmodDescriptions;
+unit Gernashs_OMOD_ReNamer_DescParser; // FO4PatchOmodDescriptions;
 
 // code for editing xEdit scripts with Delphi
 interface
