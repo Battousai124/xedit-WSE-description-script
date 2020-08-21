@@ -20,8 +20,8 @@ RollingPinAluminium[Fallout4.esm]:MSWP=Aluminium
 //mat_PA_T60_RawMetal[Fallout4.esm]:MSWP=Brotherhood of Steel Officer
 {{{------------------------Keywords_Values_Type-------------------------}}}
 Keywords=Keywords_Values_Type
-mod_weapon_shock_fist[Fallout4.esm]:KYWD=+10 Energy (per installed Tesla Bracers, max. 2)
-dn_HasMisc_Unarmed[Fallout4.esm]:KYWD=15 points of damage increase per installed Hydraulic Bracers
+//mod_weapon_shock_fist[Fallout4.esm]:KYWD=+10 Energy (per installed Tesla Bracers, max. 2)
+//dn_HasMisc_Unarmed[Fallout4.esm]:KYWD=15 points of damage increase per installed Hydraulic Bracers
 {{{---------------------------Weapon_Types------------------------------}}}
 {{-------------------------------Melee-----------------------------------}}
 dn_HasLogo_Swatter[Fallout4.esm]:KYWD=Increased damage vs armoured targets
@@ -46,7 +46,7 @@ HasLegendary_Weapon_Speed[Fallout4.esm]:KYWD=Adds 25% faster fire rate
 HasLegendary_Weapon_VATSGun[Fallout4.esm]:KYWD=Improved VATS hit chance(+33%)
 HasSilencer[Fallout4.esm]:KYWD=Suppresses sound from firing
 ap_melee_ArmorPenetrate[Fallout4.esm]:KYWD=Armor Piercing
-dn_HasBarrel_MS09Push[Fallout4.esm]:KYWD=Uses telekinesis to push targets away
+//dn_HasBarrel_MS09Push[Fallout4.esm]:KYWD=Uses telekinesis to push targets away
 dn_HasLining_FlameResistance[Fallout4.esm]:KYWD=Immune to being set on fire
 ///dn_HasMag_ExtraLarge[Fallout4.esm]:KYWD=Exceptional ammo capacity
 ///[Fallout4.esm]:KYWD=Superior ammo capacity
@@ -102,6 +102,7 @@ dn_HasReceiver_Crank5[Fallout4.esm]:KYWD=Six crank reload maximum.
 {{-----------------------------Calibre|Ammo------------------------------}}
 // Disabled OverrideProjectile=
 {{{---------------------------------------------------------------------}}}
+MS09PushProjectile[Fallout4.esm]:PROJ=Uses telekinesis to push targets away
 AlienBlasterProjectile[Fallout4.esm]:PROJ=Changes Ammo to Fusion Cells.
 CryoProjectile[Fallout4.esm]:PROJ=Fires cryogenic capsules.
 DLC03_HarpoonGunBarbedProjectile[DLCCoast.esm]:PROJ=Changes Ammo to Barbed Harpoons.
@@ -148,6 +149,7 @@ PowerArmorVent[Fallout4.esm]:AVIF=Impact Landing Damage: +50 | Stagger Strength:
 ReduceLimbDamageMod[Fallout4.esm]:AVIF=Reduces limb damage by: 
 SpeedMult[Fallout4.esm]:AVIF=Increases wearer's movement speed by: 
 ccBGSFO4116_PA_FlameResistance_AV [AVIF:FE06A826]=Fire damage reduced by: 
+PA_ShockDmg_AV[Fallout4.esm]:AVIF=+10 Energy (per installed Tesla Bracers, max. 2)
 {{{-------------------Actor_Values_Type---DUD Entries-------------------}}}
 PA_Intelligence_AV[Fallout4.esm]:AVIF=NFW
 PA_OptimizedServos_AV[Fallout4.esm]:AVIF=NFW
@@ -155,7 +157,6 @@ PA_KineticServos_AV[Fallout4.esm]:AVIF=NFW
 PA_Charisma_AV[Fallout4.esm]:AVIF=NFW
 PA_Strength_AV[Fallout4.esm]:AVIF=NFW
 PA_RustyKnuckles_AV[Fallout4.esm]:AVIF=NFW
-PA_ShockDmg_AV[Fallout4.esm]:AVIF=NFW
 mat_PA_X01_Institute[Fallout4.esm]:MSWP=NFW
 {{{--------------------------Enchantments_Value-------------------------}}}
 Enchantments=Enchantments_Value
@@ -363,8 +364,8 @@ dtRadiationIngestion[Fallout4.esm]:DMGT=Additional Radiation Ingestion damage:
 {{{------------------------------ZoomData-------------------------------}}}
 ZoomData=
 {{{---------------------------------------------------------------------}}}
-dn_HasScope_GlowSights[Fallout4.esm]:KYWD=Glow Sights, for low visibility environments.
-dn_HasScope_ReflexSight[Fallout4.esm]:KYWD=Reflex Sight
+//dn_HasScope_GlowSights[Fallout4.esm]:KYWD=Glow Sights, for low visibility environments.
+//dn_HasScope_ReflexSight[Fallout4.esm]:KYWD=Reflex Sight
 ZM_Standard_Scope_x2[Fallout4.esm]:ZOOM=x2 Short Scope
 ZM_Standard_Scope_x4[Fallout4.esm]:ZOOM=x4 Short Scope
 ZM_Standard_Scope_x6[Fallout4.esm]:ZOOM=x6 Medium Scope
