@@ -1,0 +1,350 @@
+
+_newscript_.pas
+Add enable parent to the refs of specific base object.pas
+Add into container.pas
+Add prefix or suffix to Editor ID.pas
+Add Prefix Plus Name To EDID.pas
+amb/openfile.bmp
+Apply custom scripted filter.pas
+Apply filter for cleaning.pas
+Apply filter for deleted navmeshes.pas
+Assets browser.pas
+Assets manager.pas
+AT - Armor Mod Builder v1.4.pas
+AT - Break it Down v1.0.pas
+AT - CCOR Compatibility Script v1.0.pas
+AT - NPC Generator v1.8.pas
+AT - NPC Transmogrifier v1.0.pas
+AT - PerkTreeUI v1.3.pas
+AT - QuickChange v2.5.pas
+AT - QuickDisplay v1.5.pas
+AT - Re-Evaluator v1.0.pas
+AT - Renamer v1.1.pas
+AT - Replace FormID v1.3.pas
+AT - Virtual Broom v1.1.pas
+Base object variations.pas
+BASH tags autodetection.pas
+Bookmark.pas
+Bookmark1.pas
+Bookmark1Go.pas
+Bookmark2.pas
+Bookmark2Go.pas
+Bookmark3.pas
+Bookmark3Go.pas
+Bookmark4.pas
+Bookmark4Go.pas
+Bookmark5.pas
+Bookmark5Go.pas
+Change load order of FormID.pas
+Change persistent flag.pas
+Check for circular previous INFOs.pas
+Check for errors.pas
+Check for invalid alternate textures.pas
+Conflict Status.pas
+Copy as override.pas
+Copy FormID to clipboard.pas
+Copy version control info from another plugin.pas
+Create Shared Infos.pas
+DDS - Find textures without mipmaps.pas
+Detect conflict between elements.pas
+Effs_Lib/AABGRAPH.PAS
+Effs_Lib/EffsWeaponPatchHelperForm.pas
+Effs_Lib/EffsWeaponPatchHelperSettings.pas
+Effs_Lib/lcltype.pp
+Effs_Lib/MappingGunClassToWorkbenchCategory.csv
+Effs_Lib/tachart/ipf_fix.o
+Effs_Lib/tachart/ipf_fix.ppu
+Effs_Lib/tachart/taanimatedsource.o
+Effs_Lib/tachart/taanimatedsource.ppu
+Effs_Lib/tachart/taaxissource.o
+Effs_Lib/tachart/taaxissource.ppu
+Effs_Lib/tachart/tachartaxis.o
+Effs_Lib/tachart/tachartaxis.ppu
+Effs_Lib/tachart/tachartaxisutils.o
+Effs_Lib/tachart/tachartaxisutils.ppu
+Effs_Lib/tachart/tachartcombos.o
+Effs_Lib/tachart/tachartcombos.ppu
+Effs_Lib/tachart/tachartextentlink.o
+Effs_Lib/tachart/tachartextentlink.ppu
+Effs_Lib/tachart/tachartimagelist.o
+Effs_Lib/tachart/tachartimagelist.ppu
+Effs_Lib/tachart/TAChartLazarusPkg.compiled
+Effs_Lib/tachart/tachartlazaruspkg.o
+Effs_Lib/tachart/tachartlazaruspkg.ppu
+Effs_Lib/tachart/tachartlistbox.o
+Effs_Lib/tachart/tachartlistbox.ppu
+Effs_Lib/tachart/tachartstrconsts.o
+Effs_Lib/tachart/tachartstrconsts.ppu
+Effs_Lib/tachart/tachartstrconsts.rsj
+Effs_Lib/tachart/tachartteechart.o
+Effs_Lib/tachart/tachartteechart.ppu
+Effs_Lib/tachart/tachartutils.o
+Effs_Lib/tachart/tachartutils.ppu
+Effs_Lib/tachart/tacustomfuncseries.o
+Effs_Lib/tachart/tacustomfuncseries.ppu
+Effs_Lib/tachart/tacustomseries.o
+Effs_Lib/tachart/tacustomseries.ppu
+Effs_Lib/tachart/tacustomsource.o
+Effs_Lib/tachart/tacustomsource.ppu
+Effs_Lib/tachart/tadatapointseditor.lfm
+Effs_Lib/tachart/tadatapointseditor.o
+Effs_Lib/tachart/tadatapointseditor.ppu
+Effs_Lib/tachart/tadatatools.o
+Effs_Lib/tachart/tadatatools.ppu
+Effs_Lib/tachart/tadbsource.o
+Effs_Lib/tachart/tadbsource.ppu
+Effs_Lib/tachart/tadiagram.o
+Effs_Lib/tachart/tadiagram.ppu
+Effs_Lib/tachart/tadiagramdrawing.o
+Effs_Lib/tachart/tadiagramdrawing.ppu
+Effs_Lib/tachart/tadiagramlayout.o
+Effs_Lib/tachart/tadiagramlayout.ppu
+Effs_Lib/tachart/tadrawercanvas.o
+Effs_Lib/tachart/tadrawercanvas.ppu
+Effs_Lib/tachart/tadrawersvg.o
+Effs_Lib/tachart/tadrawersvg.ppu
+Effs_Lib/tachart/tadrawutils.o
+Effs_Lib/tachart/tadrawutils.ppu
+Effs_Lib/tachart/taenumerators.o
+Effs_Lib/tachart/taenumerators.ppu
+Effs_Lib/tachart/taexpressionseries.o
+Effs_Lib/tachart/taexpressionseries.ppu
+Effs_Lib/tachart/tafitlib.o
+Effs_Lib/tachart/tafitlib.ppu
+Effs_Lib/tachart/tafitutils.o
+Effs_Lib/tachart/tafitutils.ppu
+Effs_Lib/tachart/tafonts.o
+Effs_Lib/tachart/tafonts.ppu
+Effs_Lib/tachart/tafuncseries.o
+Effs_Lib/tachart/tafuncseries.ppu
+Effs_Lib/tachart/tageometry.o
+Effs_Lib/tachart/tageometry.ppu
+Effs_Lib/tachart/tagraph.o
+Effs_Lib/tachart/tagraph.ppu
+Effs_Lib/tachart/tagraph.res
+Effs_Lib/tachart/taguiconnector.o
+Effs_Lib/tachart/taguiconnector.ppu
+Effs_Lib/tachart/tahtml.o
+Effs_Lib/tachart/tahtml.ppu
+Effs_Lib/tachart/taintervalsources.o
+Effs_Lib/tachart/taintervalsources.ppu
+Effs_Lib/tachart/talegend.o
+Effs_Lib/tachart/talegend.ppu
+Effs_Lib/tachart/talegendpanel.o
+Effs_Lib/tachart/talegendpanel.ppu
+Effs_Lib/tachart/tamath.o
+Effs_Lib/tachart/tamath.ppu
+Effs_Lib/tachart/tamultiseries.o
+Effs_Lib/tachart/tamultiseries.ppu
+Effs_Lib/tachart/tanavigation.o
+Effs_Lib/tachart/tanavigation.ppu
+Effs_Lib/tachart/taopengl.o
+Effs_Lib/tachart/taopengl.ppu
+Effs_Lib/tachart/taradialseries.o
+Effs_Lib/tachart/taradialseries.ppu
+Effs_Lib/tachart/taseries.o
+Effs_Lib/tachart/taseries.ppu
+Effs_Lib/tachart/taserieseditor.o
+Effs_Lib/tachart/taserieseditor.ppu
+Effs_Lib/tachart/taseriespropeditors.o
+Effs_Lib/tachart/taseriespropeditors.ppu
+Effs_Lib/tachart/tasources.o
+Effs_Lib/tachart/tasources.ppu
+Effs_Lib/tachart/tastyles.o
+Effs_Lib/tachart/tastyles.ppu
+Effs_Lib/tachart/tasubcomponentseditor.lfm
+Effs_Lib/tachart/tasubcomponentseditor.o
+Effs_Lib/tachart/tasubcomponentseditor.ppu
+Effs_Lib/tachart/tatextelements.o
+Effs_Lib/tachart/tatextelements.ppu
+Effs_Lib/tachart/tatooleditors.o
+Effs_Lib/tachart/tatooleditors.ppu
+Effs_Lib/tachart/tatools.o
+Effs_Lib/tachart/tatools.ppu
+Effs_Lib/tachart/tatransformations.o
+Effs_Lib/tachart/tatransformations.ppu
+Effs_Lib/tachart/tatypes.o
+Effs_Lib/tachart/tatypes.ppu
+Effs_WeaponPatchHelper.pas
+Execute external applications.pas
+Export dialogues.pas
+Export list of cells.pas
+ExportImportTexts.pas
+Fallout4 - Convert ALCH to SPEL.pas
+Fallout4 - Copy XPRI subrecord.pas
+Fallout4 - Disable PreVis.pas
+Fallout4 - Filter for precombined statics.pas
+Fallout4 - Import SCLP bone weights.pas
+Fallout4 - Workshop Menu Editor.pas
+Find cell in worldspace.pas
+Find ESP plugins which could be turned into ESL.pas
+Find plugins which could be turned into ESL.pas
+Find records.pas
+FNV - Export dialogues.pas
+FO3 and FNV - Translator.pas
+FO4-AtlasMap-Commonwealth.txt
+FO4-AtlasMap-SanctuaryHillsWorld.txt
+FO4ExportImportFormIDs.pas
+FO4ExportImportINNR.pas
+FO4ExportImportLLCT.pas
+FO4ExportImportLLCT_ItemsFirst.pas
+FO4ExportImportOBTE.pas
+FO4ExportListAllOfThisType.pas
+FO4ExportListAllOfThisType.pas.backup.2020_08_02_16_06_12
+FUZer.pas
+JSON - Demo.pas
+List FormIDs from specific space.pas
+List hardcoded forms from references.pas
+List loaded plugins and their masters.pas
+List LOD objects and meshes.pas
+List master references.pas
+List null FormID.pas
+List perk entry points usage.pas
+List records referencing specific plugin.pas
+List used baseforms and statistics.pas
+List used meshes from references.pas
+List used meshes.pas
+LOD Statistics.pas
+LODGen.exe
+LODGen.pas
+LODGen_flat_lod.nif
+LODGenx64.exe
+Make new records from overrides.pas
+Merge overrides into master.pas
+mteFunctions.pas
+NIF - Batch JSON converter.pas
+NIF - Batch textures replacement.pas
+NIF - Batch update tangents and bitangents.pas
+NIF - Convert OBJ to NIF.pas
+NIF - List blocks references.pas
+npcg/AltmerFamilyNames.txt
+npcg/AltmerFemaleNames.txt
+npcg/AltmerMaleNames.txt
+npcg/ArgonianFamilyNames.txt
+npcg/ArgonianFemaleNames.txt
+npcg/ArgonianMaleNames.txt
+npcg/BosmerFamilyNames.txt
+npcg/BosmerFemaleNames.txt
+npcg/BosmerMaleNames.txt
+npcg/BretonFamilyNames.txt
+npcg/BretonFemaleNames.txt
+npcg/BretonMaleNames.txt
+npcg/DunmerFamilyNames.txt
+npcg/DunmerFemaleNames.txt
+npcg/DunmerMaleNames.txt
+npcg/GeneralFamilyNames.txt
+npcg/GeneralFemaleNames.txt
+npcg/GeneralMaleNames.txt
+npcg/ImperialFamilyNames.txt
+npcg/ImperialFemaleNames.txt
+npcg/ImperialMaleNames.txt
+npcg/KhajiitFamilyNames.txt
+npcg/KhajiitFemaleNames.txt
+npcg/KhajiitMaleNames.txt
+npcg/NordFamilyNames.txt
+npcg/NordFemaleNames.txt
+npcg/NordMaleNames.txt
+npcg/OrcFamilyNames.txt
+npcg/OrcFemaleNames.txt
+npcg/OrcMaleNames.txt
+npcg/outfits.txt
+npcg/RedguardFamilyNames.txt
+npcg/RedguardFemaleNames.txt
+npcg/RedguardMaleNames.txt
+Oblivion - Export all scripts in xml format.pas
+Oblivion - Export Dialogues.pas
+Oblivion - Items lookup replacement.pas
+Oblivion - Items lookup replacement.txt
+Oblivion - OCO faces assignment.pas
+Output used assets filenames.pas
+PerkTreeUI/Green_pog.png
+PerkTreeUI/starfield.bmp
+PerkTreeUI/Yellow_pog.png
+Put master references in the same cell as overriding references.pas
+Put worldspace references in the right cells.pas
+Redirect references.pas
+Regular Expressions Workbench.pas
+Remove duplicate references.pas
+Remove excess references.pas
+Remove identical to previous override records.pas
+Remove invalid entries from from lists.pas
+Remove percentage of references of specific object.pas
+Remove same references against the master cell.pas
+Renumber FormID of Matching EDID.pas
+Renumber FormID.pas
+Replace landscape texture.pas
+Replace map marker.pas
+Replace model alternate textures.pas
+Replace model file name.pas
+Replace text in EDID and FULL.pas
+Report masters.pas
+Report unclamped FormIDs.pas
+Restore record names from master.pas
+Save script source.pas
+SaveAs.pas
+Scale trees references.pas
+Set default water level in exterior cells with HasWater flag.pas
+SetESL.pas
+Skyrim - Add keywords.pas
+Skyrim - Add shadow bias to lights.pas
+Skyrim - Book Covers Patch.pas
+Skyrim - Check edge links in navmeshes.pas
+Skyrim - Check script properties.pas
+Skyrim - Clean edge links in navmeshes.pas
+Skyrim - Convert BOOK to SCRL.pas
+Skyrim - Convert LIGH record with mesh to STAT or MISC.pas
+Skyrim - Copy book text only from master record.pas
+Skyrim - Copy cells settings.pas
+Skyrim - Copy VMAD subrecord.pas
+Skyrim - Create patch for ClimatesOfTamriel and SoundsOfSkyrim-TheWilds.pas
+Skyrim - Export and import weapons stats from spreadsheet file.pas
+Skyrim - Filter by script.pas
+Skyrim - Find uncompressed records.pas
+Skyrim - List actors with more than one vendor faction.pas
+Skyrim - List interior cells.pas
+Skyrim - List old version plugins.pas
+Skyrim - List used scripts.pas
+Skyrim - Make outfits from inventories.pas
+Skyrim - Ore Veins don't respawn.pas
+Skyrim - Read Books Aloud.pas
+Skyrim - Remove frequence variance from sound descriptors.pas
+Skyrim - Remove invalid entries.pas
+Skyrim - Reuse faces.pas
+Skyrim - Set first person flags on armors affected by specific plugin.pas
+Skyrim - Set HavokDontSettle flag on BOOK references.pas
+Skyrim - Set HavokDontSettle flag on refs using models from list.pas
+Skyrim - Set HavokDontSettle models list.txt
+Skyrim - Show references from location.pas
+Skyrim - Tree LOD files patcher.pas
+Skyrim - Tweak bloom, eyes adaptation, tint.pas
+Skyrim SE - Generate Large References.pas
+SSE-AtlasMap-Blackreach.txt
+SSE-AtlasMap-DeepwoodRedoubtWorld.txt
+SSE-AtlasMap-DLC01FalmerValley.txt
+SSE-AtlasMap-DLC01SoulCairn.txt
+SSE-AtlasMap-DLC1HunterHQWorld.txt
+SSE-AtlasMap-DLC2ApocryphaWorld.txt
+SSE-AtlasMap-DLC2SolstheimWorld.txt
+SSE-AtlasMap-JaphetsFollyWorld.txt
+SSE-AtlasMap-Markarth.txt
+SSE-AtlasMap-SkuldafnWorld.txt
+SSE-AtlasMap-Sovngarde.txt
+SSE-AtlasMap-Tamriel.txt
+TES5-AtlasMap-Tamriel.txt
+Texconv.exe
+Texconvx64.exe
+Undelete and Disable References.pas
+Undelete navmeshes.pas
+Update records form version.pas
+Weather Editor.pas
+Worldspace browser.pas
+Worldspace change height.pas
+Worldspace copy landscape area to another worldspace.pas
+Worldspace copy landscape.pas
+Worldspace crop.pas
+Worldspace displacement.pas
+Worldspace move references into another worldspace.pas
+Worldspace region change height.pas
+Worldspace region move.pas
+Worldspace scale refs position.pas
+xEditAPI.pas
