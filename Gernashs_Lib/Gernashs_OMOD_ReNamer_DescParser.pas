@@ -1,17 +1,16 @@
 //
-
-// Gernashs_OMOD_ReNamer_DescParser
+// Gernashs_description_Renamer
 //
-// Ver: 1
-// WIP (2)
+// Ver: 4
+// WIP (1)
 //
 // Scripting: EffEIO
 // Tester: KenShin, Gernash
 //
 
-unit Gernashs_OMOD_ReNamer_DescParser;
+unit Gernashs_description_Renamer; // FO4PatchOmodDescriptions;
 
-
+// code for editing xEdit scripts with Delphi
 interface
 
 implementation
@@ -22,557 +21,686 @@ uses
   SysUtils,
   StrUtils,
   Windows;
+uses 'Effs_Lib\EffsDebugLog';
+uses 'Effs_Lib\EffsFormTools';
+uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Form';
+uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Config';
+uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_DescParser';
+uses 'Effs_Lib\EffsXEditTools';
 
-procedure GetMappedValues(rec: IInterface; mappedValues, indicesToSkip,
-  mappedValuesFormat: TStringList;);
+const
+  sPropertiesList = wbScriptsPath +
+    'Gernashs_Lib\Gernashs description Renamer - Resource.txt';
+  automaticPluginDescriptionStartStr =
+    'Automatically created via Gernashs_OMOD_ReNamer script';
+
 var
-  valuetype, valuefunctiontype, valuePropertytype: string;
-  loopResult, loopResultFormatted: string;
-  floatValue: Real;
-  prop, properties: IInterface;
-  i, j, dummyInt: Integer;
+  slPropertyMap: TStringList;
+  targetPlugin: IwbFile;
+  ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList,
+    ChecksSuccessfulList, BeforeChangesList, AfterChangesList: TStringList;
+  bChecksFailed, bAborted, bModificationNecessary, bTargetPluginLoaded: Boolean;
+  bSlPropertyMapTranslated, bThisIsTheFirstExecution: Boolean;
+  { lastFileProcessed, } targetPluginName: String;
 
-  // OMOD Property Value Sort to %, x, deg or Value {{{THE MATHS}}}
-
+function Initialize: Integer;
 begin
-  LogFunctionStart('GetMappedValues');
-  properties := ElementByPath(rec, 'DATA\Properties');
-  for i := 0 to Pred(ElementCount(properties)) do
-  begin
-    if indicesToSkip.Find(i, dummyInt) then
-    begin
-      mappedValues.Add('');
-      // necessary, so that number of records stay the same
-      mappedValuesFormat.Add('');
-      continue;
-    end;
+  SetDefaultConfig;
 
-    prop := ElementByIndex(properties, i);
-    valuePropertytype := GetElementEditValues(prop, 'Property');
-    j := slPropertyMap.IndexOfName(valuePropertytype);
-    if j = -1 then
-    begin
-      mappedValues.Add('');
-      // necessary, so that number of records stay the same
-      mappedValuesFormat.Add('');
-      continue;
-    end;
+  LogFunctionStart('Initialize');
 
-    loopResult := '';
-    loopResultFormatted := '';
+  RecordsHeadersList := TStringList.Create;
+  ResultTextsList := TStringList.Create;
+  ChecksFailedList := TStringList.Create;
+  ChecksSuccessfulList := TStringList.Create;
+  ModificationsDoneList := TStringList.Create;
+  BeforeChangesList := TStringList.Create;
+  AfterChangesList := TStringList.Create;
 
-    valuetype := GetElementEditValues(prop, 'Value Type');
-    valuePropertytype := GetElementEditValues(prop, 'Property');
-    valuefunctiontype := GetElementEditValues(prop, 'Function Type');
+  slPropertyMap := TStringList.Create;
+  slPropertyMap.LoadFromFile(sPropertiesList);
+  if GlobConfig.AlwaysTranslateResourceFileAfterLoading then
+    TranslateDescriptionConfigurationFile;
 
-    if (valuePropertytype = 'AimModelRecoilArcRotateDeg') or
-      (valuePropertytype = 'AimModelMinConeDegrees') or
-      (valuePropertytype = 'AimModelMaxConeDegrees') or
-      (valuePropertytype = 'AimModelRecoilMinDegPerShot') or
-      (valuePropertytype = 'AimModelRecoilMaxDegPerShot') or
-      (valuePropertytype = 'AimModelRecoilHipMult') or
-      (valuePropertytype = 'AimModelRecoilArcDeg') then
-    begin
-      floatValue := GetNativeValue(ElementByIndex(prop, 6));
-      if floatValue > 1.0 then
-      begin
-        loopResult := FloatToStr(round(floatValue * 10) / 10);
-        loopResultFormatted := '+' + loopResult + chr($00B0);
-      end
-      else if floatValue > 0.0 then
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := '+' + loopResult + chr($00B0);
-      end
-      else
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := loopResult + chr($00B0);
-      end;
-    end
+  ReadLoadOrder;
 
-    else if (valuePropertytype = 'Speed') or (valuePropertytype = 'MinRange') or
-      (valuePropertytype = 'MaxRange') or
-      (valuePropertytype = 'OutOfRangeDamageMult') or
-      (valuePropertytype = 'AttackActionPointCost') or
-      (valuePropertytype = 'CriticalDamageMult') or
-      (valuePropertytype = 'MinPowerPerShot') or
-      (valuePropertytype = 'AimModelConeIronSightsMultiplier') or
-      (valuePropertytype = 'ZoomDataFOVMult') or
-      (valuePropertytype = 'SecondaryDamage') or
-      (valuePropertytype = 'AimModelBaseStability') or
-      (valuePropertytype = 'AttackDamage') or
-      (valuePropertytype = 'AmmoCapacity') or (valuePropertytype = 'ReloadSpeed')
-    then
-    begin
-      floatValue := GetNativeValue(ElementByIndex(prop, 6));
-      if floatValue > 1.0 then
-      Begin
-        loopResult := FloatToStr(round(floatValue * 10) / 10);
-        loopResultFormatted := loopResult + 'x';
-        if valuePropertytype = 'AmmoCapacity' then
-          loopResultFormatted := loopResult;
-      end
-      else if floatValue > 0.0 then
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := '+' + loopResult + '%';
-      end
-      else
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := loopResult + '%';
-      end;
-    end
+  bThisIsTheFirstExecution := true;
 
-    else if (valuePropertytype = 'Rating') or (valuePropertytype = 'Health')
-    then
-    begin
-      floatValue := GetNativeValue(ElementByIndex(prop, 6));
-      if floatValue > 1.0 then
-      Begin
-        loopResult := FloatToStr(round(floatValue * 10) / 10);
-        loopResultFormatted := loopResult;
-      end
-      else if floatValue > 0.0 then
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := '+' + loopResult + '%';
-      end
-      else
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := loopResult + '%';
-      end;
-    end
-
-    else if (valuePropertytype = 'NumProjectiles') or
-      (valuePropertytype = 'AimModelRecoilShotsForRunaway') then
-    begin
-      floatValue := GetNativeValue(ElementByIndex(prop, 6));
-      loopResult := FloatToStr(round(floatValue * 10) / 10);
-      loopResultFormatted := loopResult + ' rnd';
-      if (valuePropertytype = 'AimModelRecoilShotsForRunaway') then
-        loopResultFormatted := loopResult;
-
-    end
-
-    else if (valuePropertytype = 'SightedTransitionSeconds') or
-      (valuePropertytype = 'FullPowerSeconds') or
-      (valuePropertytype = 'AttackDelaySec') then
-    begin
-      floatValue := GetNativeValue(ElementByIndex(prop, 6));
-      if floatValue > 1.0 then
-      Begin
-        loopResult := FloatToStr(round(floatValue * 10) / 10);
-        loopResultFormatted := loopResult + ' sec';
-      end
-      else if floatValue > 0.0 then
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := '+' + loopResult + '%';
-      end
-      else
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := loopResult + '%';
-      end;
-    end
-
-    else if (valuePropertytype = 'DamageTypeValue') or
-      (valuePropertytype = 'DamageTypeValues') then
-    begin
-      floatValue := GetNativeValue(ElementByIndex(prop, 7)); // Value 2
-      if floatValue > 1.0 then
-      begin
-        loopResult := FloatToStr(round(floatValue * 10) / 10);
-        loopResultFormatted := loopResult;
-      end
-      else if floatValue > 0.0 then
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := '+' + loopResult + '%';
-      end
-      else
-      begin
-        loopResult := IntToStr(Int(round(floatValue * 1000) / 10));
-        loopResultFormatted := loopResult + '%';
-      end;
-    end
-
-    else if (valuePropertytype = 'ActorValues') then
-    begin
-      floatValue := GetElementEditValues(prop, 'Value 2'); // Value 2
-      loopResult := IntToStr(floatValue);
-      loopResultFormatted := loopResult;
-    end
-
-    else if (valuePropertytype = 'Enchantments') or
-      (valuePropertytype = 'ZoomData') then
-    begin
-      loopResult := slPropertyMap.Values
-        [RecordToString(LinksTo(ElementByIndex(prop, 6)))];
-      loopResultFormatted := loopResult;
-    end;
-
-    // DebugLog(Format('loopResultFormatted: %s', [loopResultFormatted]));
-    // DebugLog(Format('loopResult: %s', [loopResult]));
-
-    // add property index as prefix for sorting
-
-    mappedValues.Add(loopResult);
-    mappedValuesFormat.Add(loopResultFormatted);
-  end;
   LogFunctionEnd;
 end;
 
-
-// Property to Name Mapping Layout
-
-procedure GetMappedDescription(rec: IInterface; sl: TStringList;);
-var
-  loopResult: String;
-  valuetype, valuefunctiontype, valuePropertytype, value1Loop1, mappedName,
-    mappedValue: string;
-  valuetype2, valuefunctiontype2, valuePropertytype2, value1Loop2,
-    mappedValue2: string;
-  mappedValueFORMAT, mappedValue2FORMAT: string;
-  floatValue: Real;
-  prop, properties, prop2: IInterface;
-  mappedValuesFormat, mappedValues, indicesToSkip: TStringList;
-  i, j, k, dummyInt: Integer;
-  lookupStr: String;
+function Process(rec: IInterface): Integer;
 begin
-  LogFunctionStart('GetMappedDescription');
-  mappedValues := TStringList.Create;
-  indicesToSkip := TStringList.Create;
-  mappedValuesFormat := TStringList.Create;
-  indicesToSkip.Sorted := true; // so that .Find() works
+  if GlobConfig.Cancelled then
+    raise Exception.Create
+      ('Execution intentionally disrupted with an error (saves time when millions of records would be processed, because you executed the script on files, or even worse on Fallout4.esm)');
+
+  if CheckIfRecordShouldBeSkipped(rec) then
+    Exit;
+
+  LogFunctionStart('Process');
+
+  if bThisIsTheFirstExecution then
+  begin
+    bThisIsTheFirstExecution := false;
+
+    CreateMainForm;
+
+    if GlobConfig.MainAction = 2 then
+    begin
+      OverwriteDescriptionConfigurationFile;
+      // (Cancelled is set by the button itself, therefore doesn't need to be set here)
+      Exit;
+    end;
+  end;
+
+  if (not GlobConfig.Cancelled) and (not bAborted) then
+  begin
+    ProcessOneRecord(rec);
+  end;
+
+  // lastFileProcessed := GetFileName(rec);
+
+  LogFunctionEnd;
+end;
+
+function Finalize: Integer;
+begin
+  LogFunctionStart('Finalize');
+
+  if not GlobConfig.Cancelled then
+  begin
+    PrepareResults(bChecksFailed, bAborted);
+    CreateResultsForm(bChecksFailed, bAborted, ResultTextsList);
+  end;
+
+  slPropertyMap.Free;
+  slPropertyMap := nil;
+  RecordsHeadersList.Free;
+  RecordsHeadersList := nil;
+  ChecksFailedList.Free;
+  ChecksFailedList := nil;
+  ChecksSuccessfulList.Free;
+  ChecksSuccessfulList := nil;
+  ModificationsDoneList.Free;
+  ModificationsDoneList := nil;
+  ResultTextsList.Free;
+  ResultTextsList := nil;
+  BeforeChangesList.Free;
+  BeforeChangesList := nil;
+  AfterChangesList.Free;
+  AfterChangesList := nil;
+  GlobConfig.NotAllowedPluginNames.Free;
+  GlobConfig.NotAllowedPluginNames := nil;
+  GlobConfig.ExistingGernashsDescrPlugins.Free;
+  GlobConfig.ExistingGernashsDescrPlugins := nil;
+
+  if Assigned(targetPlugin) then
+    SortMasters(targetPlugin);
+
+  LogFunctionEnd;
+end;
+
+ // =========================================================================
+// read the load order and store certain things in the config for later usage
+// =========================================================================
+procedure ReadLoadOrder();
+const
+  basicPluginNameSuggestion = 'Gernashs_OMODDescr';
+var
+  i, j, tmpInt: Integer;
+  tmpStr, pluginName, pluginNameWithoutExtension: String;
+  plugin: IInterface;
+  existsAlready, isNewName: Boolean;
+begin
+  LogFunctionStart('ReadLoadOrder');
+
+  GlobConfig.LastPluginInLoadOrder := GetFileName(FileByIndex(Pred(FileCount)));
+
+  // read the load order
+  for i := 0 to Pred(FileCount) do
+  begin
+    plugin := FileByIndex(i);
+    pluginName := GetFileName(plugin);
+    pluginNameWithoutExtension := Copy(pluginName, 1, Length(pluginName) - 4);
+
+    GlobConfig.NotAllowedPluginNames.Add(pluginNameWithoutExtension);
+
+    tmpStr := GetElementEditValues(ElementByIndex(plugin, 0), 'SNAM');
+    if Length(tmpStr) >= Length(automaticPluginDescriptionStartStr) then
+    begin
+      if SameText(automaticPluginDescriptionStartStr,
+        Copy(tmpStr, 1, Length(automaticPluginDescriptionStartStr))) then
+      begin
+        GlobConfig.ExistingGernashsDescrPlugins.Add(pluginName);
+      end
+    end;
+  end;
+
+  // cross check with the data folder, not to create files that already exist there
+  AddPluginsInDataFolderToNotAllowedList(GlobConfig.NotAllowedPluginNames);
+
+  // generate a new suggestion for a filename
+  existsAlready := false;
+  isNewName := false;
+  pluginNameWithoutExtension := basicPluginNameSuggestion;
+  pluginName := pluginNameWithoutExtension + '.esp';
+  i := 1;
+  while not isNewName do
+  begin
+    existsAlready := false;
+
+    if i > 1 then
+    begin
+      pluginNameWithoutExtension :=
+        Format('%s_%d', [basicPluginNameSuggestion, i]);
+      pluginName := pluginNameWithoutExtension + '.esp';
+    end;
+
+    for j := 0 to GlobConfig.ExistingGernashsDescrPlugins.Count - 1 do
+    begin
+      if SameText(pluginName, GlobConfig.ExistingGernashsDescrPlugins[j]) then
+      begin
+        existsAlready := true;
+        break;
+      end;
+    end;
+
+    if not existsAlready then
+      if GlobConfig.NotAllowedPluginNames.Find(pluginNameWithoutExtension,
+        tmpInt) then
+        existsAlready := true;
+
+    if not existsAlready then
+      isNewName := true;
+
+    i := i + 1;
+  end;
+
+  GlobConfig.NewPluginName := pluginNameWithoutExtension;
+  GlobConfig.ExistingGernashsDescrPluginsSelectedIndex :=
+    GlobConfig.ExistingGernashsDescrPlugins.Count - 1;
+
+  LogFunctionEnd;
+end;
+
+// =========================================================================
+// add ESPs residing in the Game's Data folder to the not allowed list, if they are not in there already
+// =========================================================================
+procedure AddPluginsInDataFolderToNotAllowedList(notAllowedFilesWithoutExtension
+  : TStringList;);
+var
+  tmpStringList: TStringList;
+  i, tmpInt: Integer;
+  searchRec: TSearchRec;
+  dataPath, tmpStr: String;
+begin
+  LogFunctionStart('AddPluginsInDataFolderToNotAllowedList');
+
+  tmpStringList := TStringList.Create;
+  tmpStringList.Sorted := true;
+  tmpStringList.Duplicates := dupIgnore;
 
   try
-    GetMappedValues(rec, mappedValues, indicesToSkip, mappedValuesFormat);
-    properties := ElementByPath(rec, 'DATA\Properties');
-
-    for i := 0 to Pred(ElementCount(properties)) do
+    // fist copy the existing list over to one that does not grow when there are a lot of files
+    for i: = 0 to notAllowedFilesWithoutExtension.Count - 1 do
     begin
-      loopResult := '';
-      if indicesToSkip.Find(i, dummyInt) then
-        continue;
+      tmpStringList.Add(notAllowedFilesWithoutExtension[i])
+    end;
 
-      prop := ElementByIndex(properties, i);
-      valuePropertytype := GetElementEditValues(prop, 'Property');
-      j := slPropertyMap.IndexOfName(valuePropertytype);
+    // now go through all files in the data directory and add them to the forbidden-List
+    dataPath := wbDataPath;
+    if FindFirst(dataPath + '*.esp', faAnyFile, searchRec) = 0 then
+    begin
+      repeat
+        if SameText(searchRec.Name, '.') then
+          continue;
+        if SameText(searchRec.Name, '..') then
+          continue;
 
-      if j = -1 then
-        continue;
+        tmpStr := Copy(searchRec.Name, 1, Length(searchRec.Name) - 4);
 
-      mappedName := slPropertyMap.Values[valuePropertytype];
-      mappedValue := mappedValues[i];
-      mappedValueFORMAT := mappedValuesFormat[i];
-      value1Loop1 := slPropertyMap.Values
-        [RecordToString(LinksTo(ElementByIndex(prop, 6)))];
-      valuefunctiontype := GetElementEditValues(prop, 'Function Type');
-      valuetype := GetElementEditValues(prop, 'Value Type');
+        if not tmpStringList.Find(tmpStr, tmpInt) then
+          notAllowedFilesWithoutExtension.Add(tmpStr);
+      until FindNext(searchRec) <> 0;
 
-      if mappedName = 'Damage_Type' then
+      FindClose(searchRec);
+    end;
+
+  finally
+    tmpStringList.Free;
+    tmpStringList := nil;
+  end;
+
+  LogFunctionEnd;
+end;
+
+// =========================================================================
+// get target Plugin - where to store new record overwrites to
+// =========================================================================
+procedure GetOrCreateTargetPlugin();
+var
+  tmpRec: IInterface;
+  tmpStr: String;
+begin
+  LogFunctionStart('GetOrCreateTargetPlugin');
+
+  if GlobConfig.PluginSelectionMode = 1 then // automatic
+  begin
+    if GlobConfig.ExistingGernashsDescrPluginsSelectedIndex < 0 then
+    begin
+      tmpStr := GlobConfig.NewPluginName;
+      if not SameText(Copy(tmpStr, Length(tmpStr) - 4, 4), '.esp') then
+        tmpStr := tmpStr + '.esp';
+      targetPlugin := AddNewFileName(tmpStr, true);
+
+      SetEditValue(ElementByPath(ElementByIndex(targetPlugin, 0), 'CNAM'),
+        'Gernash');
+      SetElementEditValues(ElementByIndex(targetPlugin, 0), 'SNAM',
+        automaticPluginDescriptionStartStr +
+        ' (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
+
+      LogModification(Format('new plugin created: %s',
+        [GetFileName(targetPlugin)]));
+    end
+    else
+    begin
+      targetPlugin := FileByName(GlobConfig.ExistingGernashsDescrPlugins
+        [GlobConfig.ExistingGernashsDescrPluginsSelectedIndex]);
+      LogCheckSuccessful(Format('Existing plugin selected to store records: %s',
+        [GetFileName(targetPlugin)]));
+    end;
+  end
+  else if GlobConfig.PluginSelectionMode = 2 then
+  begin
+    tmpStr := GlobConfig.NewPluginName;
+    if not SameText(Copy(tmpStr, Length(tmpStr) - 4, 4), '.esp') then
+      tmpStr := tmpStr + '.esp';
+    targetPlugin := AddNewFileName(tmpStr, true);
+
+    SetEditValue(ElementByPath(ElementByIndex(targetPlugin, 0), 'CNAM'),
+      'Gernash');
+    SetElementEditValues(ElementByIndex(targetPlugin, 0), 'SNAM',
+      automaticPluginDescriptionStartStr +
+      ' (do not change the part of this description before the bracket or else the automatic mode will not find the plugin anymore)');
+
+    LogModification(Format('new plugin created: %s',
+      [GetFileName(targetPlugin)]));
+  end
+  else if GlobConfig.PluginSelectionMode = 3 then
+  begin
+    targetPlugin := FileByIndex(Pred(FileCount));
+    LogCheckSuccessful(Format('Existing plugin selected to store records: %s',
+      [GetFileName(targetPlugin)]));
+  end
+  else
+  begin // also happening on "Cancel"
+    LogCheckFailed
+      ('Could not read configuration how to select the target plugin.');
+    Exit; // --> no result form necessary here
+  end;
+
+  if not bAborted then
+  begin
+    if not Assigned(targetPlugin) then
+    begin
+      LogCheckFailed
+        ('The plugin selected could not be loaded. Operation aborted.');
+      bAborted := true;
+    end;
+  end;
+
+  targetPluginName := GetFileName(targetPlugin);
+  bTargetPluginLoaded := true;
+
+  LogFunctionEnd;
+end;
+
+// =========================================================================
+// processes a single record
+// =========================================================================
+procedure ProcessOneRecord(rec: IInterface);
+var
+  desc, oldDesc, recordPluginName: string;
+  newRec, tmpEntry: IInterface;
+  bRecordAlreadyPresent: Boolean;
+  recordNameForOutput, tmpStr: String;
+begin
+  LogFunctionStart('ProcessOneRecord');
+
+  bModificationNecessary := true;
+
+  // patch the winning override record
+  rec := WinningOverride(rec);
+
+  recordNameForOutput := RecordToString(rec);
+  recordPluginName := GetFileName(rec);
+
+  if not Assigned(rec) then
+  begin
+    LogCheckFailed
+      (Format('Something went wrong when getting the override for this record. Record skipped. - record: %s',
+      [recordNameForOutput]));
+    LogFunctionEnd;
+    Exit;
+  end;
+
+  // call actual logic for generating the description
+  desc := GetOmodDescription(rec);
+
+  if desc = '' then
+  begin
+    LogCheckFailed
+      (Format('The logic would have created an empty description. Record skipped. - record: %s',
+      [recordNameForOutput]));
+    LogFunctionEnd;
+    Exit;
+  end;
+
+  if (not bAborted) then
+  begin
+    oldDesc := GetEditValue(ElementByPath(rec, 'DESC'));
+
+    if SameText(oldDesc, desc) then
+    begin
+      LogCheckSuccessful
+        (Format('Description already up to date. - record: %s - DESC: "%s"',
+        [recordNameForOutput, desc]));
+      bModificationNecessary := false;
+    end
+    else
+    begin
+      BeforeChangesList.Add(Format('before: %s - DESC: "%s"',
+        [recordNameForOutput, oldDesc]));
+    end;
+  end;
+
+  if (not bAborted) and (bModificationNecessary) then
+  begin
+    // create new plugin
+    if not bTargetPluginLoaded then
+      GetOrCreateTargetPlugin;
+
+    if (not bAborted) then
+    begin
+      if GlobConfig.DoNotManipulateMasterRecords then
       begin
-
-        for k := 0 to Pred(ElementCount(properties)) do
+        if SameText(GetFileName(MasterOrSelf(rec)), targetPluginName) then
         begin
-          if (k = i) then
-            continue;
-          prop2 := ElementByIndex(properties, k);
-
-          if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')
-            ) = -1 then
-          begin
-            continue;
-          end;
-
-          valuetype2 := GetElementEditValues(prop2, 'Value Type');
-          valuePropertytype2 := GetElementEditValues(prop2, 'Property');
-          valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
-          value1Loop2 := slPropertyMap.Values
-            [RecordToString(LinksTo(ElementByIndex(prop2, 6)))];
-
-          if value1Loop2 = '' then
-            continue;
-
-          if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords')
-          then
-          begin
-            indicesToSkip.Add(k);
-            loopResult := Format('%s damage: %s',
-              [value1Loop2, mappedValueFORMAT]);
-            break;
-          end;
+          LogCheckFailed
+            (Format('The plugin selected is the master plugin for this record. Record skipped. - record: %s - plugin: %s',
+            [recordNameForOutput, targetPluginName]));
+          LogFunctionEnd;
+          // --> this will not result in an empty plugin being created, as it can only happen, if an existing plugin is selected
+          Exit;
         end;
+      end;
 
-        if loopResult = '' then
-          loopResult := Format('%s damage: %s',
-            [value1Loop1, mappedValueFORMAT]);
-      end
-
-      else if mappedName = 'Damage_Resistance' then
-      begin
-
-        for k := 0 to Pred(ElementCount(properties)) do
+      RecordsHeadersList.Add
+        (Format('record: %s - created by plugin: %s - winning override in: %s',
+        [recordNameForOutput, GetFileName(MasterOrSelf(rec)),
+        GetFileName(WinningOverride(rec))]));
+      try
+        if SameText(recordPluginName, targetPluginName) then
         begin
-          if (k = i) then
-            continue;
-          prop2 := ElementByIndex(properties, k);
-
-          if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')
-            ) = -1 then
-          begin
-            continue;
-          end;
-
-          valuetype2 := GetElementEditValues(prop2, 'Value Type');
-          valuePropertytype2 := GetElementEditValues(prop2, 'Property');
-          valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
-          value1Loop2 := slPropertyMap.Values
-            [RecordToString(LinksTo(ElementByIndex(prop2, 6)))];
-
-          if value1Loop2 = '' then
-            continue;
-
-          if (valuetype2 = 'FormID,Int') and (valuePropertytype2 = 'Keywords')
-          then
-          begin
-            indicesToSkip.Add(k);
-            loopResult := Format('Reduces %s damage by: %s',
-              [value1Loop2, mappedValueFORMAT]);
-            break;
-          end;
-        end;
-
-        if loopResult = '' then
-          loopResult := Format('Reduces %s damage by: %s',
-            [value1Loop1, mappedValueFORMAT]);
-      end
-
-      else if (mappedName = 'Range (Min\Max):') or
-        (mappedName = 'Recoil (Min\Max):') or (mappedName = 'Spread (Min\Max):')
-      then
-      begin
-
-        for k := 0 to Pred(ElementCount(properties)) do
-        begin
-          if (k = i) then
-            continue;
-          prop2 := ElementByIndex(properties, k);
-
-          if slPropertyMap.IndexOfName(GetElementEditValues(prop2, 'Property')
-            ) = -1 then
-          begin
-            continue;
-          end;
-
-          valuetype2 := GetElementEditValues(prop2, 'Value Type');
-          valuePropertytype2 := GetElementEditValues(prop2, 'Property');
-          valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
-          value1Loop2 := GetNativeValue(ElementByIndex(prop2, 6));
-          mappedValue2 := FloatToStr(value1Loop2);
-
-          if (mappedName = 'Range (Min\Max):') then
-          begin
-            if value1Loop2 > 1.0 then
-            begin
-              mappedValue2 := FloatToStr(round(value1Loop2 * 10) / 10);
-              mappedValue2FORMAT := Format('%sx', [mappedValue2]);
-            end
-            else if value1Loop2 > 0.0 then
-            begin
-              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000) / 10));
-              // (round(floatValue * 1000)/10));
-              mappedValue2FORMAT := Format('+%s%', [mappedValue2]);
-            end
-            else
-            begin
-              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000) / 10));
-              mappedValue2FORMAT := mappedValue2 + '%';
-            end;
-          end
-
-          else if (mappedName = 'Recoil (Min\Max):') or
-            (mappedName = 'Spread (Min\Max):') then
-          begin
-            if value1Loop2 > 1.0 then
-            begin
-              mappedValue2 := FloatToStr(round(value1Loop2 * 10) / 10);
-              mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
-            end
-            else if value1Loop2 > 0.0 then
-            begin
-              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000) / 10));
-              mappedValue2FORMAT := '+' + mappedValue2 + chr($00B0);
-            end
-            else
-            begin
-              mappedValue2 := IntToStr(Int(round(value1Loop2 * 1000) / 10));
-              mappedValue2FORMAT := mappedValue2 + chr($00B0);
-            end;
-          end;
-
-          if value1Loop2 = '' then
-            continue; // not looking for a string does nothing????
-
-          if (mappedName = 'Range (Min\Max):') and
-            (valuePropertytype2 = 'MaxRange') then
-          begin
-            indicesToSkip.Add(k);
-            if (mappedValue = mappedValue2) then
-              loopResult := Format('Range: %s', [mappedValueFORMAT])
-            else
-            begin
-              loopResult := Format('%s %s\%s', [mappedName, mappedValueFORMAT,
-                mappedValue2FORMAT]);
-              break;
-            end;
-          end
-          else if (mappedName = 'Recoil (Min\Max):') and
-            (valuePropertytype2 = 'AimModelRecoilMaxDegPerShot') then
-          begin
-            indicesToSkip.Add(k);
-            if (mappedValue = mappedValue2) then
-              loopResult := Format('Recoil: %s', [mappedValueFORMAT])
-            else
-            begin
-              loopResult := Format('%s %s\%s', [mappedName, mappedValueFORMAT,
-                mappedValue2FORMAT]);
-              break;
-            end;
-          end
-          else if (mappedName = 'Spread (Min\Max):') and
-            (valuePropertytype2 = 'AimModelMaxConeDegrees') then
-          begin
-            indicesToSkip.Add(k);
-            if (StrToFloat(mappedValue) >= StrToFloat(mappedValue2)) then
-              loopResult := Format('Spread: %s', [mappedValueFORMAT])
-            else
-            begin
-              loopResult := Format('%s %s\%s', [mappedName, mappedValueFORMAT,
-                mappedValue2FORMAT]);
-              break;
-            end;
-          end;
-          if (mappedName = 'Range (Min\Max):') and (loopResult = '') then
-          begin
-            loopResult := Format('Range: %s', [mappedValueFORMAT]);
-          end;
-          if (mappedName = 'Recoil (Min\Max):') and (loopResult = '') then
-          begin
-            loopResult := Format('Recoil: %s', [mappedValueFORMAT]);
-          end;
-          if (mappedName = 'Spread (Min\Max):') and (loopResult = '') then
-          begin
-            loopResult := Format('Spread: %s', [mappedValueFORMAT]);
-          end;
-        end;
-
-      end
-
-      else if (mappedName = 'Actor_Values_Type') and (value1Loop1 <> 'NFW') then
-      begin
-        if (mappedValue = '1') or (value1Loop1 = '') then
-        begin
-          loopResult := value1Loop1;
+          newRec := rec;
         end
         else
-          loopResult := Format('%s' + '+' + '%s', [value1Loop1, mappedValue])
-      end
+        begin
+          // add masters
+          AddRequiredElementMasters(rec, targetPlugin, false);
 
-      else if ((mappedName = 'MaterialSwaps_Values_Type') and
-        (valuetype <> 'REM') and (value1Loop1 <> 'NFW')) or
-        (mappedName = 'Ammo_Type') then
-      begin
-        loopResult := value1Loop1;
-      end
+          // copy as override
+          newRec := wbCopyElementToFile(rec, targetPlugin, false, true);
+          LogModification
+            (Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',
+            [recordNameForOutput, targetPluginName]));
+        end;
 
-      else if ((mappedName = 'Enchantments_Value') and (value1Loop1 <> 'NFW'))
-        or ((mappedName = 'Keywords_Values_Type') and (value1Loop1 <> '') and
-        (value1Loop1 <> 'Energy') and (value1Loop1 <> 'Cold') and
-        (value1Loop1 <> 'Radiation') and
-        (value1Loop1 <> 'Split Beam Shotgun Energy')) or
-        (valuePropertytype = 'ZoomData') then
-      begin
-        loopResult := value1Loop1;
-      end
-
-      // else if (valuePropertytype = 'ZoomData') then
-      // loopResult := mappedValueFORMAT
-
-      else if (value1Loop1 <> 'NFW') and (mappedName <> '\') and
-        (valuetype <> 'REM') and (mappedName <> 'Keywords_Values_Type') and
-        (mappedName <> 'Actor_Values_Type') and
-        (mappedName <> 'Enchantments_Value') and (mappedName <> 'NFW') and
-        (mappedValue <> 'NFW') then
-      begin
-        loopResult := Format('%s%s', [mappedName, mappedValueFORMAT]);
+        if not Assigned(newRec) then
+        begin
+          LogCheckFailed
+            (Format('Something went wrong when creating the override record. Record skipped. - record: %s',
+            [recordNameForOutput]));
+          LogFunctionEnd;
+          Exit;
+        end
+        else
+        begin
+          // setting new description
+          SetElementEditValues(newRec, 'DESC', desc);
+          LogModification
+            (Format('Description was replaced: - record: %s - old DESC: "%s" - new DESC: "%s"',
+            [recordNameForOutput, oldDesc, desc]));
+          AfterChangesList.Add(Format('after: %s - DESC: "%s"',
+            [recordNameForOutput, desc]));
+        end;
+      except
+        on Ex: Exception do
+        begin
+          LogCheckFailed(Format('Failed to copy: %s', [FullPath(rec)]));
+          LogCheckFailed('    reason: ' + Ex.Message);
+        end;
       end;
-
-      // DebugLog(Format('mappedName: %s', [mappedName]));
-      // DebugLog(Format('mappedValue: %s', [mappedValue]));
-      // DebugLog(Format('value1Loop1: %s', [value1Loop1]));
-      // DebugLog(Format('valuetype: %s', [valuetype]));
-      // DebugLog(Format('valuetype2: %s', [valuetype2]));
-      // DebugLog(Format('mappedValue2: %s', [mappedValue2]));
-      // DebugLog(Format('valuePropertytype2: %s', [valuePropertytype2]));
-      // DebugLog(Format('valuefunctiontype2: %s', [valuefunctiontype2]));
-      // DebugLog(Format('value1Loop2: %s', [value1Loop2]));
-      // DebugLog(Format('loopResult: %s', [loopResult]));
-
-      // add property index as prefix for sorting
-
-      sl.Add(Format('%.3d', [j]) + loopResult);
     end;
-
-  finally
-    mappedValues.Free;
-    mappedValues := nil;
-    indicesToSkip.Free;
-    indicesToSkip := nil;
-    mappedValuesFormat.Free;
-    mappedValuesFormat := nil;
   end;
+
   LogFunctionEnd;
 end;
 
-function GetOmodDescription(rec: IInterface): String;
+// =========================================================================
+// Translate the resource file / configuration file
+// =========================================================================
+procedure OverwriteDescriptionConfigurationFile();
 var
-  i: Integer;
-  proprefix, prosuffix: string;
-  sl: TStringList;
-
+  slCurrentFile: TStringList;
+  backupFileName: String;
 begin
-  LogFunctionStart('GetOmodDescription');
-  sl := TStringList.Create;
-  sl.Sorted := true; // sorting automatically happens at insert
+  LogFunctionStart('OverwriteDescriptionConfigurationFile');
+  slCurrentFile := TStringList.Create;
+
+  if not bSlPropertyMapTranslated then
+    TranslateDescriptionConfigurationFile;
 
   try
-    GetMappedDescription(rec, sl);
+    slCurrentFile.LoadFromFile(sPropertiesList);
+    backupFileName := StringReplace(sPropertiesList, '.txt',
+      FormatDateTime('yyyymmdd_hhnnss', Now) + '_backup.txt', [rfIgnoreCase]);
+    slCurrentFile.SaveToFile(backupFileName);
 
-    // concatenate and remove prefixes
-
-    for i := 0 to sl.Count - 1 do
-    begin
-      proprefix := Copy(sl[i], 4, Length(1));
-      prosuffix := RightStr(Result, 1);
-      if (proprefix = '') or (proprefix = '\') or (prosuffix = ' ') then
-      begin
-        Result := Result;
-      end
-      else if Result <> '' then
-      begin
-        Result := Result + ' | ';
-      end;
-      Result := Result + Copy(sl[i], 4, Length(sl[i]))
-    end;
+    slPropertyMap.SaveToFile(sPropertiesList);
   finally
-    sl.Free;
-    sl := nil;
+    slCurrentFile.Free;
+    slCurrentFile := nil;
   end;
+
+  LogFunctionEnd;
+end;
+
+// =========================================================================
+// Translate the resource file / configuration file
+// =========================================================================
+procedure TranslateDescriptionConfigurationFile();
+var
+  i, delimPos: Integer;
+  line, potentialRecord, newRecordStr: String;
+  rec: IInterface;
+begin
+  LogFunctionStart('TranslateDescriptionConfigurationFile');
+
+  for i := 0 to slPropertyMap.Count - 1 do
+  begin
+    line := slPropertyMap[i];
+    delimPos := Pos('=', line);
+
+    if delimPos > 0 then
+    begin
+      potentialRecord := Copy(line, 1, delimPos - 1);
+      // DebugLog(Format('Test2: %s',[potentialRecord]));
+      if Pos('[', potentialRecord) > 0 then
+      begin
+        rec := StringToRecord(potentialRecord);
+        if Assigned(rec) then
+        begin
+          // DebugLog(Format('Test5: %s',[potentialRecord]));
+          newRecordStr := RecordToString(rec);
+          // DebugLog(Format('Test6: %s',[newRecordStr]));
+          slPropertyMap[i] := newRecordStr + Copy(line, delimPos,
+            Length(line) - Length(potentialRecord));
+          // DebugLog(Format('Test7: %s',[newRecordStr]));
+          LogCheckSuccessful
+            (Format('Translated load order dependent record notation in resource file to new notation: line-No.: %d - old notation: %s - new notation: %s',
+            [i, potentialRecord, newRecordStr]));
+          // DebugLog(Format('Test8: %s',[newRecordStr]));
+        end
+        else
+        begin
+          // DebugLog(Format('Test9: %s',[newRecordStr]));
+          LogCheckFailed
+            (Format('Error translating the resource file: could not load record: %s',
+            [potentialRecord]));
+        end;
+      end;
+    end;
+  end;
+
+  bSlPropertyMapTranslated := true;
+
+  LogFunctionEnd;
+end;
+
+
+// =========================================================================
+// Pure Checks (do not contain modification)
+// =========================================================================
+
+function CheckIfRecordShouldBeSkipped(rec: IInterface;): Boolean;
+begin
+  // no logging in here due to performance reasons
+  // LogFunctionStart('CheckIfRecordShouldBeSkipped');
+  Result := false;
+
+  if Signature(rec) <> 'OMOD' then
+  begin
+    // DebugLog(Format('Record has the wrong signature. Record skipped. - record: %s',[FullPath(rec)]));
+    Result := true;
+  end
+  else
+  begin
+    // DebugLog(Format('Record has the right signature. - record: %s',[recordNameForOutput]));
+  end;
+
+  // LogFunctionEnd;
+end;
+
+// =========================================================================
+// Logs and output beautification
+// =========================================================================
+procedure LogCheckFailed(Message: string;);
+begin
+  // LogFunctionStart('LogCheckFailed');
+
+  bChecksFailed := true;
+  ChecksFailedList.Add(message);
+  Log('Check failed: ' + message);
+
+  // LogFunctionEnd;
+end;
+
+procedure LogCheckSuccessful(Message: string;);
+begin
+  // LogFunctionStart('LogCheckSuccessful');
+
+  ChecksSuccessfulList.Add(message);
+  Log('Check successful: ' + message);
+
+  // LogFunctionEnd;
+end;
+
+procedure LogModification(Message: string;);
+begin
+  // LogFunctionStart('LogModification');
+
+  ModificationsDoneList.Add(message);
+  Log('Modification performed: ' + message);
+
+  // LogFunctionEnd;
+end;
+
+// prepare results list for output (add headers and such)
+procedure PrepareResults(bChecksFailed: Boolean; bAborted: Boolean;);
+const
+  headerStr =
+    '-------------------------------------------------------------------';
+var
+  tmpStr: String; // overwritten with every usage
+  i: Integer;
+begin
+  LogFunctionStart('PrepareResults');
+
+  ResultTextsList.Add(FormatResultHeader('General Information:', headerStr));
+  ResultTextsList.AddStrings(RecordsHeadersList);
+  // ResultTextsList.Add('(EditorID and plugins of records listed below always represent the master/base version of this record - where the record is created)');
+  ResultTextsList.Add(' ');
+
+  tmpStr := 'Checks that failed: ';
+  if not bChecksFailed then
+    tmpStr := tmpStr + '(No checks failed) ';
+  ResultTextsList.Add(FormatResultHeader(tmpStr, headerStr));
+  ResultTextsList.AddStrings(ChecksFailedList);
+  ResultTextsList.Add(' ');
+
+  if bAborted then
+  begin
+    ResultTextsList.Add('--> Operation has been aborted before completion!');
+    ResultTextsList.Add(' ');
+  end;
+
+  tmpStr := 'Checks that were successful: ';
+  if ChecksSuccessfulList.Count = 0 then
+    tmpStr := tmpStr + '(No successful checks) ';
+  ResultTextsList.Add(FormatResultHeader(tmpStr, headerStr));
+  ResultTextsList.AddStrings(ChecksSuccessfulList);
+  ResultTextsList.Add(' ');
+
+  // tmpStr:= 'Masters added: ';
+  // if AddedMastersList.Count = 0 then
+  // tmpStr:= tmpStr + '(no masters added) ';
+  // ResultTextsList.Add(FormatResultHeader(tmpStr,headerStr));
+  // ResultTextsList.AddStrings(AddedMastersList);
+  // ResultTextsList.Add(' ');
+
+  tmpStr := 'Modifications performed: ';
+  if ModificationsDoneList.Count = 0 then
+    tmpStr := tmpStr + '(no modifications) ';
+  ResultTextsList.Add(FormatResultHeader(tmpStr, headerStr));
+  ResultTextsList.AddStrings(ModificationsDoneList);
+  ResultTextsList.Add(' ');
+
+  if BeforeChangesList.Count >= 1 then
+  begin
+    ResultTextsList.Add(FormatResultHeader('Before changes: ', headerStr));
+    ResultTextsList.AddStrings(BeforeChangesList);
+    ResultTextsList.Add(' ');
+  end;
+
+  if AfterChangesList.Count >= 1 then
+  begin
+    ResultTextsList.Add(FormatResultHeader('After changes: ', headerStr));
+    ResultTextsList.AddStrings(AfterChangesList);
+    ResultTextsList.Add(' ');
+  end;
+
+  LogFunctionEnd;
+end;
+
+function FormatResultHeader(text, headerStr: String): String;
+begin
+  LogFunctionStart('FormatResultHeader');
+
+  Result := Copy(headerStr, 1, 5) + ' ' + text + ' ' +
+    Copy(headerStr, 1, Length(headerStr) - Length(text) - 2);
+
   LogFunctionEnd;
 end;
 
