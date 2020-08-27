@@ -30,32 +30,10 @@ begin
   mappedValues.Duplicates := dupIgnore;
   indicesToSkip := TStringList.Create;
   indicesToSkip.Sorted := True; // so that .Find() works
-  indicesToSkip.Duplicates := dupIgnore;
-	try
-		properties := ElementByPath(rec, 'DATA\Properties');
-		for i := 0 to Pred(ElementCount(properties)) do
-		begin
-			if indicesToSkip.Find(i, dummyInt) then
-			begin
-				mappedValues.Add(''); // necessary, so that number of records stay the same
-				continue;
-			end;
-			tmpint := '';
+  indicesToSkip.Duplicates := dupIgnore;	try		properties := ElementByPath(rec, 'DATA\Properties');
+		for i := 0 to Pred(ElementCount(properties)) do		begin			if indicesToSkip.Find(i, dummyInt) then			begin				mappedValues.Add(''); // necessary, so that number of records stay the same				continue;			end;			tmpint := '';
 			loop1Result := '';
-			mappedValue := '';
-			prop := ElementByIndex(properties, i);
-			value_PropertyType := GetElementEditValues(prop, 'Property');
-			j := slPropertyMap.IndexOfName(value_PropertyType);
-
-			if j = -1 then
-			begin
-				mappedValues.Add('');	// necessary, so that number of records stay the same
-				continue;
-			end;
-
-			value_Type := GetElementEditValues(prop, 'Value Type');
-			value_PropertyType := GetElementEditValues(prop, 'Property');
-			value_FunctionType := GetElementEditValues(prop, 'Function Type');
+			mappedValue := '';			prop := ElementByIndex(properties, i);			value_PropertyType := GetElementEditValues(prop, 'Property');			j := slPropertyMap.IndexOfName(value_PropertyType);			if j = -1 then			begin				mappedValues.Add('');	// necessary, so that number of records stay the same				continue;			end;			value_Type := GetElementEditValues(prop, 'Value Type');			value_PropertyType := GetElementEditValues(prop, 'Property');			value_FunctionType := GetElementEditValues(prop, 'Function Type');
 			mappedName := slPropertyMap.Values[value_PropertyType];
 			mappedHelperFileValue := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop, 6)))];
 
@@ -64,6 +42,7 @@ begin
 				(value_PropertyType = 'AimModelMinConeDegrees') or
 				(value_PropertyType = 'MinRange'))  and (mappedValue = '') then
 			begin
+				dummyValue := '';
 				mappedValue := '';
 				formatedloop1Result := '';
 				formatedloop2Result := '';

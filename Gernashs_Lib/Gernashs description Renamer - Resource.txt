@@ -1,0 +1,342 @@
+﻿{--------------}
+{ Version: 2.0 }
+{--------------}
+{{---------------------------Vanilla_Naming------------------------------}}
+{{{---------------------MaterialSwaps_Values_Type-----------------------}}}
+MaterialSwaps=MaterialSwaps_Values_Type
+{{{---------------------------------------------------------------------}}}
+{{----------------------------COLOR/Materials----------------------------}}
+BaseballBatAluminium[Fallout4.esm]:MSWP=Aluminium
+MetalArmorAlloyed[Fallout4.esm]:MSWP=Alloyed Metal
+MetalArmorPolished[Fallout4.esm]:MSWP=Polished Metal
+RollingPinAluminium[Fallout4.esm]:MSWP=Aluminium
+mat_PA_X01_Institute[Fallout4.esm]:MSWP=NFW
+{{{---------------------------Weapon_Types------------------------------}}}
+{{-------------------------------Melee-----------------------------------}}
+{{-------------------------------Ranged----------------------------------}}
+mod_Lining_Mesh_BioComm_Enchantment[Fallout4.esm]:ENCH=NFW
+{{{----------------------------Armor------------------------------------}}}
+ench_mod_LegendaryArmor_Chameleon[Fallout4.esm]:ENCH=Enemies have a harder time detecting you, while you're sneaking and not moving.
+{{{-------Common legendary affix naming to LGND_WeaponAV [AVIF:001EF5D9]-------}}}
+{{{--------------------------legendary affects--------------------------}}}
+DLC01Bot_FortifyResistDamage[DLCRobot.esm]:MGEF=Increase Damage resistance by: 5
+{{--------------------------Additional Naming----------------------------}}
+CritPlasma[Fallout4.esm]:SPEL=Can turn enemies into goo.
+SpellPA_CommonArm[Fallout4.esm]:SPEL=Rate 3 points/sec for 3 sec
+{{{-------------------------Keywords_Values_Type------------------------}}}
+Keywords=Keywords_Values_Type
+{{{---------------------------------------------------------------------}}}
+dn_HasReceiver_Crank5[Fallout4.esm]:KYWD=Six crank reload maximum.
+dn_HasReceiver_Crank4[Fallout4.esm]:KYWD=Five crank reload maximum.
+dn_HasReceiver_Crank3[Fallout4.esm]:KYWD=Four crank reload maximum.
+dn_HasReceiver_Crank2[Fallout4.esm]:KYWD=Three crank reload maximum.
+dn_HasReceiver_Crank1[Fallout4.esm]:KYWD=Two crank reload maximum. | Ammo Capacity: 2
+{{-----------------------------Calibre|Ammo------------------------------}}
+// Disabled OverrideProjectile=
+Ammo=Ammo_Type
+{{{---------------------------------------------------------------------}}}
+AmmoFusionCell[Fallout4.esm]:AMMO=Changes Ammo to Fusion Cells.
+MS09PushProjectile[Fallout4.esm]:PROJ=Uses telekinesis to push targets away
+AlienBlasterProjectile[Fallout4.esm]:PROJ=AlienBlasterProjectile
+CryoProjectile[Fallout4.esm]:PROJ=Fires cryogenic capsules.
+DLC03_HarpoonGunBarbedProjectile[DLCCoast.esm]:PROJ=Changes Ammo to Barbed Harpoons.
+EXPCryoProjectileImpactSet[Fallout4.esm]:IPDS=Fires cryogenic capsules.
+MS09ZetaRadiationEnch[Fallout4.esm]:ENCH=Changes weapon damage into Zeta Wave radiation.
+MissileProjectileSeek[Fallout4.esm]:PROJ=Locks onto target.
+{{{---------------------------Actor_Values_Type-------------------------}}}
+ActorValues=Actor_Values_Type
+{{{---------------------------------------------------------------------}}}
+Strength[Fallout4.esm]:AVIF=Increase STR by:
+Perception[Fallout4.esm]:AVIF=Increase PER by:
+Endurance[Fallout4.esm]:AVIF=Increase END by:
+Charisma[Fallout4.esm]:AVIF=Increase CHR by:
+Intelligence[Fallout4.esm]:AVIF=Increase INT by:
+Agility[Fallout4.esm]:AVIF=Increase AGI by:
+Luck[Fallout4.esm]:AVIF=Increase LCK by:
+CarryWeight[Fallout4.esm]:AVIF=Carry Weight capacity increased by:
+ActionPoints[Fallout4.esm]:AVIF=Action Points Increased by:
+ArmorBlockPercent[Fallout4.esm]:AVIF=While blocking, melee damage is reduced by:
+ArmorQuietMod[Fallout4.esm]:AVIF=Reduces detection from moving by:
+ArmorShadowHide[Fallout4.esm]:AVIF=Improve stealth in shadows by:
+ChemDurationMod[Fallout4.esm]:AVIF=Increase duration of Chems by:
+FallingDamageMod[Fallout4.esm]:AVIF=Reduce fall damage by:
+LGND_ArmorDisarm[Fallout4.esm]:AVIF=Chance to disarm melee Attacker on Hit:
+LGND_LessDmgBlockSprint[Fallout4.esm]:AVIF=While blocking or sprinting, damage is reduced by:
+LGND_LessDmgStandStill[Fallout4.esm]:AVIF=Reduces damage while standing and not moving by:
+LGND_LessDmgSupermutants[Fallout4.esm]:AVIF=Reduces damage from Super Mutants by:
+LGND_LessFallDamage[Fallout4.esm]:AVIF=Reduce fall damage by:
+Mod_Brawler_AV[Fallout4.esm]:AVIF=Unarmed damage increased by:
+Mod_IgnoreArmor_AV[Fallout4.esm]:AVIF=Unarmed and Melee attacks ignore Armor rating by:
+Mod_ReducedPowerAttack_AV[Fallout4.esm]:AVIF=AP Drain from Power attacks reduced by:
+Mod_ReducedSprint_AV[Fallout4.esm]:AVIF=AP Drain from Sprinting reduced by:
+Mod_Stabilized_AV[Fallout4.esm]:AVIF=Base stability increased by:
+Mod_StealthMove_AV[Fallout4.esm]:AVIF=Increased Movement Speed while sneaking by:
+PA_Explosives_AV[Fallout4.esm]:AVIF=Reduce Damage from explosions by:
+PA_OptimizedBracers_AV[Fallout4.esm]:AVIF=AP Drain from Power attacks reduced by:
+PA_OptimizedServos_AV[Fallout4.esm]:AVIF=AP Drain from Sprinting reduced by:
+PA_OverdriveServos_AV[Fallout4.esm]:AVIF=Sprint speed Boosted, AP Drain increased by:
+PowerArmorVent[Fallout4.esm]:AVIF=Impact Landing Damage: +50 | Stagger Strength: +2 | Impact Landing Aggro Radius (Base: 15): +5 | Aggro Strength: x2 (if installed in both Legs)
+ReduceLimbDamageMod[Fallout4.esm]:AVIF=Reduces limb damage by:
+SpeedMult[Fallout4.esm]:AVIF=Increases wearer's movement speed by:
+ccBGSFO4116_PA_FlameResistance_AV [AVIF:FE06A826]=Fire damage reduced by:
+PA_ShockDmg_AV[Fallout4.esm]:AVIF=+10 Energy (per installed Tesla Bracers, max. 2)
+PA_Agility_AV[Fallout4.esm]:AVIF=Increases Agility with all pieces painted by: 1
+{{{-------------------Actor_Values_Type---DUD Entries-------------------}}}
+PA_Intelligence_AV[Fallout4.esm]:AVIF=NFW
+PA_OptimizedServos_AV[Fallout4.esm]:AVIF=NFW
+PA_KineticServos_AV[Fallout4.esm]:AVIF=NFW
+PA_Charisma_AV[Fallout4.esm]:AVIF=NFW
+PA_Strength_AV[Fallout4.esm]:AVIF=NFW
+PA_RustyKnuckles_AV[Fallout4.esm]:AVIF=NFW
+PA_Perception_AV[Fallout4.esm]:AVIF=NFW
+PA_Strength_AV[Fallout4.esm]:AVIF=NFW
+PA_Unarmed_AV[Fallout4.esm]:AVIF=NFW
+{{{--------------------------Enchantments_Value-------------------------}}}
+Enchantments=Enchantments_Value
+{{{---------------------------------------------------------------------}}}
+EnchPA_WaterBreathTime[Fallout4.esm]:ENCH=Increases time underwater by: 5x
+EnchPA_Charisma[Fallout4.esm]:ENCH=Increases Charisma with all pieces painted by: 1
+EnchPA_Strength[Fallout4.esm]:ENCH=Increases Strength with all pieces painted by: 1
+DLC01Bot_CommonArmorEnch[DLCRobot.esm]:ENCH=Rate 3 points/sec for 3 sec
+DLC01Bot_CommonArmorEnch_Unstable[DLCRobot.esm]:ENCH=Unstable: may break when used
+DLC01Bot_FortifyAssaultronHeadLaserEnch_Unstable[DLCRobot.esm]:ENCH=
+DLC01Bot_FortifyMeleeDmg50Ench_Unstable[DLCRobot.esm]:ENCH=
+DLC01Bot_FortifyMesmetronEnch_Unstable[DLCRobot.esm]:ENCH=
+DLC01EnchBot_AV_BleedDamage[DLCRobot.esm]:ENCH=Has Bleed effect
+DLC01EnchBot_AV_BurnDamage[DLCRobot.esm]:ENCH=Has Flame effect
+DLC01EnchBot_AV_ConditionRate[DLCRobot.esm]:ENCH=
+DLC01EnchBot_AV_EnergyDamage[DLCRobot.esm]:ENCH=Has Energy effect
+DLC01EnchBot_AV_Knockdown[DLCRobot.esm]:ENCH=Has Knockdown effect
+DLC01EnchBot_AV_PoisonDamage[DLCRobot.esm]:ENCH=
+DLC01EnchBot_AV_RadsDamage[DLCRobot.esm]:ENCH=
+DLC01EnchBot_AV_Stagger[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Cloak_Detection[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Cloak_EMP[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Cloak_Heal[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Cloak_Radiation[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Cloak_Recon[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Cloak_Shield[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Cloak_Stealth[DLCRobot.esm]:ENCH=
+DLC01EnchBot_EnergyDamage[DLCRobot.esm]:ENCH=
+DLC01EnchBot_FortifyCarryWeight10[DLCRobot.esm]:ENCH=Carry Weight capacity: +10
+DLC01EnchBot_FortifyCarryWeight20[DLCRobot.esm]:ENCH=Carry Weight capacity: +20
+DLC01EnchBot_FortifyCarryWeight5[DLCRobot.esm]:ENCH=Carry Weight capacity: +5
+DLC01EnchBot_FortifyCarryWeight50[DLCRobot.esm]:ENCH=
+DLC01EnchBot_FortifyCarryWeightProtectron[DLCRobot.esm]:ENCH=Carry Weight capacity: +50
+DLC01EnchBot_FortifyCarryWeightRobobrain_Legs[DLCRobot.esm]:ENCH=Carry Weight capacity: +20
+DLC01EnchBot_FortifyCarryWeightSatchel01[DLCRobot.esm]:ENCH=Carry Weight capacity: +20
+DLC01EnchBot_FortifyCarryWeightSentry[DLCRobot.esm]:ENCH=
+DLC01EnchBot_FortifyCarryWeightSentry_Legs[DLCRobot.esm]:ENCH=Carry Weight capacity: +60
+DLC01EnchBot_FortifyHealthAssaultron_Arm[DLCRobot.esm]:ENCH=MAX Health: +5, Radiation MAX Health: +5
+DLC01EnchBot_FortifyHealthAssaultron_Head[DLCRobot.esm]:ENCH=MAX Health: +5, Radiation MAX Health: +5
+DLC01EnchBot_FortifyHealthAssaultron_Legs[DLCRobot.esm]:ENCH=MAX Health: +25, Radiation MAX Health: +25
+DLC01EnchBot_FortifyHealthAssaultron_Torso[DLCRobot.esm]:ENCH=MAX Health: +25, Radiation MAX Health: +25
+DLC01EnchBot_FortifyHealthMrHandy_Arm[DLCRobot.esm]:ENCH=MAX Health: +3, Radiation MAX Health: +3
+DLC01EnchBot_FortifyHealthMrHandy_Head[DLCRobot.esm]:ENCH=MAX Health: +3, Radiation MAX Health: +3
+DLC01EnchBot_FortifyHealthMrHandy_Legs[DLCRobot.esm]:ENCH=MAX Health: +6, Radiation MAX Health: +6
+DLC01EnchBot_FortifyHealthMrHandy_Torso[DLCRobot.esm]:ENCH=MAX Health: +14, Radiation MAX Health: +14
+DLC01EnchBot_FortifyHealthRobobrain_Arm[DLCRobot.esm]:ENCH=MAX Health: +10, Radiation MAX Health: +10
+DLC01EnchBot_FortifyHealthRobobrain_Head[DLCRobot.esm]:ENCH=MAX Health: +10, Radiation MAX Health: +10
+DLC01EnchBot_FortifyHealthRobobrain_Legs[DLCRobot.esm]:ENCH=MAX Health: +50, Radiation MAX Health: +50
+DLC01EnchBot_FortifyHealthRobobrain_Torso[DLCRobot.esm]:ENCH=MAX Health +50, Radiation MAX Health: +50
+DLC01EnchBot_FortifyHealthSentry_Arm[DLCRobot.esm]:ENCH=MAX Health: +20, Radiation MAX Health: +20
+DLC01EnchBot_FortifyHealthSentry_Head[DLCRobot.esm]:ENCH=MAX Health: +20, Radiation MAX Health: +20
+DLC01EnchBot_FortifyHealthSentry_Legs[DLCRobot.esm]:ENCH=MAX Health: +100, Radiation MAX Health: +100
+DLC01EnchBot_FortifyHealthSentry_Torso[DLCRobot.esm]:ENCH=MAX Health: +100, Radiation MAX Health: +100
+DLC01EnchBot_FortifyMeleeDmg10[DLCRobot.esm]:ENCH=Melee damage: +10%
+DLC01EnchBot_FortifyMeleeDmg5[DLCRobot.esm]:ENCH=Melee damage: +5%
+DLC01EnchBot_FortifyMeleeDmg50[DLCRobot.esm]:ENCH=Melee damage: +50%
+DLC01EnchBot_FortifyResistDamage10[DLCRobot.esm]:ENCH=Resist Damage points: 20
+DLC01EnchBot_FortifyResistDamage20[DLCRobot.esm]:ENCH=Resist Damage points: 10
+DLC01EnchBot_FortifyResistDamageConstruction00[DLCRobot.esm]:ENCH=Damage Resistance: +8, Energy Resistance: +8
+DLC01EnchBot_FortifyResistDamageConstruction01[DLCRobot.esm]:ENCH=Energy Resistance: +16
+DLC01EnchBot_FortifyResistDamageConstruction09[DLCRobot.esm]:ENCH=Damage Resistance: +20, Energy Resistance: +20
+DLC01EnchBot_FortifyResistDamageConstruction10[DLCRobot.esm]:ENCH=Damage Resistance: +25, Energy Resistance: +25
+DLC01EnchBot_FortifyResistDamageStandard01[DLCRobot.esm]:ENCH=Damage Resistance: +4, Energy Resistance: +2
+DLC01EnchBot_FortifyResistDamageStandard02[DLCRobot.esm]:ENCH=Damage Resistance: +8, Energy Resistance: +4
+DLC01EnchBot_FortifyResistDamageWasteland01[DLCRobot.esm]:ENCH=Damage Resistance: +5
+DLC01EnchBot_FortifyResistDamageWasteland01Heavy[DLCRobot.esm]:ENCH=Damage Resistance: +5
+DLC01EnchBot_FortifyResistDamageWasteland02[DLCRobot.esm]:ENCH=Damage Resistance: +6
+DLC01EnchBot_FortifyResistDamageWasteland03[DLCRobot.esm]:ENCH=Damage Resistance: +7
+DLC01EnchBot_FortifyResistDamageWasteland04[DLCRobot.esm]:ENCH=Damage Resistance: +8
+DLC01EnchBot_FortifyResistDamageWasteland05[DLCRobot.esm]:ENCH=Damage Resistance: +9
+DLC01EnchBot_FortifyResistDamageWasteland06[DLCRobot.esm]:ENCH=Damage Resistance: +10
+DLC01EnchBot_FortifyResistDamageWasteland07[DLCRobot.esm]:ENCH=Damage Resistance: +11
+DLC01EnchBot_FortifyResistDamageWasteland08[DLCRobot.esm]:ENCH=Damage Resistance: +12
+DLC01EnchBot_FortifyResistDamageWasteland09[DLCRobot.esm]:ENCH=Damage Resistance: +13
+DLC01EnchBot_FortifyResistDamageWasteland10[DLCRobot.esm]:ENCH=Damage Resistance: +14
+DLC01EnchBot_FortifyResistDamageWasteland11[DLCRobot.esm]:ENCH=Damage Resistance: +15
+DLC01EnchBot_FortifySpeedMult5[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Hack[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Lockpick[DLCRobot.esm]:ENCH=
+DLC01EnchBot_ReduceCarryWeight20[DLCRobot.esm]:ENCH=Carry Weight capacity: -20
+DLC01EnchBot_ReduceCarryWeightProtectron_Legs[DLCRobot.esm]:ENCH=Carry Weight capacity: -200
+DLC01EnchBot_ReduceCarryWeightSentry_Legs[DLCRobot.esm]:ENCH=Carry Weight capacity: -150
+DLC01EnchBot_ReduceHealthHandy_Legs[DLCRobot.esm]:ENCH=MAX Health: +50, Radiation MAX Health: +50
+DLC01EnchBot_ReduceHealthProtectron_Legs[DLCRobot.esm]:ENCH=
+DLC01EnchBot_ReduceMeleeDmg10[DLCRobot.esm]:ENCH=Melee damage: -10%
+DLC01EnchBot_ReduceSpeedMult5[DLCRobot.esm]:ENCH=
+DLC01EnchBot_RemoveNoCripple[DLCRobot.esm]:ENCH=
+DLC01EnchBot_SetScale125[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Unstable_AssaultronHeadLaser[DLCRobot.esm]:ENCH=Chance to break on use
+DLC01EnchBot_Unstable_LeftAttackCondition[DLCRobot.esm]:ENCH=Chance to break on use
+DLC01EnchBot_Unstable_Mesmetron[DLCRobot.esm]:ENCH=Chance to break on use
+DLC01EnchBot_Unstable_PerceptionCondition[DLCRobot.esm]:ENCH=Chance to break on use
+DLC01EnchBot_Voice_Assaultron[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Voice_Bleep_A[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Voice_Bleep_B[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Voice_Bleep_C[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Voice_Female[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Voice_FemaleProcessed[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Voice_Male[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Voice_MaleProcessed[DLCRobot.esm]:ENCH=
+DLC01EnchBot_Voice_Sentry[DLCRobot.esm]:ENCH=
+DLC01EnchBot_csAssaultron[DLCRobot.esm]:ENCH=
+DLC01EnchBot_csMrHandy[DLCRobot.esm]:ENCH=
+DLC01EnchBot_csProtectron[DLCRobot.esm]:ENCH=
+DLC01EnchBot_csRoboBrain[DLCRobot.esm]:ENCH=
+DLC01EnchBot_csSentry[DLCRobot.esm]:ENCH=
+DLC01EnchWeapRobobrainGhostFlash[DLCRobot.esm]:ENCH=
+DLC01EnchWeapSelfDamageRads[DLCRobot.esm]:ENCH=
+DLC01TrackSystem_TrapMine_Ench[DLCRobot.esm]:ENCH=
+DLC01_EnchPulseGrenadeEnergyDmgMechanist[DLCRobot.esm]:ENCH=Energy damage points: 150
+DLC01_Unstable_SentryExplosiveMinigunExplosionDamageEnch[DLCRobot.esm]:ENCH=Unstable: may break when used
+DLC03_ench_mod_Legendary_Armor_RadsIncreaseStrength[DLCCoast.esm]:ENCH=Gain +1 Strength per 133 Rads you absorb
+DN070_EnchWorldSeriesBatKnockdown[Fallout4.esm]:ENCH=Small chance to send targets flying.
+DN160enchGrognakAxe[Fallout4.esm]:ENCH=Hits cause more stagger, and targets take bleed damage.
+DN160enchGrognakCostume[Fallout4.esm]:ENCH=Increases the wearer's strength and melee damage.
+EnchModDisarm[Fallout4.esm]:ENCH=Chance to disarm
+EnchPA_BloodCleanser[Fallout4.esm]:ENCH=Reduces chance for addiction from drugs.
+EnchPA_CommonArm[Fallout4.esm]:ENCH=Unarmed attacks cause Bleed Dmg: 3pts./sec for 3 sec.
+EnchPA_CoreAssembly[Fallout4.esm]:ENCH=Increases Action Point refresh speed.
+EnchPA_EmergencyProtocols[Fallout4.esm]:ENCH=Below 20% health, speed increases 25% and incoming damage is reduced 50%.
+EnchPA_Intelligence[Fallout4.esm]:ENCH=Increases Intelligence with all pieces painted by: 1
+EnchPA_Jetpack[Fallout4.esm]:ENCH=Enables jet-assisted boost while jumping.
+EnchPA_KineticServos[Fallout4.esm]:ENCH=Increases Action Point refresh speed while moving.
+EnchPA_MedicPump[Fallout4.esm]:ENCH=Detects hits during combat and automatically uses a Stimpak when health is low.
+EnchPA_OptimizedBracers[Fallout4.esm]:ENCH=NFW
+EnchPA_OverdriveServos[Fallout4.esm]:ENCH=Increases Sprint speed by 10% for an Additional Action Point cost
+EnchPA_Perception[Fallout4.esm]:ENCH=Increases Perception with six pieces painted by 1
+EnchPA_PhotovotaicCoating[Fallout4.esm]:ENCH=Increases Action Point refresh speed in sunlight.
+EnchPA_RadScrubbers[Fallout4.esm]:ENCH=Removes radiation from consumed food and water.
+EnchPA_RadScrubbers[Fallout4.esm]:ENCH=Removes radiation from water when drinking.
+EnchPA_ReactivePlates[Fallout4.esm]:ENCH=Reflects 50% of melee damage back on attacker.
+EnchPA_ReducePADamageMult[Fallout4.esm]:ENCH=Reduce physical damage by: 5%
+EnchPA_ReducePARadResistMult[Fallout4.esm]:ENCH=Increase Radiation resistance by:14%
+EnchPA_StealthScript[Fallout4.esm]:ENCH=Activates stealth field while crouched.
+EnchPA_TargetingHUD[Fallout4.esm]:ENCH=Visor highlights living targets.
+EnchPA_UnarmedDamage[Fallout4.esm]:ENCH=Increase Unarmed Damage: +15
+EnchPA_VATSChance[Fallout4.esm]:ENCH=Increases VATS hit chance.
+EnchPA_WeldedRebar[Fallout4.esm]:ENCH=Enemies take damage from successful melee attacks.
+EnchPA_kineticLining[Fallout4.esm]:ENCH=NFW
+EnchReconScopeEquipped[Fallout4.esm]:ENCH=Sighted aiming marks enemies with a compass pip.
+EnchShockAndStun[Fallout4.esm]:ENCH=Chance to stun: 25%, Additional Electrical damage: +10
+EnchWeapModBleed[Fallout4.esm]:ENCH=Target Bleeds.
+EnchWeapMod_JunkJetFire[Fallout4.esm]:ENCH=Projectiles gain additional Fire damage: +18
+VRWorkshopShared_ench_mod_LegendaryNerfPerk[Fallout4.esm]:ENCH=Nerfed for VR attacks.
+dtFireEnchFlameChanceAlways[Fallout4.esm]:ENCH=Sets target on fire for 15 points of damage over 3 sec.
+dtRadiationEnchGammaGunSmall[Fallout4.esm]:ENCH=Has Radiation Damage
+enchArmorBrawlerMod[Fallout4.esm]:ENCH=NFW
+enchArmorExplosion1Mod[Fallout4.esm]:ENCH=Reduced damage from explosions.
+enchArmorExplosion2Mod[Fallout4.esm]:ENCH=Greatly reduced damage from explosions.
+enchArmorFallingMod[Fallout4.esm]:ENCH=NFW
+enchArmorIgnoreArmorMod[Fallout4.esm]:ENCH=NFW
+enchArmorLessStaggerMod[Fallout4.esm]:ENCH=Reduces the magnitude of incoming staggers.
+enchArmorQuietMod[Fallout4.esm]:ENCH=NFW
+enchArmorReducedPowerAttackMod[Fallout4.esm]:ENCH=NFW
+enchArmorReducedSprintMod[Fallout4.esm]:ENCH=NFW
+enchArmorStabilizedMod[Fallout4.esm]:ENCH=Increase Stability by 5% per mod piece
+enchArmorStealthMoveMod[Fallout4.esm]:ENCH=NFW
+enchMod_LaserReceiver_Fire1[Fallout4.esm]:ENCH=Ignites target for 9 Damage over 9 sec
+enchMod_LaserReceiver_Fire2[Fallout4.esm]:ENCH=Adds better burning damage
+ench_mod_LegendaryAddCommonPerk[Fallout4.esm]:ENCH=NFW
+ench_mod_LegendaryChanceToStagger[Fallout4.esm]:ENCH=Chance to stagger on hit.
+ench_mod_LegendaryPA_RadsCoreHealth[Fallout4.esm]:ENCH=Gain 50% AP Recovery per 50 Rads you absorb
+ench_mod_LegendaryWeaponOnCritRefillAP[Fallout4.esm]:ENCH=Refills your Action Points on a Critical Hit.
+ench_mod_LegendaryWeapon_Cripple[Fallout4.esm]:ENCH=20% chance to cripple the target's leg.
+ench_mod_LegendaryWeapon_DamagePoison[Fallout4.esm]:ENCH=Target Poisoned for 30 Damage over 10 Sec
+ench_mod_LegendaryWeapon_Frenzy[Fallout4.esm]:ENCH=Critical hits cause target to frenzy.
+ench_mod_LegendaryWeapon_HealAllies[Fallout4.esm]:ENCH=Heals targets instead of hurting them.
+ench_mod_LegendaryWeapon_MovementSpeedSights[Fallout4.esm]:ENCH=75% faster movement while aiming.
+ench_mod_LegendaryWeapon_Radiation[Fallout4.esm]:ENCH=Does 50 points additional radiation damage.
+ench_mod_LegendaryWeaponsAddDamageNightPerk[Fallout4.esm]:ENCH=Does increasing amounts of damage as the night grows longer and less damage during the day.
+ench_mod_ModLegendaryWeaponBleed[Fallout4.esm]:ENCH=Targets bleed for 25 points of additional damage.
+ench_mod_ModLegendaryWeaponsAddDamageInverseHealthPerk[Fallout4.esm]:ENCH=Does more damage the lower your health is.
+ench_mod_ModLegendaryWeaponsDamageConsecutiveHits_Listener[Fallout4.esm]:ENCH=Increased damage after each consecutive hit on the same target.
+mod_Lining_FieldGen_EMP_CloakEnchantment_4[Fallout4.esm]:ENCH=Deals Energy damage to nearby enemies.
+mod_Lining_ReinforcedLimbs_Enchantment[Fallout4.esm]:ENCH=NFW
+mod_armor_Railroad_InstituteKille_Ench[Fallout4.esm]:ENCH=Grants 10% bonus damage against Institute members and synths.
+pa_mod_Lining_FieldGen_EMP_CloakEnchantment[Fallout4.esm]:ENCH=Deals Energy Damage to nearby enemies: 20/sec in combat
+{{{-----------------------Damage/Resistance_Type------------------------}}}
+DamageTypeValue=Damage_Resistance
+DamageTypeValues=Damage_Type
+{{{---------------------------------------------------------------------}}}
+dtCryo[Fallout4.esm]:DMGT=Cryo
+dtElectrical[Fallout4.esm]:DMGT=Electrical
+dtElectricalEnchEffectChanceAlways[Fallout4.esm]:ENCH=
+dtEnergy[Fallout4.esm]:DMGT=Energy
+dtFire[Fallout4.esm]:DMGT=Fire
+dtPhysical[Fallout4.esm]:DMGT=Additional Physical damage:
+dtPoison[Fallout4.esm]:DMGT=Poison
+dtRadiationExposure[Fallout4.esm]:DMGT=Radiation
+dtRadiationIngestion[Fallout4.esm]:DMGT=Additional Radiation Ingestion damage:
+{{{------------------------------ZoomData-------------------------------}}}
+ZoomData=
+{{{---------------------------------------------------------------------}}}
+ZM_Standard_Scope_x2[Fallout4.esm]:ZOOM=x2 Short Scope
+ZM_Standard_Scope_x4[Fallout4.esm]:ZOOM=x4 Short Scope
+ZM_Standard_Scope_x6[Fallout4.esm]:ZOOM=x6 Medium Scope
+ZM_Standard_Scope_x10[Fallout4.esm]:ZOOM=x10 Long Scope
+ZM_Standard_Scope_x4_NightVision[Fallout4.esm]:ZOOM=x4 Short Nightvision Scope
+ZM_Standard_Scope_x6_NightVision[Fallout4.esm]:ZOOM=x6 Medium Nightvision Scope
+ZM_Standard_Scope_x10_NightVision[Fallout4.esm]:ZOOM=x10 Long Nightvision Scope
+ZM_Recon_Scope_x2[Fallout4.esm]:ZOOM=x2 Recon Scope
+ZM_Recon_Scope_x4[Fallout4.esm]:ZOOM=x4 Recon Scope
+ZM_Recon_Scope_x10[Fallout4.esm]:ZOOM=x10 Recon Scope
+{{{---------------------Show Additional Properties----------------------}}}
+Health=Increases Item Health by:
+{{{---------------------------Better_Naming-----------------------------}}}
+Rating=Increase Armor Rating by:
+ZoomDataFOVMult=Zoom:
+AttackDamage=Weapon Damage:
+CriticalDamageMult=Crit. Damage:
+SecondaryDamage=Bash Damage:
+Speed=Fire Rate:
+FullPowerSeconds=Time to charge:
+NumProjectiles=No of Projectiles:
+MinPowerPerShot=Min Damage:
+AmmoCapacity=Ammo Capacity:
+AttackDelaySec=Trigger Sensitivity:
+ReloadSpeed=Reload Speed:
+MinRange=Range (Min\Max):
+MaxRange=\
+OutOfRangeDamageMult=Out-of-Range Damage reduced by:
+AimModelRecoilHipMult=Recoil (Hip):
+AimModelRecoilMinDegPerShot=Recoil (Min\Max):
+AimModelRecoilShotsForRunaway=Rounds to Max Recoil:
+AimModelRecoilMaxDegPerShot=\
+AimModelMinConeDegrees=Spread (Min\Max):
+AimModelMaxConeDegrees=\
+AimModelBaseStability=Sight Sway (Hip):
+AimModelConeIronSightsMultiplier=Sighted Sway:
+AimModelRecoilArcDeg=Recoil Arc:
+AimModelRecoilArcRotateDeg=Arc Rotate:
+ArmorPenetration[Fallout4.esm]:AVIF=Armor Penetration:
+SightedTransitionSeconds=Sight Time:
+AttackActionPointCost=AP Cost:
+{{{-----------------------------------------------------------------------}}}
+{-If you want a new property to show up you have to have it in the list   	}
+{e.g. 'Health=Increase Health by: '                                       	}
+{-Display order is dictated by the order of the files in this list        	}
+{-If you have AFIC and ENCH then use ENCH for the Description and use the 	}
+{-NFW TAG to exclude the AFIC: description from appearing in the Naming.  	}
+{-Use AVIF to Calculate what Keywords produce Which effect to Add to      	}
+{Description                                                              	}
+{{{-----------------------------------------------------------------------}}}
+{                                 Maths                                   	}
+{Range:																		}
+{each point of a mod is worth 12 range, and there's a base range of 11.		}
+{Weapon spread																}
+{AimModel???ConeDegrees: IF MIN>MAX then MIN=MAX							}
+{AimModelRecoilArcRotateDeg: (( 1.0 + value ) * 15° ) rotating clockwise	}
+{{{-----------------------------------------------------------------------}}}
