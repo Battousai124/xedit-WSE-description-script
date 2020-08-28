@@ -11,17 +11,17 @@ uses
   StrUtils,
   Windows;
 
-procedure GetMappedDescription(rec: IInterface; sl, TStringList;); // stuff in here GLOBAL?
+PROCEDURE GetMappedDescription(rec: IInterface; sl, TStringList;);
 
 var
-  tmpint, prop, proploop2, properties: IInterface;
+  tmpInt, prop, proploop2, properties: IInterface;
   i, i2, j, j2, dummyInt: Integer;
   mappedValues, indicesToSkip : TStringList;
-	dummyStr, dummyStr2 : String;
+	tmpStr : String;
+  mappedName, mappedValue, mappedHelperFileValue, formatedloop1Result, formatedloop2Result : String;
   value_Type, value_FunctionType, value_PropertyType, loop1Result : String;
-  mappedName, mappedValue, mappedHelperFileValue : String;
-	loop2Result, formatedloop2Result, formatedloop1Result, value_Type_Loop2, valuePropertytype2, value_Functiontype2 : String;
-  floatValue, floatValue2, dummyValue : Double; //Real;
+	value_Functiontype2, valuePropertytype2, loop2Result : String;
+  floatValue, floatValue2, absValue : Double;
 
 begin
   LogFunctionStart('GetMappedDescription');
@@ -30,19 +30,44 @@ begin
   mappedValues.Duplicates := dupIgnore;
   indicesToSkip := TStringList.Create;
   indicesToSkip.Sorted := True; // so that .Find() works
-  indicesToSkip.Duplicates := dupIgnore;	try		properties := ElementByPath(rec, 'DATA\Properties');
-		for i := 0 to Pred(ElementCount(properties)) do		begin			if indicesToSkip.Find(i, dummyInt) then			begin				mappedValues.Add(''); // necessary, so that number of records stay the same				continue;			end;			tmpint := '';
+  indicesToSkip.Duplicates := dupIgnore;
+	try
+		properties := ElementByPath(rec, 'DATA\Properties');
+		for i := 0 to Pred(ElementCount(properties)) do
+		begin
+			if indicesToSkip.Find(i, dummyInt) then
+			begin
+				mappedValues.Add(''); // necessary, so that number of records stay the same
+				continue;
+			end;
+			tmpInt := '';
 			loop1Result := '';
-			mappedValue := '';			prop := ElementByIndex(properties, i);			value_PropertyType := GetElementEditValues(prop, 'Property');			j := slPropertyMap.IndexOfName(value_PropertyType);			if j = -1 then			begin				mappedValues.Add('');	// necessary, so that number of records stay the same				continue;			end;			value_Type := GetElementEditValues(prop, 'Value Type');			value_PropertyType := GetElementEditValues(prop, 'Property');			value_FunctionType := GetElementEditValues(prop, 'Function Type');
+			mappedValue := '';
+			prop := ElementByIndex(properties, i);
+			value_PropertyType := GetElementEditValues(prop, 'Property');
+			j := slPropertyMap.IndexOfName(value_PropertyType);
+
+			if j = -1 then
+			begin
+				mappedValues.Add('');	// necessary, so that number of records stay the same
+				continue;
+			end;
+
+			value_Type := GetElementEditValues(prop, 'Value Type');
+			value_PropertyType := GetElementEditValues(prop, 'Property');
+			value_FunctionType := GetElementEditValues(prop, 'Function Type');
 			mappedName := slPropertyMap.Values[value_PropertyType];
 			mappedHelperFileValue := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop, 6)))];
 
-	//	begin 2nd LOOP
+// =========================================================================
+// LOOP 2 
+// =========================================================================
+			
 			if ((value_PropertyType = 'AimModelRecoilMinDegPerShot') or
 				(value_PropertyType = 'AimModelMinConeDegrees') or
 				(value_PropertyType = 'MinRange'))  and (mappedValue = '') then
 			begin
-				dummyValue := '';
+				absValue := '';
 				mappedValue := '';
 				formatedloop1Result := '';
 				formatedloop2Result := '';
@@ -62,20 +87,20 @@ begin
 
 					loop1Result := '';
 					loop2Result := '';
-          value_Type_Loop2 := GetElementEditValues(proploop2, 'Value Type');
           value_Functiontype2 := GetElementEditValues(proploop2, 'Function Type');
 					
           if ((value_PropertyType = 'MinRange') or (valuePropertytype2 = 'MaxRange')) then
           begin
-						floatValue := GetNativeValue(ElementByIndex(prop, 6));
-						floatValue2 := GetNativeValue(ElementByIndex(proploop2, 6));
+						floatValue := StrToFloat(GetElementEditValues(prop, 'Value 1'));
+						floatValue2 := StrToFloat(GetElementEditValues(proploop2, 'Value 1'));
 						if (value_PropertyType = 'MinRange') then 
-							dummyValue := ABS(floatValue)
+							absValue := ABS(floatValue)
 							else
-							dummyValue := ABS(floatValue2);
-						dummyStr := 'Range';
-						if dummyValue = 0 then continue;
-            if dummyValue >= 1.0 then
+							absValue := ABS(floatValue2);
+						tmpStr := 'Range';
+						if absValue = 0 then 
+							continue;
+            if absValue >= 1.0 then
             begin
 							loop1Result :=  FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 10) / 10);
 						  loop2Result :=  FloatToStr(round((((256 * floatValue2) + 256) * 0.0142875) * 10) / 10);
@@ -85,36 +110,37 @@ begin
 									loop2Result :=  FloatToStr(round(((floatValue2) * 0.0142875) * 10) / 10);
 								end;
               // DebugLog(Format('loop  1   Result: %s', [formatedloop1Result]));
-						end
-            else if dummyValue > 0.0 then
+						end else 
+						if absValue > 0.0 then
             begin
-							loop1Result := FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 1000) / 10);//FloatToStr(Int(round((((256+(256*floatValue)) * 1000) / 10)) + 256) * 0.0142875);
-							loop2Result := FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 1000) / 10);//FloatToStr(Int(round((((256+(256*floatValue2)) * 1000) / 10)) + 256) * 0.0142875);
-							// DebugLog(Format('loop  2   Result: %s dummyValue %s' , [formatedloop1Result,dummyValue]));
+							loop1Result := FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 1000) / 10)
+							loop2Result := FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 1000) / 10);
+							// DebugLog(Format('loop  2   Result: %s absValue %s' , [formatedloop1Result,absValue]));
             end;
 						formatedloop1Result := format('%sm', [loop1Result]);
             formatedloop2Result := format('%sm', [loop2Result]);
 					end;
 
 					if ((value_PropertyType = 'AimModelRecoilMinDegPerShot') or (valuePropertytype2 = 'AimModelRecoilMaxDegPerShot')) or
-					((value_PropertyType = 'AimModelMinConeDegrees') or (valuePropertytype2 = 'AimModelMaxConeDegrees')) then
+						((value_PropertyType = 'AimModelMinConeDegrees') or (valuePropertytype2 = 'AimModelMaxConeDegrees')) then
 					begin
-						floatValue := GetNativeValue(ElementByIndex(prop, 6));
-						floatValue2 := GetNativeValue(ElementByIndex(proploop2, 6));
-						if (value_PropertyType = 'AimModelRecoilMinDegPerShot') then dummyStr:= 'Recoil';
-						if (value_PropertyType = 'AimModelMinConeDegrees') then dummyStr:= 'Spread';
+						floatValue := StrToFloat(GetElementEditValues(prop, 'Value 1'));
+						floatValue2 := StrToFloat(GetElementEditValues(proploop2, 'Value 1'));
+						if (value_PropertyType = 'AimModelRecoilMinDegPerShot') then tmpStr:= 'Recoil';
+						if (value_PropertyType = 'AimModelMinConeDegrees') then tmpStr:= 'Spread';
 						if ((value_PropertyType = 'AimModelRecoilMinDegPerShot') or (value_PropertyType = 'AimModelMinConeDegrees')) then 
-							dummyValue := ABS(floatValue)
+							absValue := ABS(floatValue)
 							else
-							dummyValue := ABS(floatValue2);
-						if dummyValue = 0 then continue;
-            if dummyValue > 1.0 then
+							absValue := ABS(floatValue2);
+						if absValue = 0 then 
+							continue;
+            if absValue > 1.0 then
             begin
               loop1Result := FloatToStr(round(floatValue * 10) / 10);
               loop2Result := FloatToStr(round(floatValue2 * 10) / 10);
 							// DebugLog(Format('loop  1   Result: %s', [formatedloop1Result]));
-						end
-            else if dummyValue > 0.0 then
+						end else 
+						if absValue > 0.0 then
             begin
               loop1Result := FloatToStr(round(floatValue * 1000) / 10);
               loop2Result := FloatToStr(round(floatValue2 * 1000) / 10);
@@ -128,128 +154,146 @@ begin
 						continue; // not looking for a string does nothing????
 				
 					if ((value_PropertyType = 'MinRange') and (valuePropertytype2 = 'MaxRange')) or
-					((value_PropertyType = 'AimModelRecoilMinDegPerShot') and (valuePropertytype2 = 'AimModelRecoilMaxDegPerShot')) or
-					((value_PropertyType = 'AimModelMinConeDegrees') and (valuePropertytype2 = 'AimModelMaxConeDegrees')) then
+						((value_PropertyType = 'AimModelRecoilMinDegPerShot') and (valuePropertytype2 = 'AimModelRecoilMaxDegPerShot')) or
+						((value_PropertyType = 'AimModelMinConeDegrees') and (valuePropertytype2 = 'AimModelMaxConeDegrees')) then
+					begin
+						indicesToSkip.Add(i);
+						indicesToSkip.Add(i2);
+						if floatValue >= floatValue2 then
 						begin
-						
-							indicesToSkip.Add(i);
-							indicesToSkip.Add(i2);
-							if floatValue >= floatValue2 then
-								begin
-									mappedValue := format('%s: %s', [dummyStr,formatedloop1Result]);
-									end
-									else
-									begin
-										mappedValue := format('%s (Min\Max): %s\%s', [dummyStr, formatedloop1Result, formatedloop2Result]);
-									 // DebugLog(Format('l2M1 loop1Result: %s | loop2Result: %s | mappedValue: %s'  , [loop1Result, loop2Result, mappedValue]));
-									Break;
-									end;
+							mappedValue := format('%s: %s', [tmpStr,formatedloop1Result]);
+						end else
+						begin
+							mappedValue := format('%s (Min\Max): %s\%s', [tmpStr, formatedloop1Result, formatedloop2Result]);
+							// DebugLog(Format('l2M1 loop1Result: %s | loop2Result: %s | mappedValue: %s'  , [loop1Result, loop2Result, mappedValue]));
+							Break;
 						end;
+					end;
 								
-							if ((value_PropertyType = 'MinRange') or
-								(value_PropertyType = 'AimModelRecoilMinDegPerShot') or
-								(value_PropertyType = 'AimModelMinConeDegrees')) then
-								begin
-									indicesToSkip.Add(i);
-									indicesToSkip.Add(i2);
-									mappedValue := format('%s: %s', [dummyStr,formatedloop1Result]);
-									 // DebugLog(Format('l2M2 loop1Result: %s | loop2Result: %s | mappedValue: %s'  , [loop1Result, loop2Result, mappedValue]));
-									Break;
-								end;
+					if ((value_PropertyType = 'MinRange') or
+						(value_PropertyType = 'AimModelRecoilMinDegPerShot') or
+						(value_PropertyType = 'AimModelMinConeDegrees')) then
+					begin
+						indicesToSkip.Add(i);
+						indicesToSkip.Add(i2);
+						mappedValue := format('%s: %s', [tmpStr,formatedloop1Result]);
+						 // DebugLog(Format('l2M2 loop1Result: %s | loop2Result: %s | mappedValue: %s'  , [loop1Result, loop2Result, mappedValue]));
+						Break;
+					end;
 								
-							if ((valuePropertytype2 = 'MaxRange') or
-								(valuePropertytype2 = 'AimModelRecoilMaxDegPerShot') or
-								(valuePropertytype2 = 'AimModelMaxConeDegrees')) then
-								begin
-									indicesToSkip.Add(i);
-									indicesToSkip.Add(i2);
-									mappedValue := format('%s: %s', [dummyStr,formatedloop2Result]);
-									 // DebugLog(Format('l2M3 loop1Result: %s | loop2Result: %s | mappedValue: %s'  , [loop1Result, loop2Result, mappedValue]));
-									Break;
-								end;
+					if ((valuePropertytype2 = 'MaxRange') or
+						(valuePropertytype2 = 'AimModelRecoilMaxDegPerShot') or
+						(valuePropertytype2 = 'AimModelMaxConeDegrees')) then
+					begin
+						indicesToSkip.Add(i);
+						indicesToSkip.Add(i2);
+						mappedValue := format('%s: %s', [tmpStr,formatedloop2Result]);
+						 // DebugLog(Format('l2M3 loop1Result: %s | loop2Result: %s | mappedValue: %s'  , [loop1Result, loop2Result, mappedValue]));
+						Break;
+					end;
 				end;
 			end;
 		
-	//	end 2nd LOOP  
+// =========================================================================
+// Float Loop Block 
+// =========================================================================
 
-	//Float Loop Block 
 			if (((value_Type = 'Float') or (value_Type = 'Int')) and ((value_FunctionType= 'SET') or (value_FunctionType = 'ADD') or (value_FunctionType = 'MUL+ADD'))) and
-			(not(value_PropertyType = 'MinRange') and
-			not(value_PropertyType = 'MaxRange') and
-			not(value_PropertyType = 'AimModelRecoilMinDegPerShot') and 
-			not(value_PropertyType = 'AimModelRecoilMaxDegPerShot') and
-			not(value_PropertyType = 'AimModelMinConeDegrees') and
-			not(value_PropertyType = 'AimModelMaxConeDegrees')) and (mappedValue = '') then
-				begin
-					floatValue := GetElementEditValues(prop, 'Value 1');
-					dummyValue := ABS(floatValue);
-					if dummyValue = 0 then continue;
-					if dummyValue > 1.0 then
-						begin
-						loop1Result := format('%s', [FloatToStr(round(floatValue * 10) / 10)]);
-						if (value_PropertyType = 'AimModelRecoilArcDeg') then 
-						loop1Result := format('%s'+ chr($00B0), [FloatToStr(round(floatValue * 10) / 10)]);
-							// DebugLog(Format('Float_loop  1   loop1Result %s' , [loop1Result]));
-						end
-						else if dummyValue > 0.0 then
-						begin
-							loop1Result := format('%s%%', [FloatToStr(round(floatValue * 1000) / 10)]);
-							// DebugLog(Format('Float_loop  2   loop1Result %s' , [loop1Result]));
-						end;
-						mappedValue := format('%s%s', [mappedName, loop1Result]);
-				end;
+				(not(value_PropertyType = 'MinRange') and
+				not(value_PropertyType = 'MaxRange') and
+				not(value_PropertyType = 'AimModelRecoilMinDegPerShot') and 
+				not(value_PropertyType = 'AimModelRecoilMaxDegPerShot') and
+				not(value_PropertyType = 'AimModelMinConeDegrees') and
+				not(value_PropertyType = 'AimModelMaxConeDegrees')) and (mappedValue = '') then
+			begin
+				floatValue := GetElementEditValues(prop, 'Value 1');
+				absValue := ABS(floatValue);
+				if absValue = 0 then 
+					continue;
+				if absValue > 1.0 then
+					begin
+					loop1Result := format('%s', [FloatToStr(round(floatValue * 10) / 10)]);
+					if (value_PropertyType = 'AimModelRecoilArcDeg') then 
+					loop1Result := format('%s'+ chr($00B0), [FloatToStr(round(floatValue * 10) / 10)]);
+						// DebugLog(Format('Float_loop  1   loop1Result %s' , [loop1Result]));
+					end else 
+					if absValue > 0.0 then
+					begin
+						loop1Result := format('%s%%', [FloatToStr(round(floatValue * 1000) / 10)]);
+						// DebugLog(Format('Float_loop  2   loop1Result %s' , [loop1Result]));
+					end;
+					mappedValue := format('%s%s', [mappedName, loop1Result]);
+			end;
 
-	//Damage Type - Calculated off 'Value 2'
+// =========================================================================
+// Damage Type - Calculated off 'Value 2'
+// =========================================================================
+
 			if (value_Propertytype = 'DamageTypeValues')  and (mappedValue = '') then
 			begin
 				floatValue := GetElementEditValues(prop, 'Value 2');
-				dummyValue := ABS(floatValue);
-				if dummyValue = 0 then continue;
-				if dummyValue > 1.0 then
+				absValue := ABS(floatValue);
+				if absValue = 0 then 
+					continue;
+				if absValue > 1.0 then
 				begin
 					loop1Result := FloatToStr(round(floatValue * 10) / 10);
-				end
-				else if dummyValue > 0.0 then
+				end	else 
+				if absValue > 0.0 then
 				begin
 					loop1Result := format('%s%%', [FloatToStr(round(floatValue * 1000) / 10)]);
 				end;
 				mappedValue := format('%s Damage: %s', [mappedHelperFileValue, loop1Result]);
 			end;
 
-	//Damage Resistance
+// =========================================================================
+// 	Damage Resistance - Calculated off 'Value 2'
+// =========================================================================
+			
 			if ((mappedName = 'Damage_Resistance')  and (mappedValue = ''))  then
 				begin
 					loop1Result := FloatToStr(GetElementEditValues(prop, 'Value 2'));
-					dummyStr2 := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop, 6)))];
-					mappedValue := format('Reduces %s damage by: %s', [dummyStr2, loop1Result]);
+					tmpStr := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop, 6)))];
+					mappedValue := format('Reduces %s damage by: %s', [tmpStr, loop1Result]);
 				end;
 				
-	//Ammo			
+// =========================================================================
+// 	AMMO
+// =========================================================================		
+				
 			if (mappedName = 'Ammo_Type')  and (mappedValue = '') then
 				begin
-					tmpint := LinksTo(ElementByIndex(prop, 6));
-					loop1Result := GetEditValue(ElementByPath(tmpint, 'ONAM'));
+					tmpInt := LinksTo(ElementByIndex(prop, 6));
+					loop1Result := GetEditValue(ElementByPath(tmpInt, 'ONAM'));
 					if Length(loop1Result) = 0 then
-						begin
-							mappedValue := GetEditValue(ElementByPath(tmpint, 'FULL'));
-							mappedValue := format('Changes Ammo to %s', [GetNameWithoutTags(loop1Result, 0)]);
-						end else
+					begin
+						mappedValue := GetEditValue(ElementByPath(tmpInt, 'FULL'));
+						mappedValue := format('Changes Ammo to %s', [GetNameWithoutTags(loop1Result, 0)]);
+					end else
 					mappedValue := format('Changes Ammo to %s', [GetNameWithoutTags(loop1Result, 0)]);
 				end;
 
-	//Enchantments and Keywords
-			if ((mappedName = 'Enchantments_Value') or
-				(mappedName = 'Keywords_Values_Type')  or
-				(value_PropertyType = 'ZoomData'))  and (mappedValue = '')  then
-				begin
-				mappedValue := format('%s', [mappedHelperFileValue]);
-				end;
+// =========================================================================
+// 		Enchantments and Keywords
+// =========================================================================
 				
-	//Skip these Properties
-			if ((mappedName = 'MaterialSwaps_Values_Type') or
-				(mappedName = 'Actor_Values_Type')) and (mappedValue = '') then
-						continue;
-	//EOF				
+			if ((mappedName = 'Enchantments_Value') or (mappedName = 'Keywords_Values_Type') or (value_PropertyType = 'ZoomData')) and 
+				(mappedValue = '')  then
+			begin
+				mappedValue := format('%s', [mappedHelperFileValue]);
+			end;
+				
+// =========================================================================
+// 		Skip these Properties
+// =========================================================================
+	
+			if ((mappedName = 'MaterialSwaps_Values_Type') or (mappedName = 'Actor_Values_Type')) and (mappedValue = '') then
+				continue;
+			
+// =========================================================================
+// 		EOF
+// =========================================================================
+				
 			// DebugLog(Format('EOF value_PropertyType: %s | EOF mappedName: %s | EOF mappedValue: %s'  , [value_PropertyType, mappedName, mappedValue]));
 			sl.Add(format('%.3d', [j]) + mappedValue);
 
