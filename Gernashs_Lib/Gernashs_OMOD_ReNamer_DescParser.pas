@@ -86,6 +86,8 @@ begin
 
 					loop1Result := '';
 					loop2Result := '';
+					floatValue := 0;
+					floatValue2 := 0;
           value_Functiontype2 := GetElementEditValues(proploop2, 'Function Type');
 					
 					if value_PropertyType='Keywords' then continue;
@@ -95,29 +97,24 @@ begin
           begin
 						floatValue := StrToFloat(GetElementEditValues(prop, 'Value 1'));
 						floatValue2 := StrToFloat(GetElementEditValues(proploop2, 'Value 1'));
-						absValue := ABS(floatValue2);
+						absValue := ABS(floatValue);
+						absValue2 := ABS(floatValue2);
 						tmpStr := 'Range';
 						if absValue = 0 then 
 							continue;
-            if absValue >= 1.0 then
             begin
-							loop1Result :=  FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 10) / 10);
-						  loop2Result :=  FloatToStr(round((((256 * floatValue2) + 256) * 0.0142875) * 10) / 10);
+							loop1Result :=  FloatToStr(round((((256 * absValue) + 256) * 0.0142875) * 10) / 10);
+						  loop2Result :=  FloatToStr(round((((256 * absValue2) + 256) * 0.0142875) * 10) / 10);
 							if ((value_Functiontype2='SET') or (value_FunctionType='SET')) then
 								begin
-									loop1Result :=  FloatToStr(round(((floatValue) * 0.0142875) * 10) / 10);
-									loop2Result :=  FloatToStr(round(((floatValue2) * 0.0142875) * 10) / 10);
+									loop1Result :=  FloatToStr(round(((absValue) * 0.0142875) * 10) / 10);
+									loop2Result :=  FloatToStr(round(((absValue2) * 0.0142875) * 10) / 10);
 								end;
-              // DebugLog(Format('loop  1   Result: %s', [formatedloop1Result]));
-						end else 
-						if absValue > 0.0 then
-            begin
-							loop1Result := FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 1000) / 10);
-							loop2Result := FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 1000) / 10);
-							// DebugLog(Format('loop  2   Result: %s absValue %s' , [formatedloop1Result,absValue]));
-            end;
+						end; 
 						formatedloop1Result := format('%sm', [loop1Result]);
             formatedloop2Result := format('%sm', [loop2Result]);
+              DebugLog(Format('loop  1   Result: %s', [formatedloop1Result]));
+              DebugLog(Format('loop  1   Result: %s', [formatedloop2Result]));
 					end;
 
 					if ((value_PropertyType = 'AimModelRecoilMinDegPerShot') and (valuePropertytype2 = 'AimModelRecoilMaxDegPerShot')) or
@@ -127,27 +124,30 @@ begin
 						floatValue2 := StrToFloat(GetElementEditValues(proploop2, 'Value 1'));
 						if (value_PropertyType = 'AimModelRecoilMinDegPerShot') then tmpStr:= 'Recoil';
 						if (value_PropertyType = 'AimModelMinConeDegrees') then tmpStr:= 'Spread';
-						absValue := ABS(floatValue2);
+						absValue := ABS(floatValue);
+						absValue2 := ABS(floatValue2);
 						if absValue = 0 then 
 							continue;
-            if absValue > 1.0 then
+						if (value_FunctionType= 'SET') then
             begin
-              loop1Result := FloatToStr(round(floatValue * 10) / 10);
-              loop2Result := FloatToStr(round(floatValue2 * 10) / 10);
-							// DebugLog(Format('loop  1   Result: %s', [formatedloop1Result]));
+              loop1Result := FloatToStr(round(absValue * 10) / 10);
+              loop2Result := FloatToStr(round(absValue2 * 10) / 10);
+							formatedloop1Result := Format('%s'+ chr($00B0), [loop1Result]);
+              formatedloop2Result := Format('%s'+ chr($00B0), [loop2Result]);
+							DebugLog(Format('loop  1   Result: %s', [formatedloop1Result]));
 						end else 
-						if absValue > 0.0 then
+						if (value_FunctionType = 'MUL+ADD') then
             begin
-              loop1Result := FloatToStr(round(floatValue * 1000) / 10);
-              loop2Result := FloatToStr(round(floatValue2 * 1000) / 10);
+              loop1Result := FloatToStr(round(absValue * 1000) / 10);
+              loop2Result := FloatToStr(round(absValue2 * 1000) / 10);
+							formatedloop1Result := Format('%s%%', [loop1Result]);
+              formatedloop2Result := Format('%s%%', [loop2Result]);
               // DebugLog(Format('loop  2   Result: %s', [formatedloop1Result]));
             end;
-							formatedloop1Result := loop1Result + chr($00B0);
-              formatedloop2Result := loop2Result + chr($00B0);
 					end;
 
 					if loop2Result = '' then
-						continue; // not looking for a string does nothing????
+						continue; 									{not looking for a string does nothing????}
 						
 { =========================================================================
  		MIN/MAX Output Format
@@ -159,9 +159,6 @@ begin
 					absValue := ABS(floatValue);
 					absValue2 := ABS(floatValue2);
 						indicesToSkip.Add(i);
-						// indicesToSkip.Add(i2);
-						// DebugLog(Format('l2M1 loop1Result: %s | loop2Result: %s | mappedValue: %s'  , [loop1Result, loop2Result, mappedValue]));
-							
 						if absValue >= absValue2 then
 						begin
 							mappedValue := format('%s: %s', [tmpStr,formatedloop1Result]);
@@ -184,19 +181,13 @@ begin
 						indicesToSkip.Add(i);
 						if absValue = 0 then 
 							continue;
-            if absValue >= 1.0 then
+            // if absValue >= 1.0 then
             begin
-							loop1Result :=  FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 10) / 10);
+							loop1Result :=  FloatToStr(round((((256 * absValue) + 256) * 0.0142875) * 10) / 10);
 							if ((value_Functiontype2='SET') or (value_FunctionType='SET')) then
 								begin
-									loop1Result :=  FloatToStr(round(((floatValue) * 0.0142875) * 10) / 10);
+									loop1Result :=  FloatToStr(round(((absValue) * 0.0142875) * 10) / 10);
 								end;
-              // DebugLog(Format('loop  1   Result: %s', [formatedloop1Result]));
-						end else 
-						if absValue > 0.0 then
-            begin
-							loop1Result := FloatToStr(round((((256 * floatValue) + 256) * 0.0142875) * 1000) / 10);
-							// DebugLog(Format('loop  2   Result: %s absValue %s' , [formatedloop1Result,absValue]));
             end;
 						formatedloop1Result := format('%sm', [loop1Result]);
 						mappedValue := format('%s: %s', [tmpStr,formatedloop1Result]);
@@ -213,29 +204,25 @@ begin
 							indicesToSkip.Add(i);
 						if absValue = 0 then 
 							continue;
-            if absValue > 1.0 then
+            // if absValue > 1.0 then
+						if (value_FunctionType= 'SET') then
             begin
-              loop1Result := FloatToStr(round(floatValue * 10) / 10);
+              loop1Result := FloatToStr(round(absValue * 10) / 10);
+							formatedloop1Result := Format('%s'+ chr($00B0), [loop1Result]);
 							// DebugLog(Format('loop  1   Result: %s', [formatedloop1Result]));
-						end else 
-						if absValue > 0.0 then
+						end 
+						else 
+						if (value_FunctionType = 'MUL+ADD') then
             begin
-              loop1Result := FloatToStr(round(floatValue * 1000) / 10);
+              loop1Result := FloatToStr(round(absValue * 1000) / 10);
+							formatedloop1Result := Format('%s%%', [loop1Result]);
               // DebugLog(Format('loop  2   Result: %s', [formatedloop1Result]));
             end;
-							formatedloop1Result := loop1Result + chr($00B0);
-							mappedValue := format('%s: %s', [tmpStr,formatedloop1Result]);
 					end;
-					
-				if (mappedValue = '') then
-				begin
-				DebugLog('no mapped Value');
-				DebugLog(Format('value_PropertyType: %s | valuePropertytype2: %s' , [value_PropertyType, valuePropertytype2]));
-				end;
 			end;
 // =========================================================================
-// 		Don't process Max Values Of loop2 in loop1
-// 		Skip these additional Properties			
+// 		Don't process Max Values of loop2 in loop1
+// 		also Skip these additional Properties			
 // =========================================================================		
 			
 			if (mappedValue = '') and
@@ -258,21 +245,26 @@ begin
 					continue;
 				if absValue > 1.0 then
 					begin
+					loop1Result := format('%sx', [FloatToStr(round(floatValue * 10) / 10)]);
+					if ((value_PropertyType = 'AmmoCapacity') or (value_PropertyType = 'AimModelRecoilShotsForRunaway') or
+					(value_PropertyType = 'AttackDamage')) then
 					loop1Result := format('%s', [FloatToStr(round(floatValue * 10) / 10)]);
 					if (value_PropertyType = 'AimModelRecoilArcDeg') then 
 					loop1Result := format('%s'+ chr($00B0), [FloatToStr(round(floatValue * 10) / 10)]);
 					if ((value_PropertyType = 'AttackDamage') and (value_FunctionType = 'MUL+ADD')) then
 						loop1Result := format('%s%%', [FloatToStr(round(floatValue * 1000) / 10)]);
+					if (value_PropertyType = 'FullPowerSeconds') then
+						loop1Result := format('%ssec', [FloatToStr(round(floatValue * 10) / 10)]);
 						// DebugLog(Format('Float_loop  1   loop1Result %s' , [loop1Result]));
 					end else 
 					if absValue > 0.0 then
 					begin
 						loop1Result := format('%s%%', [FloatToStr(round(floatValue * 1000) / 10)]);
-						if (value_PropertyType = 'NumProjectiles') then
+						if ((value_PropertyType = 'NumProjectiles') or (value_PropertyType = 'AimModelRecoilShotsForRunaway')) then
 							loop1Result := format('%s', [FloatToStr(round(floatValue * 10) / 10)]);
 						// DebugLog(Format('Float_loop  2   loop1Result %s' , [loop1Result]));
 					end;
-					mappedValue := format('%s%s', [mappedName, loop1Result]);
+					mappedValue := format('%s %s', [mappedName, loop1Result]);
 			end;
 
 // =========================================================================
