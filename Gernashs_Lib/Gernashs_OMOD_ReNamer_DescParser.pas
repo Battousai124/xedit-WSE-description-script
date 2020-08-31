@@ -15,9 +15,11 @@ PROCEDURE GetMappedDescription(rec: IInterface; sl, TStringList;);
 
 var
   tmpInt, prop, proploop2, properties: IInterface;
+	ENCHproperties: IInterface;
   i, i2, j, j2, dummyInt: Integer;
   mappedValues, indicesToSkip : TStringList;
-	tmpStr : String;
+	flag : boolean;
+	tmpStr, tmpStr2 : String;
   mappedName, mappedValue, mappedHelperFileValue, formatedloop1Result, formatedloop2Result : String;
   value_Type, value_FunctionType, value_PropertyType, loop1Result : String;
 	value_Functiontype2, valuePropertytype2, loop2Result : String;
@@ -227,7 +229,7 @@ begin
 			
 			if (mappedValue = '') and
 			((value_PropertyType = 'MaxRange') or (value_PropertyType = 'AimModelRecoilMaxDegPerShot') or	(value_PropertyType = 'AimModelMaxConeDegrees')) or
-			((mappedName = 'MaterialSwaps_Values_Type') or (mappedName = 'Actor_Values_Type')) then
+			((mappedName = 'MaterialSwaps_Values_Type')) then
 				begin
 				indicesToSkip.Add(i);
 				continue;
@@ -246,7 +248,7 @@ begin
 				if absValue > 1.0 then
 					begin
 					loop1Result := format('%sx', [FloatToStr(round(floatValue * 10) / 10)]);
-					if ((value_PropertyType = 'AmmoCapacity') or (value_PropertyType = 'AimModelRecoilShotsForRunaway') or
+					if ((value_PropertyType = 'AmmoCapacity') or (value_PropertyType = 'AimModelRecoilShotsForRunaway') or (value_PropertyType = 'Health') or (value_PropertyType = 'Rating')
 					(value_PropertyType = 'AttackDamage')) then
 					loop1Result := format('%s', [FloatToStr(round(floatValue * 10) / 10)]);
 					if (value_PropertyType = 'AimModelRecoilArcDeg') then 
@@ -294,9 +296,13 @@ begin
 			
 			if ((mappedName = 'Damage_Resistance')  and (mappedValue = ''))  then
 				begin
-					loop1Result := FloatToStr(GetElementEditValues(prop, 'Value 2'));
+					floatValue := StrToFloat(GetElementEditValues(prop, 'Value 2'));
+					if floatValue = 0 then 
+					continue;
+					loop1Result := FloatToStr(floatValue);
 					tmpStr := slPropertyMap.Values[RecordToString(LinksTo(ElementByIndex(prop, 6)))];
-					mappedValue := format('Reduces %s damage by: %s', [tmpStr, loop1Result]);
+					mappedValue := format('Increase %s Resistance by: %s', [tmpStr, loop1Result]);
+					// mappedValue := format('Reduces %s damage by: %s', [tmpStr, loop1Result]);
 				end;
 				
 // =========================================================================
@@ -314,22 +320,157 @@ begin
 					end else
 					mappedValue := format('Changes Ammo to %s', [GetNameWithoutTags(loop1Result, 0)]);
 				end;
-
+				
 // =========================================================================
-// 		Enchantments and Keywords
+// 	Enchantments AUTO-Namer
 // =========================================================================
 				
-			if ((mappedName = 'Enchantments_Value') or (mappedName = 'Keywords_Values_Type') or (value_PropertyType = 'ZoomData')) and 
-				(mappedValue = '')  then
+if (mappedName = 'Enchantments_Value') and (mappedValue = '') then
+	begin
+		if GetElementEditValues(prop, 'Value 1')='NULL - Null Reference [00000000]' then 
+			begin
+			DebugLog(Format('{SKIP Enchant Loop}'  , [loop1Result]));
+			continue;
+			end;
+		if Length(mappedHelperFileValue) > 0 then	
+			begin
+			mappedValue := format('%s', [mappedHelperFileValue]);
+			DebugLog(Format('{mappedValue} %s'  , [mappedValue]));
+			DebugLog(Format('{mappedHelperFileValue} %s'  , [mappedHelperFileValue]));
+			end;
+			
+			
+		DebugLog(Format('{START Enchant Loop}'  , [loop1Result]));
+		loop2Result:= '';
+		tmpInt := LinksTo(ElementByIndex(prop, 6)); {Enter Link}
+		{Test for ENCHANT}	
+		tmpStr := GetEditValue(ElementByPath(tmpInt, 'Record Header\Signature'));
+		if (tmpStr <> 'ENCH') and (mappedValue = '') then
+			begin
+			// DebugLog(Format('{SKIP Not an Enchant} %s'  , [tmpStr]));
+			Break;
+			end;
+		ENCHproperties := ElementByPath(tmpInt, 'Effects\Effect');
+		floatValue := GetEditValue(ElementByPath(ENCHproperties, 'EFIT\Magnitude'));
+		floatValue2 := GetEditValue(ElementByPath(ENCHproperties, 'EFIT\Duration'));
+		tmpStr := FloattoStr(floatValue);
+		tmpStr2 := FloattoStr(floatValue2);
+		// DebugLog(Format('{START Enchant floatValue>0}'  , [loop1Result]));
+		tmpInt := LinksTo(ElementByPath(ENCHproperties, 'EFID')); {Enter Link}
+		
+		{Get Perk DESC/FULL name}
+		loop1Result := GetEditValue(ElementByPath(tmpInt, 'DESC'));
+		if (Length(loop1Result) = 0) and (mappedValue = '')then
+			begin
+			loop1Result := GetEditValue(ElementByPath(tmpInt, 'FULL'));
+			// DebugLog(Format('{Get Perk DESC/FULL name}: %s'  , [loop1Result]));	
+			end;
+		
+		{Does it contain a Flat Perk Value}
+		ENCHproperties := ElementByPath(tmpInt, 'Magic Effect Data\DATA');
+		loop2Result := GetEditValue(ElementByPath(ENCHproperties, 'Perk to Apply'));
+		if (Length(loop2Result) > 0) and (mappedValue = '') then
+			begin
+				// tmpStr2 := FloattoStr(loop2Result);
+				tmpInt := LinksTo(ElementByPath(ENCHproperties, 'Perk to Apply'));
+				ENCHproperties := ElementByPath(tmpInt, 'Effects\Effect');
+				{Perk AVIF}
+				loop2Result := GetEditValue(ElementByPath(ENCHproperties, 'Function Parameters\EPFD - DATA\Actor Value, Float\Float'));
+				if Length(loop2Result) > 0 then
+				begin
+					// DebugLog(Format('PERK AVIF: %s'  , [loop2Result]));
+					floatValue2 := StrToFloat(loop2Result);
+					if floatValue2 >1.0 then 
+					begin
+						tmpStr := ((round(floatValue2 * 10) / 10));
+						mappedValue := format('%s: %sx', [loop1Result, tmpStr]);
+					end else
+					if floatValue2 <=1.0 then 
+					begin
+						tmpStr := ((round(floatValue2 * 1000) / 10));
+						mappedValue := format('%s: %s%%', [loop1Result, tmpStr]);
+						// DebugLog(Format('PERK tmpStr: %s | mappedValue: %s'  , [tmpStr2, mappedValue]));
+					end;
+				end;
+				{Perk Flat EPFD}
+				loop2Result := GetEditValue(ElementByPath(ENCHproperties, 'Function Parameters\EPFD - DATA\Float'));
+				if (Length(loop2Result) > 0) and (mappedValue = '') then
+					begin		
+						// DebugLog(Format('PERK EPFD: %s'  , [loop2Result]));
+						floatValue2 := StrToFloat(loop2Result);
+						if floatValue2 >1.0 then 
+							begin
+							tmpStr := ((round(floatValue2 * 10) / 10));
+							mappedValue := format('%s: %sx', [loop1Result, tmpStr]);
+							end else
+						if floatValue2 <=1.0 then 
+							begin
+							tmpStr := ((round(floatValue2 * 1000) / 10));
+							mappedValue := format('%s: %s%%', [loop1Result, tmpStr]);
+							// DebugLog(Format('PERK tmpStr: %s | mappedValue: %s'  , [tmpStr2, mappedValue]));
+							end;
+					end;
+		
+				{Does it contain a AVIF}
+				loop2Result := GetEditValue(ElementByPath(ENCHproperties, 'EPFD\Actor Value, Float\Float'));
+				if (Length(loop2Result) > 0) and (mappedValue = '') then
+					begin
+						// DebugLog(Format('AVIF tmpStr: %s'  , [loop2Result]));
+						tmpStr := FloattoStr((round(loop2Result * 1000) / 10));
+						// DebugLog(Format('AVIF tmpStr: %s'  , [tmpStr]));
+						if Length(floatValue) > 0 then
+							begin
+								mappedValue := format('%s: %s%%', [loop1Result, tmpStr]);
+								// DebugLog(Format('mappedValue: %s'  , [mappedValue]));
+							end;
+					end;
+				// DebugLog(Format('If NULL then TOP LEVEL mappedValue: %s'  , [mappedValue]));
+				{Top level Enchant Only}
+				// DebugLog(Format('END mappedValue: %s'  , [mappedValue]));
+				if (mappedValue = '') then
+					begin
+						// DebugLog(Format('Gen in last loop mappedValue: %s'  , [mappedValue]));
+						if tmpStr2 > 0 then
+						begin
+							mappedValue := format('%s: %s%% for %ssec', [loop1Result, tmpStr, tmpStr2]);
+							DebugLog(Format('mappedValue: %s'  , [mappedValue]));
+						end else
+						begin
+							mappedValue := format('%s: %s%%', [loop1Result, tmpStr]);
+							// DebugLog(Format('mappedValue: %s'  , [mappedValue]));
+						end;
+					end;
+			end;
+			// DebugLog(Format('{END Enchant Loop}'  , [loop1Result]));
+			// end;
+	end;
+
+// =========================================================================
+// 	Actor_Values_Type
+// =========================================================================
+	
+			if (mappedName = 'Actor_Values_Type') and (mappedValue = '') then
+			begin
+				// floatValue := GetElementEditValues(prop, 'Value 2');
+			  loop1Result := FloatToStr(GetElementEditValues(prop, 'Value 2'));
+				mappedValue := format('%s %s', [mappedHelperFileValue, loop1Result]);
+			end;
+	
+// =========================================================================
+// 	ZoomDATA and Keywords
+// =========================================================================
+				
+			if ((mappedName = 'Keywords_Values_Type') or (value_PropertyType = 'ZoomData')) and 
+				(mappedValue = '') then
 			begin
 				mappedValue := format('%s', [mappedHelperFileValue]);
 			end;
 			
 // =========================================================================
-// 		EOF
+// 	EOF
 // =========================================================================
-				
-			// DebugLog(Format('EOF value_PropertyType: %s | EOF mappedName: %s | EOF mappedValue: %s'  , [value_PropertyType, mappedName, mappedValue]));
+			// if ((mappedValue = '0') or (mappedValue = '0%')) then continue;
+			DebugLog(Format('EOF value_PropertyType: %s | EOF mappedName: %s | EOF mappedValue: %s'  , [value_PropertyType, mappedName, mappedValue]));
 			sl.Add(format('%.3d', [j]) + mappedValue);
 
 	 end;
