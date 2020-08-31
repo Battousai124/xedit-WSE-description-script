@@ -1,4 +1,4 @@
-﻿{--------------}
+{--------------}
 { Version: 2.0 }
 {--------------}
 {{---------------------------Vanilla_Naming------------------------------}}
@@ -13,6 +13,9 @@ RollingPinAluminium[Fallout4.esm]:MSWP=Aluminium
 mat_PA_X01_Institute[Fallout4.esm]:MSWP=NFW
 {{{---------------------------Weapon_Types------------------------------}}}
 {{-------------------------------Melee-----------------------------------}}
+PA_WaterBreathTimeEffect[Fallout4.esm]:MGEF=Increases time underwater by
+ReducePADamageMultEffect[Fallout4.esm]:MGEF=Reduce physical damage by
+ReducePARadResistMultEffect[Fallout4.esm]:MGEF=Increase Radiation resistance by
 {{-------------------------------Ranged----------------------------------}}
 mod_Lining_Mesh_BioComm_Enchantment[Fallout4.esm]:ENCH=NFW
 {{{----------------------------Armor------------------------------------}}}
@@ -59,7 +62,7 @@ ArmorBlockPercent[Fallout4.esm]:AVIF=While blocking, melee damage is reduced by:
 ArmorQuietMod[Fallout4.esm]:AVIF=Reduces detection from moving by:
 ArmorShadowHide[Fallout4.esm]:AVIF=Improve stealth in shadows by:
 ChemDurationMod[Fallout4.esm]:AVIF=Increase duration of Chems by:
-FallingDamageMod[Fallout4.esm]:AVIF=Reduce fall damage by:
+//FallingDamageMod[Fallout4.esm]:AVIF=Reduce fall damage by:
 LGND_ArmorDisarm[Fallout4.esm]:AVIF=Chance to disarm melee Attacker on Hit:
 LGND_LessDmgBlockSprint[Fallout4.esm]:AVIF=While blocking or sprinting, damage is reduced by:
 LGND_LessDmgStandStill[Fallout4.esm]:AVIF=Reduces damage while standing and not moving by:
@@ -93,10 +96,35 @@ PA_Strength_AV[Fallout4.esm]:AVIF=NFW
 PA_Unarmed_AV[Fallout4.esm]:AVIF=NFW
 {{{--------------------------Enchantments_Value-------------------------}}}
 Enchantments=Enchantments_Value
-{{{---------------------------------------------------------------------}}}
-EnchPA_WaterBreathTime[Fallout4.esm]:ENCH=Increases time underwater by: 5x
+{{{-----------------------PA Enchantments_Value-------------------------}}}
+EnchPA_Helmet_Filter_Water[Fallout4.esm]:ENCH=[Level 4]Removes radiation from consumed liquids.
+//EnchPA_WaterBreathTime[Fallout4.esm]:ENCH=Increases time underwater by: 5x
 EnchPA_Charisma[Fallout4.esm]:ENCH=Increases Charisma with all pieces painted by: 1
 EnchPA_Strength[Fallout4.esm]:ENCH=Increases Strength with all pieces painted by: 1
+EnchPA_BloodCleanser[Fallout4.esm]:ENCH=Reduces chance for addiction from drugs.
+EnchPA_CommonArm[Fallout4.esm]:ENCH=Unarmed attacks cause Bleed Dmg: 3pts./sec for 3 sec.
+EnchPA_CoreAssembly[Fallout4.esm]:ENCH=Increases Action Point refresh speed.
+EnchPA_EmergencyProtocols[Fallout4.esm]:ENCH=Below 20% health, speed increases 25% and incoming damage is reduced 50%.
+EnchPA_Intelligence[Fallout4.esm]:ENCH=Increases Intelligence with all pieces painted by: 1
+EnchPA_Jetpack[Fallout4.esm]:ENCH=Enables jet-assisted boost while jumping.
+EnchPA_KineticServos[Fallout4.esm]:ENCH=Increases Action Point refresh speed while moving.
+EnchPA_MedicPump[Fallout4.esm]:ENCH=Detects hits during combat and automatically uses a Stimpak when health is low.
+EnchPA_OptimizedBracers[Fallout4.esm]:ENCH=[Based of AVIF]Power attacks cost 25% less
+EnchPA_OverdriveServos[Fallout4.esm]:ENCH=Increases Sprint speed by 10% for an Additional Action Point cost
+EnchPA_Perception[Fallout4.esm]:ENCH=Increases Perception with six pieces painted by 1
+EnchPA_PhotovotaicCoating[Fallout4.esm]:ENCH=+1.2 Action Point Regeneration while outside between 6:00 and 18:00.
+EnchPA_RadScrubbers[Fallout4.esm]:ENCH=[Level 4]Removes radiation from consumed food and water.
+EnchPA_RadScrubbers[Fallout4.esm]:ENCH=Removes radiation from water when drinking.
+EnchPA_ReactivePlates[Fallout4.esm]:ENCH=Reflects 50% of melee damage back on attacker.
+EnchPA_ReducePADamageMult[Fallout4.esm]:ENCH=Reduce physical damage by: 5%
+EnchPA_ReducePARadResistMult[Fallout4.esm]:ENCH=Increase Radiation resistance by:14%
+EnchPA_StealthScript[Fallout4.esm]:ENCH=Activates stealth field while crouched.
+EnchPA_TargetingHUD[Fallout4.esm]:ENCH=Visor highlights living targets.
+EnchPA_UnarmedDamage[Fallout4.esm]:ENCH=[Level 3]Increase Unarmed Damage: +15
+EnchPA_VATSChance[Fallout4.esm]:ENCH=Increases VATS hit chance.
+EnchPA_WeldedRebar[Fallout4.esm]:ENCH=Enemies take damage from successful melee attacks.
+EnchPA_kineticLining[Fallout4.esm]:ENCH=NFW
+{{{---------------------------------------------------------------------}}}
 DLC01Bot_CommonArmorEnch[DLCRobot.esm]:ENCH=Rate 3 points/sec for 3 sec
 DLC01Bot_CommonArmorEnch_Unstable[DLCRobot.esm]:ENCH=Unstable: may break when used
 DLC01Bot_FortifyAssaultronHeadLaserEnch_Unstable[DLCRobot.esm]:ENCH=
@@ -199,39 +227,17 @@ DLC01EnchBot_csSentry[DLCRobot.esm]:ENCH=
 DLC01EnchWeapRobobrainGhostFlash[DLCRobot.esm]:ENCH=
 DLC01EnchWeapSelfDamageRads[DLCRobot.esm]:ENCH=
 DLC01TrackSystem_TrapMine_Ench[DLCRobot.esm]:ENCH=
+DLC03_ench_mod_CustomWeapon_Striker[DLCCoast.esm]:ENCH=[Level 4]50% chance to cripple a leg
 DLC01_EnchPulseGrenadeEnergyDmgMechanist[DLCRobot.esm]:ENCH=Energy damage points: 150
 DLC01_Unstable_SentryExplosiveMinigunExplosionDamageEnch[DLCRobot.esm]:ENCH=Unstable: may break when used
 DLC03_ench_mod_Legendary_Armor_RadsIncreaseStrength[DLCCoast.esm]:ENCH=Gain +1 Strength per 133 Rads you absorb
 DN070_EnchWorldSeriesBatKnockdown[Fallout4.esm]:ENCH=Small chance to send targets flying.
 DN160enchGrognakAxe[Fallout4.esm]:ENCH=Hits cause more stagger, and targets take bleed damage.
 DN160enchGrognakCostume[Fallout4.esm]:ENCH=Increases the wearer's strength and melee damage.
-EnchModDisarm[Fallout4.esm]:ENCH=Chance to disarm
-EnchPA_BloodCleanser[Fallout4.esm]:ENCH=Reduces chance for addiction from drugs.
-EnchPA_CommonArm[Fallout4.esm]:ENCH=Unarmed attacks cause Bleed Dmg: 3pts./sec for 3 sec.
-EnchPA_CoreAssembly[Fallout4.esm]:ENCH=Increases Action Point refresh speed.
-EnchPA_EmergencyProtocols[Fallout4.esm]:ENCH=Below 20% health, speed increases 25% and incoming damage is reduced 50%.
-EnchPA_Intelligence[Fallout4.esm]:ENCH=Increases Intelligence with all pieces painted by: 1
-EnchPA_Jetpack[Fallout4.esm]:ENCH=Enables jet-assisted boost while jumping.
-EnchPA_KineticServos[Fallout4.esm]:ENCH=Increases Action Point refresh speed while moving.
-EnchPA_MedicPump[Fallout4.esm]:ENCH=Detects hits during combat and automatically uses a Stimpak when health is low.
-EnchPA_OptimizedBracers[Fallout4.esm]:ENCH=NFW
-EnchPA_OverdriveServos[Fallout4.esm]:ENCH=Increases Sprint speed by 10% for an Additional Action Point cost
-EnchPA_Perception[Fallout4.esm]:ENCH=Increases Perception with six pieces painted by 1
-EnchPA_PhotovotaicCoating[Fallout4.esm]:ENCH=Increases Action Point refresh speed in sunlight.
-EnchPA_RadScrubbers[Fallout4.esm]:ENCH=Removes radiation from consumed food and water.
-EnchPA_RadScrubbers[Fallout4.esm]:ENCH=Removes radiation from water when drinking.
-EnchPA_ReactivePlates[Fallout4.esm]:ENCH=Reflects 50% of melee damage back on attacker.
-EnchPA_ReducePADamageMult[Fallout4.esm]:ENCH=Reduce physical damage by: 5%
-EnchPA_ReducePARadResistMult[Fallout4.esm]:ENCH=Increase Radiation resistance by:14%
-EnchPA_StealthScript[Fallout4.esm]:ENCH=Activates stealth field while crouched.
-EnchPA_TargetingHUD[Fallout4.esm]:ENCH=Visor highlights living targets.
-EnchPA_UnarmedDamage[Fallout4.esm]:ENCH=Increase Unarmed Damage: +15
-EnchPA_VATSChance[Fallout4.esm]:ENCH=Increases VATS hit chance.
-EnchPA_WeldedRebar[Fallout4.esm]:ENCH=Enemies take damage from successful melee attacks.
-EnchPA_kineticLining[Fallout4.esm]:ENCH=NFW
+EnchModDisarm[Fallout4.esm]:ENCH=[Level 4]Chance to disarm
 EnchReconScopeEquipped[Fallout4.esm]:ENCH=Sighted aiming marks enemies with a compass pip.
 EnchShockAndStun[Fallout4.esm]:ENCH=Chance to stun: 25%, Additional Electrical damage: +10
-EnchWeapModBleed[Fallout4.esm]:ENCH=Target Bleeds.
+EnchWeapModBleed[Fallout4.esm]:ENCH=[Level 4]Target Bleeds.
 EnchWeapMod_JunkJetFire[Fallout4.esm]:ENCH=Projectiles gain additional Fire damage: +18
 VRWorkshopShared_ench_mod_LegendaryNerfPerk[Fallout4.esm]:ENCH=Nerfed for VR attacks.
 dtFireEnchFlameChanceAlways[Fallout4.esm]:ENCH=Sets target on fire for 15 points of damage over 3 sec.
@@ -239,7 +245,7 @@ dtRadiationEnchGammaGunSmall[Fallout4.esm]:ENCH=Has Radiation Damage
 enchArmorBrawlerMod[Fallout4.esm]:ENCH=NFW
 enchArmorExplosion1Mod[Fallout4.esm]:ENCH=Reduced damage from explosions.
 enchArmorExplosion2Mod[Fallout4.esm]:ENCH=Greatly reduced damage from explosions.
-enchArmorFallingMod[Fallout4.esm]:ENCH=NFW
+enchArmorFallingMod[Fallout4.esm]:ENCH=Reduce fall damage by:
 enchArmorIgnoreArmorMod[Fallout4.esm]:ENCH=NFW
 enchArmorLessStaggerMod[Fallout4.esm]:ENCH=Reduces the magnitude of incoming staggers.
 enchArmorQuietMod[Fallout4.esm]:ENCH=NFW
@@ -249,10 +255,10 @@ enchArmorStabilizedMod[Fallout4.esm]:ENCH=Increase Stability by 5% per mod piece
 enchArmorStealthMoveMod[Fallout4.esm]:ENCH=NFW
 enchMod_LaserReceiver_Fire1[Fallout4.esm]:ENCH=Ignites target for 9 Damage over 9 sec
 enchMod_LaserReceiver_Fire2[Fallout4.esm]:ENCH=Adds better burning damage
-ench_mod_LegendaryAddCommonPerk[Fallout4.esm]:ENCH=NFW
+ench_mod_LegendaryAddCommonPerk[Fallout4.esm]:ENCH=EffEIO Level 3
 ench_mod_LegendaryChanceToStagger[Fallout4.esm]:ENCH=Chance to stagger on hit.
 ench_mod_LegendaryPA_RadsCoreHealth[Fallout4.esm]:ENCH=Gain 50% AP Recovery per 50 Rads you absorb
-ench_mod_LegendaryWeaponOnCritRefillAP[Fallout4.esm]:ENCH=Refills your Action Points on a Critical Hit.
+ench_mod_LegendaryWeaponOnCritRefillAP[Fallout4.esm]:ENCH=[LEVEL 4]Refills your Action Points on a Critical Hit.
 ench_mod_LegendaryWeapon_Cripple[Fallout4.esm]:ENCH=20% chance to cripple the target's leg.
 ench_mod_LegendaryWeapon_DamagePoison[Fallout4.esm]:ENCH=Target Poisoned for 30 Damage over 10 Sec
 ench_mod_LegendaryWeapon_Frenzy[Fallout4.esm]:ENCH=Critical hits cause target to frenzy.
@@ -294,7 +300,7 @@ ZM_Recon_Scope_x2[Fallout4.esm]:ZOOM=x2 Recon Scope
 ZM_Recon_Scope_x4[Fallout4.esm]:ZOOM=x4 Recon Scope
 ZM_Recon_Scope_x10[Fallout4.esm]:ZOOM=x10 Recon Scope
 {{{---------------------Show Additional Properties----------------------}}}
-Health=Increases Item Health by:
+Health=Durability increased by:
 {{{---------------------------Better_Naming-----------------------------}}}
 Rating=Increase Armor Rating by:
 ZoomDataFOVMult=Zoom:
