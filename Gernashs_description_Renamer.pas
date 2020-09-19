@@ -182,8 +182,8 @@ begin
 			for j := 0 to refCount - 1 do
 				begin
 					curReferencingRec := ReferencedByIndex(tmpRec, j);
-					recordRefName := EditorID(curReferencingRec) + '[' + GetFileName(curReferencingRec) + ']' + ':' + Signature(curReferencingRec);
-					curKYWDReferenceBy.add(recordRefName); //RecordToString-always returns master record
+					recordRefName := RecordToString(curReferencingRec); //should not be the master
+					curKYWDReferenceBy.add(recordRefName); 
 					end;
 			for j := 0 to curKYWDReferenceBy.count -1 do
 				begin
@@ -446,7 +446,7 @@ begin
   // patch the winning override record
   rec := WinningOverride(rec);
 
-  recordNameForOutput := RecordToString(rec);
+  recordNameForOutput := RecordMasterToString(rec);
   recordPluginName := GetFileName(rec);
 
   if not Assigned(rec) then
@@ -616,7 +616,7 @@ begin
         if Assigned(rec) then
         begin
           // DebugLog(Format('Test5: %s',[potentialRecord]));
-          newRecordStr := RecordToString(rec);
+          newRecordStr := RecordMasterToString(rec);
           // DebugLog(Format('Test6: %s',[newRecordStr]));
           slPropertyMap[i] := newRecordStr + Copy(line, delimPos,
             Length(line) - Length(potentialRecord));

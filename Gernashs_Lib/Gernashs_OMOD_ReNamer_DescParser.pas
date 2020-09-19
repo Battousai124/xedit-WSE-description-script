@@ -194,7 +194,7 @@ begin
       (valuePropertytype = 'ZoomData') then
     begin
       loopResult := slPropertyMap.Values
-        [RecordToString(LinksTo(ElementByIndex(prop, 6)))];
+        [RecordMasterToString(LinksTo(ElementByIndex(prop, 6)))];
       loopResultFormatted := loopResult;
     end;
 
@@ -253,7 +253,7 @@ begin
       mappedValue := mappedValues[i];
       mappedValueFORMAT := mappedValuesFormat[i];
       value1Loop1 := slPropertyMap.Values
-        [RecordToString(LinksTo(ElementByIndex(prop, 6)))];
+        [RecordMasterToString(LinksTo(ElementByIndex(prop, 6)))];
       valuefunctiontype := GetElementEditValues(prop, 'Function Type');
       valuetype := GetElementEditValues(prop, 'Value Type');
 
@@ -276,7 +276,7 @@ begin
           valuePropertytype2 := GetElementEditValues(prop2, 'Property');
           valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
           value1Loop2 := slPropertyMap.Values
-            [RecordToString(LinksTo(ElementByIndex(prop2, 6)))];
+            [RecordMasterToString(LinksTo(ElementByIndex(prop2, 6)))];
 
           if value1Loop2 = '' then
             continue;
@@ -315,7 +315,7 @@ begin
           valuePropertytype2 := GetElementEditValues(prop2, 'Property');
           valuefunctiontype2 := GetElementEditValues(prop2, 'Function Type');
           value1Loop2 := slPropertyMap.Values
-            [RecordToString(LinksTo(ElementByIndex(prop2, 6)))];
+            [RecordMasterToString(LinksTo(ElementByIndex(prop2, 6)))];
 
           if value1Loop2 = '' then
             continue;

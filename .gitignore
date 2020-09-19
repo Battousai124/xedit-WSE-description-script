@@ -348,3 +348,10 @@ Worldspace region change height.pas
 Worldspace region move.pas
 Worldspace scale refs position.pas
 xEditAPI.pas
+JPExport.pas
+JPImport.pas
+JPImportFiltered.pas
+JPUtils.pas
+Effs_Lib/Tests/
+Convert_Overrides_to_New_Records.pas
+Effs_Lib/Effs_Lib.zip

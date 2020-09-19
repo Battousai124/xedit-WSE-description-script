@@ -1,9 +1,24 @@
 unit EffsXEditTools;
 
+// This unit only contains static functions to deal with XEdit challenges, no variables
+// (it requires EffsDebugLog to be loaded)
+
+implementation
+
+uses 'Effs_Lib\EffsStringTools';
+
 //=========================================================================
 // convert record to string consisting of Editor ID and plugin's name with signature of group
 //=========================================================================
 function RecordToString(rec: IInterface): string;
+begin
+	Result := EditorID(rec) + '[' + GetFileName(rec) + ']' + ':' + Signature(rec);
+end;
+
+//=========================================================================
+// convert master of record to string consisting of Editor ID and plugin's name with signature of group
+//=========================================================================
+function RecordMasterToString(rec: IInterface): string;
 var
 	baseRec: IInterface;
 begin
@@ -69,7 +84,7 @@ begin
 		i:=StrToInt('$' + Copy(inBracket, 1, 2));
 		//DebugLog(Format('Test9 - inBracket: %s, i: %d',[inBracket,i]));
 		if i <= Pred(FileCount) then begin
-			f := FileByLoadOrder(i);
+			f := FileByLoadOrder(i); //ATTENTION: if your load order contains any ESLs, this does not work reliably! -> use my load order independent notation!
 			
 			Result := RecordByFormID(f, StrToInt('$' + inBracket), true);
 		end;
@@ -108,19 +123,6 @@ begin
 			if Pos(':', tmpStr) > 0 then
 				Result := false;
 		end;
-	end;
-end;
-
-//=========================================================================
-//Reverses a string
-//=========================================================================
-function ReverseString(s: string): string;
-var
-	i: integer;
-begin
-	Result := '';
-	for i := Length(s) downto 1 do begin
-		Result := Result + Copy(s, i, 1);
 	end;
 end;
 
@@ -192,7 +194,7 @@ begin
 		//DebugLog(Format('Loop: %d - filename: %s', [i, GetFileName(FileByIndex(i))]));
 		if GetFileName(FileByIndex(i)) = filename then begin
 			Result := FileByIndex(i);
-			DebugLog(Format('Loop: %d - file found: filename: %s', [i, GetFileName(Result)]));
+			// DebugLog(Format('Loop: %d - file found: filename: %s', [i, GetFileName(Result)]));
 			break;
 		end;
 	end;
@@ -200,6 +202,590 @@ begin
 	LogFunctionEnd;
 end;
 
+
+//=========================================================================
+// Resolve Smart Path
+//	this is an expansion of the path possibilities built into xEdit
+//	modifies the TStringList provided and returns TRUE if the smartPath	contained elements to resolve
+//=========================================================================
+function ResolveSmartPath(rec : IInterface; const smartPath : String; resolvedPaths : TStringList;) : Boolean;
+var 
+	i, j, tmpInt, elementCount, curPosWildcard, posWildcardInOrigPath : Integer;
+	tmpStr, pathLeftToCheck, curPath, curPathBeforeSmartPart, curPathAfterSmartPart : String;
+	curElement : IInterface;
+	curNewPaths : TStringList;
+begin
+	LogFunctionStart('ResolveSmartPath');
+	
+	curNewPaths := TStringList.Create;
+	resolvedPaths.Clear;
+	Result := false;
+	
+	try
+	
+		//automatically resolve all entries of lists
+		if Pos('[*]',smartPath) > 0 then begin
+			Result := true;
+			pathLeftToCheck := smartPath;
+			resolvedPaths.Add(smartPath);
+			
+			posWildcardInOrigPath := Pos('[*]',pathLeftToCheck); //get the first one to resolve
+			//resolve [*]
+			while posWildcardInOrigPath > 0 do begin
+				curNewPaths.Clear;
+				
+				for i := 0 to resolvedPaths.Count-1 do begin
+					curPath := resolvedPaths[i];
+					curPosWildcard := Pos('[*]',curPath); //needs to be re-evaluated, because if there are several [*], then a previous one could have changed the length of the path
+					
+					curPathBeforeSmartPart := Copy(curPath, 1, curPosWildcard-1);
+					curPathAfterSmartPart := Copy(curPath, curPosWildcard + 3, Length(curPath) - curPosWildcard - 2);
+					if Copy(curPathBeforeSmartPart,Length(curPathBeforeSmartPart),1) = '\' then
+						curPathBeforeSmartPart := Copy(curPathBeforeSmartPart,1,Length(curPathBeforeSmartPart)-1);
+					
+					// DebugLog(Format('curPathBeforeSmartPart: %s',[curPathBeforeSmartPart]));
+					
+					if SameText(curPathBeforeSmartPart,'') then begin
+						curElement := rec;
+					end else begin
+						curElement := ElementByPath(rec, curPathBeforeSmartPart);
+					end;
+					//unfortunately ElementCount() does not work -> find out by hand
+					// if Assigned(curElement) then begin
+						// elementCount := ElementCount(curElement);
+						// DebugLog(Format('element assigned, elementCount: %d',[elementCount]));
+					// end;
+					
+					elementCount := 0;
+					while Assigned(ElementByIndex(curElement,elementCount)) do begin 
+						inc(elementCount);
+					end;
+					
+					if elementCount = 0 then begin
+						//this element does not have any elements -> try just leaving the wildcard out
+						tmpStr := curPathBeforeSmartPart + curPathAfterSmartPart;
+						curNewPaths.Add(tmpStr);
+					end else begin
+						for j := 0 to elementCount -1 do begin
+							if SameText(curPathBeforeSmartPart,'') then begin
+								tmpStr := Format('[%d]%s',[j, curPathAfterSmartPart]);
+							end else begin
+								tmpStr := Format('%s\[%d]%s',[curPathBeforeSmartPart, j, curPathAfterSmartPart]);
+							end;
+							curNewPaths.Add(tmpStr);
+						end;
+					end;
+				end;
+				
+				//fill old batch of resolvedPaths with new Paths
+				resolvedPaths.Clear;
+				resolvedPaths.AddStrings(curNewPaths); //assuming this keeps the order
+				// i := 0;
+				// while i < curNewPaths.Count do begin
+					// resolvedPaths.Add(curNewPaths[i]);
+				// end;
+				
+				pathLeftToCheck := Copy(pathLeftToCheck, posWildcardInOrigPath + 3, Length(pathLeftToCheck) - posWildcardInOrigPath - 2);
+				posWildcardInOrigPath := Pos('[*]',pathLeftToCheck); //get the next one to resolve
+			end;
+		end;
+		
+		//recursive resolving of all paths beyond this path
+		if Pos('\*\',smartPath) > 0 then begin
+			Result := true;
+			pathLeftToCheck := smartPath;
+			resolvedPaths.Add(smartPath);
+			
+			posWildcardInOrigPath := Pos('\*\',pathLeftToCheck); //get the first one to resolve
+			
+			//throw an error if there is more than one
+			if Pos('\*\',Copy(pathLeftToCheck,posWildcardInOrigPath + 3, max(0, Length(pathLeftToCheck) - posWildcardInOrigPath - 2))) > 0 then 
+				raise Exception.Create(Format('path contains the "\*\" wildcard multiple times. path: %s',[smartPath]));
+			
+			tmpStr := StringReplace(smartPath, '\*\', '\', [rfIgnoreCase]);
+			resolvedPaths.Add(tmpStr);
+			
+			//resolve \*\
+			while posWildcardInOrigPath > 0 do begin
+				posWildcardInOrigPath := -1;
+				curNewPaths.Clear;
+				
+				for i := 0 to resolvedPaths.Count-1 do begin
+					curPath := resolvedPaths[i];
+					curPosWildcard := Pos('\*\',curPath); 
+					
+					if curPosWildcard > 0 then begin 
+						curPathBeforeSmartPart := Copy(curPath, 1, curPosWildcard-1);
+						curPathAfterSmartPart := Copy(curPath, curPosWildcard + 3, Length(curPath) - curPosWildcard - 2);
+						if Copy(curPathBeforeSmartPart,Length(curPathBeforeSmartPart),1) = '\' then
+							curPathBeforeSmartPart := Copy(curPathBeforeSmartPart,1,Length(curPathBeforeSmartPart)-1);
+						
+						// DebugLog(Format('curPathBeforeSmartPart: %s',[curPathBeforeSmartPart]));
+						
+						if SameText(curPathBeforeSmartPart,'') then begin
+							curElement := rec;
+						end else begin
+							curElement := ElementByPath(rec, curPathBeforeSmartPart);
+							// if Assigned(curElement) then begin
+							// end;
+						end;
+						
+						elementCount := 0;
+						while Assigned(ElementByIndex(curElement,elementCount)) do begin 
+							inc(elementCount);
+						end;
+						
+						if elementCount = 0 then begin
+							//this element does not have any elements -> try just leaving the wildcard out
+							tmpStr := curPathBeforeSmartPart + '\' + curPathAfterSmartPart;
+							curNewPaths.Add(tmpStr);
+							// DebugLog(Format('does not have childs -> save path %s',[tmpStr]));
+						end else begin
+							posWildcardInOrigPath := 1;
+							for j := 0 to elementCount -1 do begin
+								if SameText(curPathBeforeSmartPart,'') then begin
+									tmpStr := Format('[%d]\*\%s',[j, curPathAfterSmartPart]);
+								end else begin
+									tmpStr := Format('%s\[%d]\*\%s',[curPathBeforeSmartPart, j, curPathAfterSmartPart]);
+								end;
+								curNewPaths.Add(tmpStr);
+							end;
+						end;
+					end else begin
+						curNewPaths.Add(curPath);
+					end;
+				end;
+				
+				//fill old batch of resolvedPaths with new Paths
+				resolvedPaths.Clear;
+				resolvedPaths.AddStrings(curNewPaths); //assuming this keeps the order
+				// i := 0;
+				// while i < curNewPaths.Count do begin
+					// resolvedPaths.Add(curNewPaths[i]);
+				// end;
+				
+			end;
+			
+		end;
+		
+		//recursive resolving of all paths beyond this path including container elements (but without empty container elements)
+		if Pos('\**\',smartPath) > 0 then begin
+			Result := true;
+			pathLeftToCheck := smartPath;
+			resolvedPaths.Add(smartPath);
+			
+			posWildcardInOrigPath := Pos('\**\',pathLeftToCheck); //get the first one to resolve
+			
+			//throw an error if there is more than one
+			if Pos('\**\',Copy(pathLeftToCheck,posWildcardInOrigPath + 4, max(0, Length(pathLeftToCheck) - posWildcardInOrigPath - 2))) > 0 then 
+				raise Exception.Create(Format('path contains the "\**\" wildcard multiple times. path: %s',[smartPath]));
+			
+			tmpStr := StringReplace(smartPath, '\**\', '\', [rfIgnoreCase]);
+			resolvedPaths.Add(tmpStr);
+			
+			//resolve \**\
+			while posWildcardInOrigPath > 0 do begin
+				posWildcardInOrigPath := -1;
+				curNewPaths.Clear;
+				
+				for i := 0 to resolvedPaths.Count - 1 do begin
+					curPath := resolvedPaths[i];
+					curPosWildcard := Pos('\**\',curPath); 
+					
+					if curPosWildcard > 0 then begin 
+						curPathBeforeSmartPart := Copy(curPath, 1, curPosWildcard - 1);
+						curPathAfterSmartPart := Copy(curPath, curPosWildcard + 4, Length(curPath) - curPosWildcard - 3);
+						if Copy(curPathBeforeSmartPart,Length(curPathBeforeSmartPart), 1) = '\' then
+							curPathBeforeSmartPart := Copy(curPathBeforeSmartPart, 1, Length(curPathBeforeSmartPart) - 1);
+						
+						// DebugLog(Format('curPathBeforeSmartPart: %s',[curPathBeforeSmartPart]));
+						
+						if SameText(curPathBeforeSmartPart,'') then begin
+							curElement := rec;
+						end else begin
+							curElement := ElementByPath(rec, curPathBeforeSmartPart);
+							// if Assigned(curElement) then begin
+							// end;
+						end;
+						
+						elementCount := 0;
+						while Assigned(ElementByIndex(curElement,elementCount)) do begin 
+							inc(elementCount);
+						end;
+						
+						//always leave the current element without wildcard in the selection
+						if not SameText(curPathBeforeSmartPart,'') then begin
+							tmpStr := curPathBeforeSmartPart + '\' + curPathAfterSmartPart;
+							curNewPaths.Add(tmpStr);
+						end;
+						
+						if elementCount > 0 then begin
+							posWildcardInOrigPath := 1;
+							for j := 0 to elementCount -1 do begin
+								if SameText(curPathBeforeSmartPart,'') then begin
+									tmpStr := Format('[%d]\**\%s',[j, curPathAfterSmartPart]);
+								end else begin
+									tmpStr := Format('%s\[%d]\**\%s',[curPathBeforeSmartPart, j, curPathAfterSmartPart]);
+								end;
+								curNewPaths.Add(tmpStr);
+							end;
+						end;
+					end else begin
+						curNewPaths.Add(curPath);
+					end;
+				end;
+				
+				//fill old batch of resolvedPaths with new Paths
+				resolvedPaths.Clear;
+				resolvedPaths.AddStrings(curNewPaths); //assuming this keeps the order
+				// i := 0;
+				// while i < curNewPaths.Count do begin
+					// resolvedPaths.Add(curNewPaths[i]);
+				// end;
+				
+			end;
+			
+		end;
+		
+	finally
+		curNewPaths.Free;
+		curNewPaths := nil;
+	end;
+	
+	
+	// DebugLog(Format('resolved Paths: %s',[resolvedPaths.Text]));
+	
+	
+	LogFunctionEnd;
+end;
+
+
+//=========================================================================
+// gets different Infos from an element or record
+//	this is an expansion of the path possibilities built into xEdit
+//=========================================================================
+function ElementInfoBySmartPath(rec : IInterface; const smartPath : String;) : String;
+var 
+	i, tmpInt, smartSelectionSwitch : Integer;
+	tmpStr, curPath, smartSelectionTag, resultStr, curChar : String;
+	curElement, tmpElement : IInterface;
+begin
+	// LogFunctionStart('ElementInfoBySmartPath');
+
+	smartSelectionSwitch := 0;
+	curPath := smartPath;
+	
+	//get last path Part
+	tmpStr := ReverseString(smartPath);
+	tmpInt := Pos('\',tmpStr);
+	
+	if tmpInt > 4 then begin //ignore if it ends with a backslash
+		
+		// DebugLog(Format('tmpStr[1]: %s, tmpStr[tmpInt-1]: %s, tmpStr[tmpInt-2]: %s',[tmpStr[1],tmpStr[tmpInt-1],tmpStr[tmpInt-2]]));
+	
+		if tmpStr[1] = ']' then begin 
+			if tmpStr[tmpInt-1] = '[' then begin 
+				curChar := tmpStr[tmpInt-2];
+				if (curChar < '0') or (curChar > '9') then begin 
+					smartSelectionTag := ReverseString(Copy(tmpStr,1,tmpInt));
+					curPath := Copy(smartPath, 1, max(0, Length(smartPath) - Length(smartSelectionTag)));
+				end;
+			end;
+		end;
+	end;
+	
+	
+	if not SameText(smartSelectionTag,'') then begin 
+		//decide which selection should be done
+		for i := 1 to 15 do begin //this is basically for avoiding deep IF-ELSE nesting
+			case i of 
+				1:begin
+						if SameText(smartSelectionTag, '\[FormID]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				2:begin
+						if SameText(smartSelectionTag, '\[IndentedName]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				3:begin
+						if SameText(smartSelectionTag, '\[Name]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				4:begin
+						if SameText(smartSelectionTag, '\[BaseName]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				5:begin
+						if SameText(smartSelectionTag, '\[Path]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				6:begin
+						if SameText(smartSelectionTag, '\[PluginName]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				7:begin
+						if SameText(smartSelectionTag, '\[Exists]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				8:begin
+						if SameText(smartSelectionTag, '\[ElementCount]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				9:begin
+						if SameText(smartSelectionTag, '\[Index]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				10:begin
+						if SameText(smartSelectionTag, '\[IndexedPath]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				11:begin
+						if SameText(smartSelectionTag, '\[IsMaster]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				12:begin
+						if SameText(smartSelectionTag, '\[IsWinningOverride]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				13:begin
+						if SameText(smartSelectionTag, '\[SortKey]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				14:begin
+						if SameText(smartSelectionTag, '\[SelectionPath]') then begin
+							smartSelectionSwitch := i;
+							break;
+						end;
+					end;
+				15:begin
+						if SameText(smartSelectionTag, '\[EditValue]') then begin
+							break;
+							smartSelectionSwitch := 0;
+						end;
+					end;
+			end;
+		end;
+	end;
+	
+	// DebugLog(Format('curPath: %s, smartSelectionTag: %s, smartSelectionSwitch: %d',[curPath, smartSelectionTag, smartSelectionSwitch]));
+	
+	case smartSelectionSwitch of 
+		0:begin 
+				tmpStr := Path(rec);
+				tmpInt := Length(tmpStr);
+				curElement := ElementByPath(rec, curPath);
+				tmpStr := Path(curElement);
+				tmpStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
+				if (not SameText(tmpStr,'Record Header \ FormID')) and Assigned(LinksTo(curElement)) then begin
+					resultStr := RecordToString(LinksTo(curElement)); 
+				end else begin
+					resultStr := GetEditValue(ElementByPath(rec, curPath));
+				end;
+			end;
+		1:resultStr := IntToHex64(FormID(rec), 8);
+		2:begin
+				tmpStr := Path(rec); //to remove the useless first part of the path in a way that is compatible to cell records
+				tmpInt := Length(tmpStr);
+				curElement := ElementByPath(rec, curPath);
+				tmpStr := Path(curElement);
+				resultStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
+				//count the depth of the path and prepare indention for each level
+				i := 0;
+				tmpStr := '';
+				tmpInt := Pos('\',resultStr);
+				while tmpInt > 0 do begin
+					tmpStr := tmpStr + '     ';
+					inc(i);					
+					resultStr := Copy(resultStr,tmpInt +1 ,Length(resultStr) - tmpInt);
+					tmpInt := Pos('\',resultStr);
+				end;
+				resultStr := tmpStr + DisplayName(ElementByPath(rec, curPath));
+			end;
+		3:resultStr := DisplayName(ElementByPath(rec, curPath));
+		4:resultStr := BaseName(ElementByPath(rec, curPath));
+		5:begin
+				tmpStr := Path(rec); //to remove the useless first part of the path in a way that is compatible to cell records
+				tmpInt := Length(tmpStr);
+				curElement := ElementByPath(rec, curPath);
+				tmpStr := Path(curElement);
+				resultStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
+			end;
+		6:begin
+				resultStr := GetFileName(rec);
+			end;
+		7:begin
+				if SameText(curPath,'') then begin
+					curElement := rec;
+				end else begin
+					curElement := ElementByPath(rec, curPath);
+				end;
+				if Assigned(curElement) then begin
+					resultStr := 'true';
+				end else begin
+					resultStr := 'false';
+				end;
+			end;
+		8:begin
+				if SameText(curPath,'') then begin
+					curElement := rec;
+				end else begin
+					curElement := ElementByPath(rec, curPath);
+				end;
+				tmpInt := 0;
+				while Assigned(ElementByIndex(curElement, tmpInt)) do begin 
+					inc(tmpInt);
+				end;
+				resultStr := IntToStr(tmpInt);
+			end;
+		9:begin
+				if SameText(curPath,'') then begin
+					curElement := rec;
+				end else begin
+					curElement := ElementByPath(rec, curPath);
+				end;
+				tmpElement := ElementByPath(curElement, '..\');
+				resultStr := IntToStr(IndexOf(tmpElement, curElement));
+			end;
+		10:begin
+				tmpStr := FullPath(rec); //to remove the useless first part of the path in a way that is compatible to cell records
+				tmpInt := Length(tmpStr);
+				curElement := ElementByPath(rec, curPath);
+				tmpStr := FullPath(curElement);
+				resultStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
+			end;
+		11:begin
+				resultStr := '';
+				if Assigned(rec) then begin 
+					if IsMaster(rec) then begin
+						resultStr := 'true';
+					end else begin
+						resultStr := 'false';
+					end;
+				end;
+			end;
+		12:begin
+				resultStr := '';
+				if Assigned(rec) then begin 
+					if IsWinningOverride(rec) then begin
+						resultStr := 'true';
+					end else begin
+						resultStr := 'false';
+					end;
+				end;
+			end;
+		13:begin
+				curElement := ElementByPath(rec, curPath);
+				resultStr := SortKey(curElement, True);
+			end;
+		14:resultStr := curPath;
+	end;
+	
+	Result := resultStr;
+	
+	// LogFunctionEnd;
+end;
+
+//=========================================================================
+//  Read information from records utilizing smartPaths and smartSelectors and return them as CSV formatted String
+//=========================================================================
+function ReadRecords(const recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter : String;) : String;
+var 	
+	i, j, k  : Integer;
+	tmpStr, resultStr, curPathStr, curValueStr : String;
+	records, paths, curResolvedPaths : TStringList;
+	curRecord : IInterface;
+begin
+	LogFunctionStart('ReadRecords');
+	
+	//now resolve the two lists 
+	records := TStringList.Create;
+	paths := TStringList.Create;
+	curResolvedPaths := TStringList.Create;
+	
+	try
+		StringToStringList(recordsStr, ';', records);
+		StringToStringList(pathsStr, ';', paths);
+		
+		resultStr := '';
+		i := 0;
+		while i < records.Count do begin
+			curRecord := StringToRecord(records[i]);
+			if i > 0 then
+				resultStr := resultStr + recordsDelimiter;
+			j:= 0;
+			while j < paths.Count do begin
+				if j > 0 then
+					resultStr := resultStr + elementsDelimiter;
+				
+				if Assigned(curRecord) then begin
+					curPathStr := paths[j];
+					
+					if ResolveSmartPath(curRecord, curPathStr, curResolvedPaths) then begin 
+						// DebugLog(Format('resolvedPaths: %s',[curResolvedPaths.Text]));
+						k := 0;
+						while k < curResolvedPaths.Count do begin 
+							curPathStr := curResolvedPaths[k];
+							curValueStr := ElementInfoBySmartPath(curRecord, curPathStr);
+							if k = 0 then begin
+								tmpStr := EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
+							end else begin
+								tmpStr := tmpStr + elementsDelimiter + EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
+							end;
+							inc(k);
+						end;
+					end else begin
+						curValueStr := ElementInfoBySmartPath(curRecord, curPathStr);
+						tmpStr := EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
+					end;
+				end else begin 
+					tmpStr := EscapeStringIfNecessary(emptyReturnValue, '"', recordsDelimiter, elementsDelimiter);
+				end;
+				
+				resultStr := resultStr + tmpStr;
+				
+				inc(j);
+			end;
+			inc(i);
+		end;
+	finally
+		records.Free;
+		records := nil;
+		paths.Free;
+		paths := nil;
+		curResolvedPaths.Free;
+		curResolvedPaths := nil;
+	end;
+	
+	Result:=resultStr;
+	
+	LogFunctionEnd;
+end;
 
 //=========================================================================
 //  check if any plugin already uses an EditorID
@@ -253,67 +839,6 @@ begin
 end;
 
 //=========================================================================
-//  get name without hardcoded tags 
-//	basically gets rid of everything in brackets and removes single brackets if present
-// 	(recursive function)
-//=========================================================================
-function GetNameWithoutTags(name : string; recursionLevel : Integer) : String;
-var 
-	i,j : Integer;
-	tmpStr : String;
-begin
-	LogFunctionStart('GetNameWithoutTags');
-	DebugLog(Format('Recursion Level: %d',[recursionLevel]));
-	
-	tmpStr := name;
-	
-	i := Pos('[',name);
-	j := Pos(']',name);
-	if (i <= 0) or (j <= 0) then begin
-		i := Pos('{',name);
-		j := Pos('}',name);
-	end;
-	if (i <= 0) or (j <= 0) then begin
-		i := Pos('(',name);
-		j := Pos(')',name);
-	end;
-	
-	if (i > 0) and (j > 0) then begin 
-		//get rid of complete tag
-		tmpStr := Trimleft(TrimRight(Copy(name,j+2,Length(name)-j-1)));
-		
-		//remove further tags
-		tmpStr := GetNameWithoutTags(tmpStr,recursionLevel+1);
-	end;
-	
-	if recursionLevel = 0 then begin
-		//get rid of single brackets
-		tmpStr := StringReplace(StringReplace(StringReplace(tmpStr, '[', '', [rfIgnoreCase]), '{', '', [rfIgnoreCase]), '(', '', [rfIgnoreCase]);
-		tmpStr := StringReplace(StringReplace(StringReplace(tmpStr, ']', '', [rfIgnoreCase]), '}', '', [rfIgnoreCase]), ')', '', [rfIgnoreCase]);
-		
-		DebugLog(Format('name: "%s", name without tags: "%s"',[name, tmpStr]));
-	end;	
-	
-	Result := tmpStr;
-	
-	//old:
-	//Result := name;
-	//
-	//i := Pos('[',name);
-	//j := Pos(']',name);
-	//if (i <= 0) or (i >= 5) or (j <= 0) then begin
-	//	i := Pos('{',name);
-	//	j := Pos('}',name);
-	//end;
-	//
-	//if (i > 0) and (i < 5) and (j > 0) then begin //the "i<5" is checked so that brackets at the end of the name are ignored
-	//	Result := Trimleft(Copy(name,j+2,Length(name)-j-1));
-	//end;
-	
-	LogFunctionEnd;
-end;
-
-//=========================================================================
 //  process the dynamic naming rule (INNR) assigned to this weapon 
 //  (considering keywords the weapon has in its basic form)
 //	(returns true if the weapon name plays a role between prefixes and postfixes)
@@ -342,7 +867,7 @@ begin
 			if keywordsCount >= 1 then begin
 				//check if name applies (i.e. all keywords are on the weapon)
 				for k := 0 to (keywordsCount-1) do begin
-					tmpStr := RecordToString(LinksTo(ElementByIndex(keywordsRec, k)));
+					tmpStr := RecordMasterToString(LinksTo(ElementByIndex(keywordsRec, k)));
 					if not weaponKeywords.Find(tmpStr,tmpInt) then begin
 						found := false;
 					end;
@@ -467,7 +992,7 @@ begin
 	entries := ElementBySignature(w, 'KWDA');
 	for i := 0 to Pred(ElementCount(entries)) do begin
 		entry := ElementByIndex(entries, i);
-		tmpStr := RecordToString(LinksTo(entry));
+		tmpStr := RecordMasterToString(LinksTo(entry));
 		DebugLog(Format('Keyword from main record: %s',[tmpStr]));
 		keywords.Add(tmpStr); 
 	end;
@@ -482,7 +1007,7 @@ begin
 			if Assigned(combEntries) then begin
 				for j := 0 to Pred(ElementCount(combEntries)) do begin
 					entry := ElementByIndex(combEntries, j);
-					tmpStr := RecordToString(LinksTo(entry));
+					tmpStr := RecordMasterToString(LinksTo(entry));
 					DebugLog(Format('Keyword from Combination: %s',[tmpStr]));
 					keywords.Add(tmpStr);
 				end;
@@ -506,7 +1031,7 @@ begin
 	
 	entries := ElementBySignature(w, 'APPR');
 	for i := 0 to Pred(ElementCount(entries)) do begin
-		tmpStr := RecordToString(LinksTo(ElementByIndex(entries, i)));
+		tmpStr := RecordMasterToString(LinksTo(ElementByIndex(entries, i)));
 		DebugLog(Format('Attach Point from main record: %s',[tmpStr]));
 		attachPoints.Add(tmpStr); 
 	end;
@@ -555,7 +1080,7 @@ begin
 			curReferencingRec := WinningOverride(ReferencedByIndex(curAttachPoint, j));
 			
 			if Signature(curReferencingRec) = 'OMOD' then begin
-				curOMODStr := RecordToString(curReferencingRec);
+				curOMODStr := RecordMasterToString(curReferencingRec);
 				
 				//check if already added
 				modAlreadyPresent := false;
@@ -571,7 +1096,7 @@ begin
 					if not SameText(tmpStr,'1') then begin
 						for k := 0 to curKeywordsCount-1 do begin
 							//curKeyword := WinningOverride();
-							curKeywordStr := RecordToString(LinksTo(ElementByIndex(curKeywords,k)));
+							curKeywordStr := RecordMasterToString(LinksTo(ElementByIndex(curKeywords,k)));
 							
 							if weaponKeywords.Find(curKeywordStr,tmpInt) then begin
 								curKeywordsFound := curKeywordsFound + 1;
@@ -630,7 +1155,7 @@ begin
 	
 	for i := 0 to Pred(ElementCount(entries)) do begin
 		//TODO: if this attach point does exist on the weapon: output a warning
-		tmpStr := RecordToString(LinksTo(ElementByIndex(entries,i)));
+		tmpStr := RecordMasterToString(LinksTo(ElementByIndex(entries,i)));
 		bAlreadyPresent:= false;
 		
 		//check if this attach point was already present in the weapon record itself		
@@ -680,7 +1205,7 @@ begin
 			and SameText('Keywords',GetElementEditValues(entry, 'Property')) 
 			and SameText('FormID,Int',GetElementEditValues(entry, 'Value Type')) then
 		begin
-			tmpStr := RecordToString(LinksTo(ElementByPath(entry,'Value 1 - FormID')));
+			tmpStr := RecordMasterToString(LinksTo(ElementByPath(entry,'Value 1 - FormID')));
 			
 			bAlreadyPresent:= false;
 		
@@ -724,7 +1249,7 @@ begin
 	for i := 0 to omods.Count-1 do begin
 		looseModRec := ElementBySignature(WinningOverride(StringToRecord(omods[i])),'LNAM');
 		if Assigned(looseModRec) then begin
-			tmpStr := RecordToString(LinksTo(looseModRec));
+			tmpStr := RecordMasterToString(LinksTo(looseModRec));
 			DebugLog(Format('Loose Mod found: %s',[tmpStr]));
 			loosemods.Add(tmpStr); 
 		end;
@@ -746,7 +1271,7 @@ begin
 	
 	modRecipes.Clear;
 	
-	tmpStr:=RecordToString(omodRec);
+	tmpStr:=RecordMasterToString(omodRec);
 	refCount := ReferencedByCount(omodRec);
 	DebugLog(Format('current OMOD: %s, number of references to check: %d',[tmpStr,refCount]));
 	
@@ -755,10 +1280,10 @@ begin
 		curReferencingRec := WinningOverride(ReferencedByIndex(omodRec, i));
 		
 		if Signature(curReferencingRec) = 'COBJ' then begin
-			curRecipeStr := RecordToString(curReferencingRec);
+			curRecipeStr := RecordMasterToString(curReferencingRec);
 			
 			//check if the winning override still points to the referenced record
-			if SameText(tmpStr,RecordToString(LinksTo(ElementBySignature(curReferencingRec, 'CNAM')))) then begin 
+			if SameText(tmpStr,RecordMasterToString(LinksTo(ElementBySignature(curReferencingRec, 'CNAM')))) then begin 
 				//check if already added
 				if not modRecipes.Find(curRecipeStr, tmpInt) then begin
 					DebugLog(Format('Loop: %d, recipe found: %s',[i,curRecipeStr]));
@@ -784,7 +1309,7 @@ begin
 	
 	weaponRecipes.Clear;
 	
-	tmpStr:=RecordToString(w);
+	tmpStr:=RecordMasterToString(w);
 	refCount := ReferencedByCount(w);
 	
 	//get Recipes awailable for this weapon
@@ -792,10 +1317,10 @@ begin
 		curReferencingRec := WinningOverride(ReferencedByIndex(w, i));
 		
 		if Signature(curReferencingRec) = 'COBJ' then begin
-			curRecipeStr := RecordToString(curReferencingRec);
+			curRecipeStr := RecordMasterToString(curReferencingRec);
 			
 			//check if the winning override still points to the referenced record
-			if SameText(tmpStr,RecordToString(LinksTo(ElementBySignature(curReferencingRec, 'CNAM')))) then begin 
+			if SameText(tmpStr,RecordMasterToString(LinksTo(ElementBySignature(curReferencingRec, 'CNAM')))) then begin 
 				//check if already added
 				if not weaponRecipes.Find(curRecipeStr, tmpInt) then begin
 					DebugLog(Format('Loop: %d, recipe found: %s',[i,curRecipeStr]));
@@ -821,11 +1346,11 @@ begin
 	
 	omods.Clear;
 	
-	tmpStr:=RecordToString(looseModRec);
+	tmpStr:=RecordMasterToString(looseModRec);
 	for i := 0 to allOmods.Count -1 do begin
 		curOmodStr := allOmods[i];
 		curOmodRec := WinningOverride(StringToRecord(curOmodStr));
-		curLooseModStr := RecordToString(LinksTo(ElementBySignature(curOmodRec,'LNAM')));
+		curLooseModStr := RecordMasterToString(LinksTo(ElementBySignature(curOmodRec,'LNAM')));
 		if SameText(tmpStr,curLooseModStr) then begin
 			omods.Add(curOmodStr);
 		end;
@@ -849,16 +1374,16 @@ begin
 	LogFunctionStart('GetAllOmodsForLooseMod');
 	
 	omods.Clear;
-	looseModStr:=RecordToString(looseModRec);
+	looseModStr:=RecordMasterToString(looseModRec);
 	refCount := ReferencedByCount(looseModRec);
 	
 	//get all mods using this loose mod
 	for i := 0 to refCount-1 do begin
 		curOmodRec := WinningOverride(ReferencedByIndex(looseModRec, i));
 		//check if the reference was not overwritten by an override
-		curLooseModStr := RecordToString(LinksTo(ElementBySignature(curOmodRec,'LNAM')));
+		curLooseModStr := RecordMasterToString(LinksTo(ElementBySignature(curOmodRec,'LNAM')));
 		if SameText(looseModStr, curLooseModStr) then begin
-			curOmodStr := RecordToString(curOmodRec);
+			curOmodStr := RecordMasterToString(curOmodRec);
 			
 			if not omods.Find(curOMODStr,tmpInt) then begin //not reported yet
 				if Signature(curOmodRec) = 'OMOD' then begin
@@ -902,7 +1427,7 @@ begin
 			if Signature(modColRec) = 'OMOD' then begin
 				tmpStr := GetEditValue(ElementByPath(modColRec,'Record Header\Record Flags\Mod Collection'));
 				if SameText(tmpStr,'1') then begin
-					modColStr:= RecordToString(modColRec);
+					modColStr:= RecordMasterToString(modColRec);
 					DebugLog(Format('OMOD is used by mod collection - OMOD: %s - ModCol: %s',[omodStr,modColStr]));
 					if not allModcols.Find(modColStr,tmpInt) then begin
 						allModcols.Add(modColStr);
@@ -954,7 +1479,7 @@ begin
 				if Signature(modColRec) = 'OMOD' then begin
 					tmpStr := GetEditValue(ElementByPath(modColRec,'Record Header\Record Flags\Mod Collection'));
 					if SameText(tmpStr,'1') then begin
-						modColStr:= RecordToString(modColRec);
+						modColStr:= RecordMasterToString(modColRec);
 						DebugLog(Format('Mod collection is used by other mod collection - ModCol: %s - used by ModCol: %s',[modColToCheckStr,modColStr]));
 						if not allModcols.Find(modColStr,tmpInt) then begin
 							allModcols.Add(modColStr);
@@ -993,7 +1518,7 @@ begin
 	for i := 0 to allOmods.Count-1 do begin
 		omodStr:=allOmods[i];
 		omodRec:=WinningOverride(StringToRecord(omodStr));
-		attachPointStr := RecordToString(LinksTo(ElementByPath(omodRec,'Data - Data\Attach Point')));
+		attachPointStr := RecordMasterToString(LinksTo(ElementByPath(omodRec,'Data - Data\Attach Point')));
 		
 		if attachPoints.Find(attachPointStr,tmpInt) then
 			continue;
@@ -1003,7 +1528,7 @@ begin
 		for j := 0 to allModcols.Count-1 do begin
 			modColStr:=allModcols[j];
 			modColRec:=WinningOverride(StringToRecord(modColStr));
-			tmpStr := RecordToString(LinksTo(ElementByPath(modColRec,'Data - Data\Attach Point')));
+			tmpStr := RecordMasterToString(LinksTo(ElementByPath(modColRec,'Data - Data\Attach Point')));
 			if SameText(tmpStr,attachPointStr) then begin
 				refCount:=refCount+1;
 				break;
@@ -1017,7 +1542,7 @@ begin
 		if not includeAttachPointsWithOneOmod then begin
 			//find number of omods for this attach point
 			for j := 0 to allOmods.Count-1 do begin
-				tmpStr := RecordToString(LinksTo(ElementByPath(WinningOverride(StringToRecord(allOmods[j])),'Data - Data\Attach Point')));
+				tmpStr := RecordMasterToString(LinksTo(ElementByPath(WinningOverride(StringToRecord(allOmods[j])),'Data - Data\Attach Point')));
 				if SameText(tmpStr,attachPointStr) then
 					refCount := refCount + 1;
 			end;
@@ -1045,7 +1570,7 @@ begin
 	for i := 0 to modsToCheck.Count-1 do begin
 		modStr:=modsToCheck[i];
 		tmpRec:=WinningOverride(StringToRecord(modStr));
-		tmpStr := RecordToString(LinksTo(ElementByPath(tmpRec,'Data - Data\Attach Point')));
+		tmpStr := RecordMasterToString(LinksTo(ElementByPath(tmpRec,'Data - Data\Attach Point')));
 		if SameText(tmpStr,attachPointStr) then begin
 			mods.Add(modStr);
 		end;
@@ -1173,7 +1698,7 @@ begin
 	entries := ElementBySignature(w, 'KWDA');
 	for i := 0 to Pred(ElementCount(entries)) do begin
 		entry := ElementByIndex(entries, i);
-		tmpStr := RecordToString(LinksTo(entry));
+		tmpStr := RecordMasterToString(LinksTo(entry));
 		if SameText(tmpStr,keywordStr) then begin
 			Remove(entry);
 		end;
@@ -1194,7 +1719,7 @@ begin
 	LogFunctionStart('CreateOverrideInFileIfNotExists');
 	
 	Result := true;
-	tmpStr:= RecordToString(rec);
+	tmpStr:= RecordMasterToString(rec);
 	targetFileName:=GetFileName(targetFile);
 	DebugLog(Format('record: %s, target file: %s',[tmpStr,targetFileName]));
 		
@@ -1223,7 +1748,7 @@ begin
 	LogFunctionStart('CreateCopyInFile');
 	Result:=nil;
 	
-	tmpStr:= RecordToString(rec);
+	tmpStr:= RecordMasterToString(rec);
 	targetFileName:=GetFileName(targetFile);
 	DebugLog(Format('record: %s, target file: %s',[tmpStr,targetFileName]));
 		
@@ -1254,7 +1779,7 @@ begin
 	//add base .ESM if it is no master yet (no idea if this is possible)
 	if not HasMaster(targetFile,'Fallout4.esm') then begin
 		AddMasterIfMissing(targetFile,'Fallout4.esm',false);
-		addedMasters.ADD(RecordToString(FileByName('Fallout4.esm')));
+		addedMasters.ADD(RecordMasterToString(FileByName('Fallout4.esm')));
 	end;
 	
 	//Set basic Values
@@ -1360,7 +1885,7 @@ begin
 	//add base .ESM if it is no master yet (no idea if this is possible)
 	if not HasMaster(targetFile,'Fallout4.esm') then begin
 		AddMasterIfMissing(targetFile,'Fallout4.esm',false);
-		addedMasters.ADD(RecordToString(FileByName('Fallout4.esm')));
+		addedMasters.ADD(RecordMasterToString(FileByName('Fallout4.esm')));
 	end;
 	
 	//Set basic Values
@@ -1414,7 +1939,7 @@ begin
 	//add base .ESM if it is no master yet (no idea if this is possible)
 	if not HasMaster(targetFile,'Fallout4.esm') then begin
 		AddMasterIfMissing(targetFile,'Fallout4.esm',false);
-		addedMasters.ADD(RecordToString(FileByName('Fallout4.esm')));
+		addedMasters.ADD(RecordMasterToString(FileByName('Fallout4.esm')));
 	end;
 	
 	//Set basic Values
@@ -1454,6 +1979,7 @@ begin
 	
 	LogFunctionEnd;
 end;
+
 
 
 end.
