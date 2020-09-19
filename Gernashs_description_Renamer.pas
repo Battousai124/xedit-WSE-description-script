@@ -75,7 +75,7 @@ begin
     raise Exception.Create
       ('Execution intentionally disrupted with an error (saves time when millions of records would be processed, because you executed the script on files, or even worse on Fallout4.esm)');
 
-  if CheckIfRecordShouldBeSkipped(rec) then
+  if CheckIfRecordShouldBeSkipped(rec) and (not bThisIsTheFirstExecution) then
     Exit;
 
   LogFunctionStart('Process');
@@ -94,9 +94,9 @@ begin
     end;
   end;
 
-  if (not GlobConfig.Cancelled) and (not bAborted) then
+  if (not GlobConfig.Cancelled) and (not bAborted) and (signature(rec) = 'OMOD') then
   begin
-    ProcessOneRecord(rec);
+    ProcessOneOMODRecord(rec);
   end;
 
   // lastFileProcessed := GetFileName(rec);
@@ -107,6 +107,11 @@ end;
 function Finalize: Integer;
 begin
   LogFunctionStart('Finalize');
+
+	if GlobConfig.CopyFunctionalDisplay then
+		begin
+			CopyFunctionalDisplayKYWD;
+		end;
 
   if not GlobConfig.Cancelled then
   begin
@@ -141,7 +146,75 @@ begin
   LogFunctionEnd;
 end;
 
-// =========================================================================
+//CopyFunctionalDisplayKYWD
+
+procedure CopyFunctionalDisplayKYWD();
+var
+	AWKCRplugin, KeywordsGroup, tmpRec, curReferencingRec, WinrecordRef : IInterface;
+	i, j, tmpInt, refCount :Integer;
+	curKYWDReferenceBy, recNamesCorrected : TStringList;
+  recordRefName, WinrecordRefName : string;
+	
+begin
+	LogFunctionStart('CopyFunctionalDisplayKYWD');
+	curKYWDReferenceBy := TStringList.Create;
+	curKYWDReferenceBy.Sorted := True; //so that .Find() works
+	curKYWDReferenceBy.Duplicates := dupIgnore;
+	recNamesCorrected := TStringList.Create;
+	recNamesCorrected.Sorted := True; //so that .Find() works
+	recNamesCorrected.Duplicates := dupIgnore;
+	Try
+		//Search for AWKR.esp(FD KYWDs) ArmorKeywords.esm
+		AWKCRplugin := FileByName('ArmorKeywords.esm');
+		KeywordsGroup := GroupBySignature(AWKCRplugin, 'KYWD');
+		
+		//if found get all records KYWD: 99_Keyword_  11chr
+		for i := 0 to ElementCount(KeywordsGroup) - 1 do
+		begin
+			tmpREC := ElementByIndex(KeywordsGroup, i);
+			curKYWDReferenceBy.clear;
+			recNamesCorrected.clear;
+			if not(SameText(copy(EditorID(tmpRec), 1, 11), '99_Keyword_')) then
+				continue;  //22output
+			refCount := ReferencedByCount(tmpRec);
+		
+			//for every KYWD record: look into references get every record that reference KYWD: 99_Keyword_
+			for j := 0 to refCount - 1 do
+				begin
+					curReferencingRec := ReferencedByIndex(tmpRec, j);
+					recordRefName := EditorID(curReferencingRec) + '[' + GetFileName(curReferencingRec) + ']' + ':' + Signature(curReferencingRec);
+					curKYWDReferenceBy.add(recordRefName); //RecordToString-always returns master record
+					end;
+			for j := 0 to curKYWDReferenceBy.count -1 do
+				begin
+					recordRefName := curKYWDReferenceBy[j];
+					WinrecordRef := WinningOverride(StringToRecord(recordRefName));
+					WinrecordRefName := EditorID(WinrecordRef) + '[' + GetFileName(WinrecordRef) + ']' + ':' + Signature(WinrecordRef);
+				//duplicate remover
+				if (not(curKYWDReferenceBy.find(WinrecordRefName, tmpInt))) and (not(recNamesCorrected.find(WinrecordRefName, tmpInt))) then
+						begin
+						//	create override and create keyword
+							recNamesCorrected.add(WinrecordRefName);
+						end;
+				end;
+		end;
+		
+	Finally
+		curKYWDReferenceBy.free;
+		curKYWDReferenceBy:= Nil;
+		recNamesCorrected.free;
+		recNamesCorrected:= Nil;
+	end;	
+	//    for every reference found is the winning override still referencing the keyword 
+	//		if not then create override from reference. and copy KYWD
+	//
+
+
+	LogFunctionEnd;
+end;
+
+
+ // =========================================================================
 // read the load order and store certain things in the config for later usage
 // =========================================================================
 procedure ReadLoadOrder();
@@ -357,16 +430,16 @@ begin
 end;
 
 // =========================================================================
-// processes a single record
+// processes a single OMOD record
 // =========================================================================
-procedure ProcessOneRecord(rec: IInterface);
+procedure ProcessOneOMODRecord(rec: IInterface);
 var
   desc, oldDesc, recordPluginName: string;
   newRec, tmpEntry: IInterface;
   bRecordAlreadyPresent: Boolean;
   recordNameForOutput, tmpStr: String;
 begin
-  LogFunctionStart('ProcessOneRecord');
+  LogFunctionStart('ProcessOneOMODRecord');
 
   bModificationNecessary := true;
 
