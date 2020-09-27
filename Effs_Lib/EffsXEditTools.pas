@@ -10,7 +10,7 @@ uses 'Effs_Lib\EffsStringTools';
 //=========================================================================
 // convert record to string consisting of Editor ID and plugin's name with signature of group
 //=========================================================================
-function RecordToString(rec: IInterface): string;
+function RecordToString(const rec: IInterface): string;
 begin
 	Result := EditorID(rec) + '[' + GetFileName(rec) + ']' + ':' + Signature(rec);
 end;
@@ -18,7 +18,7 @@ end;
 //=========================================================================
 // convert master of record to string consisting of Editor ID and plugin's name with signature of group
 //=========================================================================
-function RecordMasterToString(rec: IInterface): string;
+function RecordMasterToString(const rec: IInterface): string;
 var
 	baseRec: IInterface;
 begin
@@ -31,75 +31,139 @@ end;
 // works with Effs notation (EditorID[FileName]:Signature) and with the load order dependent xEdit notation (EditorID "FULL name"[Signature:FormID])
 // (written in a strange, code-heavy way so that it is comparatively fast even with a dumb Pascal on-time compiler)
 //=========================================================================
-function StringToRecord(rec: string): IInterface;
+function StringToRecord(const rec: string): IInterface;
 var
-	i, j: integer;
+	i, j, k, count1, count2, count3 : integer;
 	inBracket, beforeBracket, afterBracket: string;
-	f, g: IInterface;
+	f, g, tmpRec, tmpRec2, cellRec : IInterface;
 	isNewNotation : Boolean;
 begin
 	//LogFunctionStart('StringToRecord');
-	isNewNotation := true;
 	
-	if Pos('"', rec) > 0 then
-		isNewNotation := false;
-	
-	if isNewNotation then begin
+	if not SameText(rec,'') then begin 
 		j := Pos(']', rec);
-		afterBracket := Copy(rec, j + 2, Length(rec)); // Signature of Group where the mainrecord is in keyword
-
-		if afterBracket = '' then 
-			isNewNotation := false;
-		
-		if isNewNotation then begin
-			i := Pos('[', rec);
-			inBracket := Copy(rec, i + 1, j - i - 1); // plugin of keyword
-		
-			if Pos(':', inBracket) > 0 then
-				isNewNotation := false;
-		end;
-	end;	
-	//DebugLog(Format('Test3 - string: %s, inBracket: %s, afterBracket: %s',[rec,inBracket,afterBracket]));
-	
-	if isNewNotation then begin
-		//Effs notation - not load order dependent
-		beforeBracket := Copy(rec, 1, i - 1); // Editor ID of keyword
-		for i := 0 to Pred(FileCount) do
-			if SameText(GetFileName(FileByIndex(i)), inBracket) then begin
-				f := FileByIndex(i);
-				Break;
-			end;
-		g := GroupBySignature(f, afterBracket);
-		Result := MainRecordByEditorID(g, beforeBracket);
-	end else begin
-		//xEdit notation - load order dependent
-		inBracket := ReverseString(rec); //read from the right, as the name could contain a bracket
-		i := Pos(':', inBracket);
-		inBracket := Copy(inBracket, 2, i-2);
-		inBracket := ReverseString(inBracket);
-		i := Pos(']', inBracket);
-		if i > 0 then 
-			inBracket := Copy(inBracket, 1, i-1);
-		//DebugLog(Format('Test4 - inBracket: "%s"',[inBracket]));
-		i:=StrToInt('$' + Copy(inBracket, 1, 2));
-		//DebugLog(Format('Test9 - inBracket: %s, i: %d',[inBracket,i]));
-		if i <= Pred(FileCount) then begin
-			f := FileByLoadOrder(i); //ATTENTION: if your load order contains any ESLs, this does not work reliably! -> use my load order independent notation!
+		//DebugLog(Format('position of closing square brackets: %d',[j]));
+		if j <= 0 then begin
+			//this is a file
+			//DebugLog(Format('this is a file, name: %s',[rec]));
+			Result := FileByName(rec);
+		end else begin 
+			isNewNotation := true;
 			
-			Result := RecordByFormID(f, StrToInt('$' + inBracket), true);
+			if Pos('"', rec) > 0 then
+				isNewNotation := false;
+			
+			if isNewNotation then begin
+				//j := Pos(']', rec);
+				afterBracket := Copy(rec, j + 2, Length(rec)); // Signature of Group where the mainrecord is in keyword
+
+				if afterBracket = '' then 
+					isNewNotation := false;
+				
+				if isNewNotation then begin
+					i := Pos('[', rec);
+					inBracket := Copy(rec, i + 1, j - i - 1); // plugin of keyword
+				
+					if Pos(':', inBracket) > 0 then
+						isNewNotation := false;
+				end;
+			end;	
+			// DebugLog(Format('Test3 - string: %s, inBracket: %s, afterBracket: %s',[rec,inBracket,afterBracket]));
+			
+			if isNewNotation then begin
+				//Effs notation - not load order dependent
+				beforeBracket := Copy(rec, 1, i - 1); // Editor ID of keyword
+				for i := 0 to Pred(FileCount) do
+					if SameText(GetFileName(FileByIndex(i)), inBracket) then begin
+						f := FileByIndex(i);
+						// DebugLog(Format('file found: %s',[inBracket]));
+						Break;
+					end;
+				g := GroupBySignature(f, afterBracket);
+				// if Assigned(g) then DebugLog(Format('group found: %s',[afterBracket]));
+				if SameText(afterBracket,'CELL') then begin
+					Result := MainCellRecordByEditorID(g, beforeBracket);
+				end else begin
+					Result := MainRecordByEditorID(g, beforeBracket);
+				end;
+				// if Assigned(Result) then DebugLog(Format('record found: %s',[GetElementEditValues(Result, 'Record Header\FormID')]));
+			end else begin
+				//xEdit notation - load order dependent
+				inBracket := ReverseString(rec); //read from the right, as the name could contain a bracket
+				i := Pos(':', inBracket);
+				inBracket := Copy(inBracket, 2, i-2);
+				inBracket := ReverseString(inBracket);
+				i := Pos(']', inBracket);
+				if i > 0 then 
+					inBracket := Copy(inBracket, 1, i-1);
+				//DebugLog(Format('Test4 - inBracket: "%s"',[inBracket]));
+				i:=StrToInt('$' + Copy(inBracket, 1, 2));
+				//DebugLog(Format('Test9 - inBracket: %s, i: %d',[inBracket,i]));
+				if i <= Pred(FileCount) then begin
+					f := FileByLoadOrder(i); //ATTENTION: if your load order contains any ESLs, this does not work reliably! -> use my load order independent notation!
+					
+					Result := RecordByFormID(f, StrToInt('$' + inBracket), true);
+				end;
+			end;
 		end;
 	end;
-	
 	//DebugLog(GetElementEditValues(Result, 'Record Header\FormID'));
 	//LogFunctionEnd;
 end;
+
+//=========================================================================
+// a version of MainRecordByEditorID that works for CELL records
+//=========================================================================
+function MainCellRecordByEditorID (const g: IwbGroupRecord; const edId: string;): IwbMainRecord;
+var
+	i, j, k, blockCount, subBlockCount, recordCount : Integer;
+	blockRec, subBlockRec, cellRec : IInterface;
+begin
+	//LogFunctionStart('MainCellRecordByEditorID');
+	
+	blockCount := ElementCount(g);
+	// DebugLog(Format('element Count of group: %d',[blockCount]));
+	
+	i := 0;
+	while i < blockCount do begin
+		blockRec := ElementByIndex(g, i);
+		subBlockCount := ElementCount(blockRec);
+		// DebugLog(Format('element Count of block: %d',[subBlockCount]));
+		
+		j := 0;
+		while j < subBlockCount do begin
+			subBlockRec := ElementByIndex(blockRec, j);
+			recordCount := ElementCount(subBlockRec);
+			// DebugLog(Format('element Count of sub-block: %d',[recordCount]));
+			
+			k := 0;
+			while k < recordCount do begin
+				cellRec := ElementByIndex(subBlockRec, k);
+				if SameText(EditorID(cellRec),edId) then begin
+					Result := cellRec;
+					//set exit condition
+					k := recordCount + 1;
+					j := subBlockCount + 1;
+					i := blockCount + 1;
+				end;
+				inc(k);
+			end;
+			
+			inc(j);
+		end;
+		
+		inc(i);
+	end;
+	//LogFunctionEnd;
+end;
+
 
 //=========================================================================
 // checks if a record notation follows Effs notation (EditorID[FileName]:Signature) or the load order dependent xEdit notation (EditorID "FULL name"[Signature:FormID])
 // (not needed if you want the record back - in that case just use StringToRecord)
 // (written in a strange, code-heavy way so that it is comparatively fast even with a dumb Pascal on-time compiler)
 //=========================================================================
-function RecordStringIsEffsNotation(rec: string): Boolean;
+function RecordStringIsEffsNotation(const rec: string): Boolean;
 var
 	i, j: integer;
 	tmpStr : String;
@@ -129,7 +193,7 @@ end;
 //=========================================================================
 //get Hex-ID to support referencing to different records having the same EditorID
 //=========================================================================
-function HexFormID(e: IInterface): string;
+function HexFormID(const e: IInterface): string;
 var
 	s: string;
 	i: integer;
@@ -144,7 +208,7 @@ end;
 //=========================================================================
 //get a record by providing the HEX-FormID (e.g. '0002BFA2')
 //=========================================================================
-function RecordByHexFormID(id: string): IInterface;
+function RecordByHexFormID(const id: string): IInterface;
 var
   f: IInterface;
 begin
@@ -182,7 +246,7 @@ end;
 //  Gets a file from a filename.
 //  Example usage:  f := FileByName('Weaponsmith Extended 2.esp');
 //=========================================================================
-function FileByName(filename: string): IInterface;
+function FileByName(const filename: string): IInterface;
 var
 	i: integer;
 begin
@@ -202,13 +266,258 @@ begin
 	LogFunctionEnd;
 end;
 
+//=========================================================================
+//  Gets the real cound of sub elements of this element
+//  (since ElementCount does not work all the time)
+//=========================================================================
+function ElementCount2(const element: IInterface): Integer;
+var
+	recStr, tmpStr : String;
+	totalCount, index : integer;
+	masterRec : IInterface;
+begin
+	// LogFunctionStart('ElementCount2');
+	Result := 0;
+
+	while Assigned(ElementByIndex(element, Result)) do begin 
+		inc(Result);
+	end;
+	
+	// LogFunctionEnd;
+end;
+
+//=========================================================================
+//  Gets the override index of a record within all overrides of the master of this record
+//  returns -1 for the master itself 
+//=========================================================================
+function OverrideIndex(const rec: IInterface): Integer;
+var
+	recStr, tmpStr : String;
+	totalCount, index : integer;
+	masterRec : IInterface;
+begin
+	LogFunctionStart('OverrideIndex');
+	Result := -1;
+
+	if Assigned(rec) then begin 
+		masterRec := MasterOrSelf(rec);
+		totalCount := OverrideCount(masterRec);
+		recStr := RecordToString(rec);
+		
+		// DebugLog(Format('totalCount: %d, recStr: %s',[totalCount, recStr]));
+		
+		index := 0;
+		while index < totalCount do begin
+			tmpStr := RecordToString(OverrideByIndex(masterRec, index));
+			
+			// DebugLog(Format('index: %d, tmpStr: %s',[index, tmpStr]));
+			
+			if SameText(tmpStr, recStr) then begin
+				// DebugLog(Format('found: recStr: %s, tmpStr: %s',[recStr, tmpStr]));
+				Result := index;
+				break;
+			end;
+			inc(index);
+		end;
+	end;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+// returns the next override of this record
+// (basically moves one column to the right if you look on a record with all its overrides on the xEdit user interface)
+// if called on the master, returns the first override
+// if called on the winning override, returns the record itself
+// if called on the master and no override exists, returns the record itself
+//=========================================================================
+function NextOverride(const rec : IInterface) : IInterface;
+var 
+	tmpInt, elementCount : Integer;
+	masterRec : IInterface;
+begin
+	// LogFunctionStart('NextOverride');
+	
+	Result := rec;
+	
+	tmpInt := OverrideIndex(rec);
+	masterRec := MasterOrSelf(rec);
+	elementCount := OverrideCount(masterRec);
+	if elementCount > 0 then begin
+		if tmpInt < (elementCount - 1) then begin 
+			Result := OverrideByIndex(masterRec ,tmpInt + 1);
+		end;
+	end;
+	
+	// LogFunctionEnd;
+end;
+
+//=========================================================================
+// returns the previous override of this record
+// (basically moves one column to the left if you look on a record with all its overrides on the xEdit user interface)
+// if called on the first override, returns the master record
+// if called on the master record, returns the record itself
+//=========================================================================
+function PreviousOverride(const rec : IInterface) : IInterface;
+var 
+	tmpInt : Integer;
+	masterRec : IInterface;
+begin
+	// LogFunctionStart('PreviousOverride');
+	
+	tmpInt := OverrideIndex(rec);
+	masterRec := MasterOrSelf(rec);
+	if tmpInt <= 0 then begin
+		Result := masterRec;
+	end else begin
+		Result := OverrideByIndex(masterRec ,tmpInt - 1);
+	end;
+	
+	// LogFunctionEnd;
+end;
+
+//=========================================================================
+// returns the main record of this element or the element itself if it is a main record
+// (just another method necessary, because an xEdit method does not work reliably - ContainingMainRecord() in this case)
+//	does not work if the element is of type etFlag
+//=========================================================================
+function MainRecordOrSelf(const element : IInterface) : IInterface;
+var 
+	parentRec : IInterface;
+begin
+	// LogFunctionStart('MainRecordOrSelf');
+	
+	if ElementType(element) = etMainRecord then begin
+		Result := element;
+	end else begin 
+		parentRec := ElementByPath(element, '..\');
+		
+		//DebugLog(Format('recordString from element: %s',[RecordToString(element)]));
+		
+		while Assigned(parentRec) do begin 
+			//DebugLog(Format('parentRec-Path: %s',[Path(parentRec)]));
+			if ElementType(parentRec) = etMainRecord then begin
+				Result := parentRec;
+				break;
+			end;
+			parentRec := ElementByPath(parentRec, '..\');
+		end;
+	end;
+	
+	if (not Assigned(Result)) and (not ElementType(element) = etFlag) then 
+		Result := GetFile(element);
+	
+	// LogFunctionEnd;
+end;
+
+//=========================================================================
+// returns the main record of this element or the element itself if it is a main record
+// (expansion of MainRecordOrSelf for use with smartPathSelection)
+//	handles etFlag elements correctly if they were selected by path
+//=========================================================================
+function MainRecordOrSelf2(const element, originalRecord : IInterface; const originalPath : String;) : IInterface;
+var 
+	tmpInt : Integer;
+	curPath : String;
+	parentRec : IInterface;
+begin
+	// LogFunctionStart('MainRecordOrSelf2');
+	
+	if ElementType(element) = etMainRecord then begin
+		Result := element;
+	end else begin
+		if ElementType(element) = etFlag then begin
+			//get the main flag element
+			tmpInt := Pos('\', ReverseString(originalPath));
+			curPath := Copy(originalPath, 1, Length(originalPath) - max(0, tmpInt));
+			parentRec := ElementByPath(originalRecord, curPath);
+			Result := MainRecordOrSelf(parentRec);
+		end else begin
+			Result := MainRecordOrSelf(element);
+		end;
+	end;
+	
+	// LogFunctionEnd;
+end;
+
+
+//=========================================================================
+// gets all records that reference this record
+//=========================================================================
+procedure GetReferencedByRecords(const rec : IInterface; records : TStringList;);
+var 
+	i, elementCount : Integer;
+	
+begin
+	LogFunctionStart('GetReferencedByRecords');
+	
+	records.Clear;
+	
+	elementCount := ReferencedByCount(rec);
+	i := 0;
+	while i < elementCount do begin
+		records.Add(RecordToString(ReferencedByIndex(rec, i)));
+		inc(i);
+	end;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+// gets all records that this record references
+//=========================================================================
+procedure GetReferencedRecords(const rec : IInterface; records : TStringList;);
+var 
+	i, tmpInt : Integer;
+	tmpStr, curPath : String;
+	allPaths, tmpList : TStringList;
+	curElement : IInterface;
+begin
+	LogFunctionStart('GetReferencedRecords');
+	
+	allPaths := TStringList.Create;
+	tmpList := TStringList.Create;
+	tmpList.Sorted := true; //so that .Find() works
+	records.Clear;
+	
+	try
+		ResolveSmartPath(rec, '\**\', allPaths);
+		
+		i := 0;
+		while i < allPaths.Count do begin 
+			curPath := allPaths[i];
+			tmpStr := Path(rec);
+			tmpInt := Length(tmpStr);
+			curElement := ElementByPath(rec, curPath);
+			tmpStr := Path(curElement);
+			tmpStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
+			
+			if (not SameText(tmpStr,'Record Header \ FormID')) and Assigned(LinksTo(curElement)) then begin
+				tmpStr := RecordToString(LinksTo(curElement));
+				if not tmpList.Find(tmpStr, tmpInt) then begin 
+					tmpList.Add(tmpStr); 
+					records.Add(tmpStr); 
+				end;
+			end;
+			inc(i);
+		end;
+		
+	finally
+		allPaths.Free;
+		allPaths := nil;
+		tmpList.Free;
+		tmpList := nil;
+	end;
+	
+	LogFunctionEnd;
+end;
 
 //=========================================================================
 // Resolve Smart Path
 //	this is an expansion of the path possibilities built into xEdit
 //	modifies the TStringList provided and returns TRUE if the smartPath	contained elements to resolve
 //=========================================================================
-function ResolveSmartPath(rec : IInterface; const smartPath : String; resolvedPaths : TStringList;) : Boolean;
+function ResolveSmartPath(const rec : IInterface; const smartPath : String; resolvedPaths : TStringList;) : Boolean;
 var 
 	i, j, tmpInt, elementCount, curPosWildcard, posWildcardInOrigPath : Integer;
 	tmpStr, pathLeftToCheck, curPath, curPathBeforeSmartPart, curPathAfterSmartPart : String;
@@ -251,16 +560,7 @@ begin
 						curElement := ElementByPath(rec, curPathBeforeSmartPart);
 					end;
 					//unfortunately ElementCount() does not work -> find out by hand
-					// if Assigned(curElement) then begin
-						// elementCount := ElementCount(curElement);
-						// DebugLog(Format('element assigned, elementCount: %d',[elementCount]));
-					// end;
-					
-					elementCount := 0;
-					while Assigned(ElementByIndex(curElement,elementCount)) do begin 
-						inc(elementCount);
-					end;
-					
+					elementCount := ElementCount2(curElement);
 					if elementCount = 0 then begin
 						//this element does not have any elements -> try just leaving the wildcard out
 						tmpStr := curPathBeforeSmartPart + curPathAfterSmartPart;
@@ -326,15 +626,9 @@ begin
 							curElement := rec;
 						end else begin
 							curElement := ElementByPath(rec, curPathBeforeSmartPart);
-							// if Assigned(curElement) then begin
-							// end;
 						end;
 						
-						elementCount := 0;
-						while Assigned(ElementByIndex(curElement,elementCount)) do begin 
-							inc(elementCount);
-						end;
-						
+						elementCount := ElementCount2(curElement);
 						if elementCount = 0 then begin
 							//this element does not have any elements -> try just leaving the wildcard out
 							tmpStr := curPathBeforeSmartPart + '\' + curPathAfterSmartPart;
@@ -404,14 +698,9 @@ begin
 							curElement := rec;
 						end else begin
 							curElement := ElementByPath(rec, curPathBeforeSmartPart);
-							// if Assigned(curElement) then begin
-							// end;
 						end;
 						
-						elementCount := 0;
-						while Assigned(ElementByIndex(curElement,elementCount)) do begin 
-							inc(elementCount);
-						end;
+						elementCount := ElementCount2(curElement);
 						
 						//always leave the current element without wildcard in the selection
 						if not SameText(curPathBeforeSmartPart,'') then begin
@@ -444,7 +733,6 @@ begin
 				// end;
 				
 			end;
-			
 		end;
 		
 	finally
@@ -452,27 +740,127 @@ begin
 		curNewPaths := nil;
 	end;
 	
-	
 	// DebugLog(Format('resolved Paths: %s',[resolvedPaths.Text]));
-	
-	
 	LogFunctionEnd;
 end;
 
+//=========================================================================
+// Resolve Smart Record String
+//	this is an expansion of the StringToRecord functionality in this lib
+//	modifies the TStringList provided and returns TRUE if the smartRecordString	contained elements to resolve
+//=========================================================================
+function ResolveSmartRecordString(const smartRecordString : String; resolvedRecords : TStringList;) : Boolean;
+var 
+	i, j, tmpInt, elementCount, curPosWildcard : Integer;
+	tmpStr, smartSelectionTag, curRecordStr, resultStr : String;
+	curRecord : IInterface;
+begin
+	LogFunctionStart('ResolveSmartRecordString');
+	
+	resolvedRecords.Clear;
+	Result := false;
+	
+	curRecordStr := smartRecordString;
+	//get last path Part
+	tmpStr := ReverseString(smartRecordString);
+	tmpInt := Pos('\',tmpStr);
+	
+	if tmpInt > Pos(':',tmpStr) then //ignore if the backslash is before the last ":"
+		tmpInt := -1;
+	
+	if tmpInt > 4 then begin //ignore if it ends with a backslash
+		if tmpStr[1] = ']' then begin 
+			if tmpStr[tmpInt-1] = '[' then begin 
+				smartSelectionTag := ReverseString(Copy(tmpStr,1,tmpInt));
+				curRecordStr := Copy(smartRecordString, 1, max(0, Length(smartRecordString) - Length(smartSelectionTag)));
+			end;
+		end;
+	end;
+	
+	if not SameText(smartSelectionTag,'') then begin
+		Result := true;
+		// for i := 1 to 7 do begin //this is basically for avoiding deep IF-ELSE nesting
+			// case i of 
+				// 1:begin
+						if SameText(smartSelectionTag, '\[Master]') then begin
+							resultStr := '';
+							curRecord := StringToRecord(curRecordStr);
+							if Assigned (curRecord) then 
+								resultStr := RecordToString(MasterOrSelf(curRecord));
+							resolvedRecords.Add(resultStr);
+							// break;
+						end;
+					// end;
+				// 2:begin
+						if SameText(smartSelectionTag, '\[WinningOverride]') then begin
+							resultStr := '';
+							curRecord := StringToRecord(curRecordStr);
+							if Assigned (curRecord) then 
+								resultStr := RecordToString(WinningOverride(curRecord));
+							resolvedRecords.Add(resultStr);
+							// break;
+						end;
+					// end;
+				// 3:begin
+						if SameText(smartSelectionTag, '\[NextOverride]') then begin
+							curRecord := StringToRecord(curRecordStr);
+							resultStr := RecordToString(NextOverride(curRecord));
+							resolvedRecords.Add(resultStr);
+							// break;
+						end;
+					// end;
+				// 4:begin
+						if SameText(smartSelectionTag, '\[PreviousOverride]') then begin
+							curRecord := StringToRecord(curRecordStr);
+							resultStr := RecordToString(PreviousOverride(curRecord));
+							resolvedRecords.Add(resultStr);
+							// break;
+						end;
+					// end;
+				// 5:begin
+						if SameText(smartSelectionTag, '\[ReferencedBy]') then begin
+							curRecord := StringToRecord(curRecordStr);
+							if Assigned(curRecord) then  
+								GetReferencedByRecords(curRecord, resolvedRecords);
+							//add empty entry so that the code does not break if there are no references
+							if resolvedRecords.Count = 0 then 
+								resolvedRecords.Add('');
+							// break;
+						end;
+					// end;
+				// 6:begin
+						if SameText(smartSelectionTag, '\[References]') then begin
+							curRecord := StringToRecord(curRecordStr);
+							if Assigned(curRecord) then 
+								GetReferencedRecords(curRecord, resolvedRecords);
+							//add empty entry so that the code does not break if there are no references
+							if resolvedRecords.Count = 0 then 
+								resolvedRecords.Add('');
+							// break;
+						end;
+					// end;
+				// 7:raise Exception.Create(Format('Invalid smartSelector in record string. record String: %s, smartSelector: %s',[smartRecordString, smartSelectionTag]));
+			// end; //end case
+		// end; //end for
+	end;
+	
+	LogFunctionEnd;
+end;
 
 //=========================================================================
 // gets different Infos from an element or record
 //	this is an expansion of the path possibilities built into xEdit
 //=========================================================================
-function ElementInfoBySmartPath(rec : IInterface; const smartPath : String;) : String;
+function ElementInfoBySmartPath(const rec : IInterface; const smartPath : String;) : String;
 var 
-	i, tmpInt, smartSelectionSwitch : Integer;
+	i, tmpInt : Integer;
 	tmpStr, curPath, smartSelectionTag, resultStr, curChar : String;
-	curElement, tmpElement : IInterface;
+	curRecord, curElement, tmpElement : IInterface;
+	defaultSelection : Boolean;
 begin
 	// LogFunctionStart('ElementInfoBySmartPath');
 
-	smartSelectionSwitch := 0;
+	defaultSelection := false;
 	curPath := smartPath;
 	
 	//get last path Part
@@ -494,216 +882,227 @@ begin
 		end;
 	end;
 	
+	if SameText(curPath,'') then begin
+		curElement := rec;
+	end else begin
+		curElement := ElementByPath(rec, curPath);
+	end;
 	
-	if not SameText(smartSelectionTag,'') then begin 
+	if SameText(smartSelectionTag,'') then begin 
+		defaultSelection := true;
+	end else begin 
 		//decide which selection should be done
-		for i := 1 to 15 do begin //this is basically for avoiding deep IF-ELSE nesting
-			case i of 
-				1:begin
+		// for i := 1 to 25 do begin //this is basically for avoiding deep IF-ELSE nesting
+			// case i of 
+				// 1:begin
 						if SameText(smartSelectionTag, '\[FormID]') then begin
-							smartSelectionSwitch := i;
-							break;
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := IntToHex64(FormID(curRecord), 8);
+							// break;
 						end;
-					end;
-				2:begin
+					// end;
+				// 2:begin
 						if SameText(smartSelectionTag, '\[IndentedName]') then begin
-							smartSelectionSwitch := i;
-							break;
+							if not (ElementType(curElement) = etMainRecord) then begin
+								resultStr := Path(curElement);
+								//count the depth of the path and prepare indention for each level
+								//and remove the useless first part of the path 
+								tmpInt := max(0, CountStringInString('\', resultStr, 1, -1) - 1); 
+								resultStr := RepeatString('     ', tmpInt) + DisplayName(ElementByPath(rec, curPath));
+							end;
+							// break;
 						end;
-					end;
-				3:begin
+					// end;
+				// 3:begin
 						if SameText(smartSelectionTag, '\[Name]') then begin
-							smartSelectionSwitch := i;
-							break;
+							resultStr := DisplayName(ElementByPath(rec, curPath));
+							// break;
 						end;
-					end;
-				4:begin
+					// end;
+				// 4:begin
 						if SameText(smartSelectionTag, '\[BaseName]') then begin
-							smartSelectionSwitch := i;
-							break;
+							resultStr := BaseName(ElementByPath(rec, curPath));
+							// break;
 						end;
-					end;
-				5:begin
+					// end;
+				// 5:begin
 						if SameText(smartSelectionTag, '\[Path]') then begin
-							smartSelectionSwitch := i;
-							break;
+							if not (ElementType(curElement) = etMainRecord) then begin
+								//remove the record part of the full path 
+								resultStr := Path(curElement);
+								tmpInt := max(0, Pos('\', resultStr));
+								resultStr := Trimleft(Copy(resultStr, tmpInt + 1, Length(resultStr)));
+							end;
+							// break;
 						end;
-					end;
-				6:begin
+					// end;
+				// 6:begin
 						if SameText(smartSelectionTag, '\[PluginName]') then begin
-							smartSelectionSwitch := i;
-							break;
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := GetFileName(curRecord);
+							// break;
 						end;
-					end;
-				7:begin
+					// end;
+				// 7:begin
 						if SameText(smartSelectionTag, '\[Exists]') then begin
-							smartSelectionSwitch := i;
-							break;
+							if Assigned(curElement) then begin
+								resultStr := 'true';
+							end else begin
+								resultStr := 'false';
+							end;
+							// break;
 						end;
-					end;
-				8:begin
+					// end;
+				// 8:begin
 						if SameText(smartSelectionTag, '\[ElementCount]') then begin
-							smartSelectionSwitch := i;
-							break;
+							resultStr := IntToStr(ElementCount2(curElement));
+							// break;
 						end;
-					end;
-				9:begin
+					// end;
+				// 9:begin
 						if SameText(smartSelectionTag, '\[Index]') then begin
-							smartSelectionSwitch := i;
-							break;
+							tmpElement := ElementByPath(curElement, '..\');
+							resultStr := IntToStr(IndexOf(tmpElement, curElement));
+							// break;
 						end;
-					end;
-				10:begin
+					// end;
+				// 10:begin
 						if SameText(smartSelectionTag, '\[IndexedPath]') then begin
-							smartSelectionSwitch := i;
-							break;
+							if not (ElementType(curElement) = etMainRecord) then begin
+								curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+								tmpStr := FullPath(curRecord); //to remove the useless first part of the path in a way that is compatible to cell records
+								tmpInt := Length(tmpStr);
+								tmpStr := FullPath(curElement);
+								resultStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
+							end;
+							// break;
 						end;
-					end;
-				11:begin
+					// end;
+				// 11:begin
 						if SameText(smartSelectionTag, '\[IsMaster]') then begin
-							smartSelectionSwitch := i;
-							break;
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							if Assigned(curRecord) then begin 
+								if IsMaster(curRecord) then begin
+									resultStr := 'true';
+								end else begin
+									resultStr := 'false';
+								end;
+							end;
+							// break;
 						end;
-					end;
-				12:begin
+					// end;
+				// 12:begin
+						if SameText(smartSelectionTag, '\[Record]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := RecordToString(curRecord);
+							// break;
+						end;
+					// end;
+				// 13:begin
 						if SameText(smartSelectionTag, '\[IsWinningOverride]') then begin
-							smartSelectionSwitch := i;
-							break;
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							if Assigned(curRecord) then begin 
+								if IsWinningOverride(curRecord) then begin
+									resultStr := 'true';
+								end else begin
+									resultStr := 'false';
+								end;
+							end;
+							// break;
 						end;
-					end;
-				13:begin
+					// end;
+				// 14:begin
 						if SameText(smartSelectionTag, '\[SortKey]') then begin
-							smartSelectionSwitch := i;
-							break;
+							resultStr := SortKey(curElement, True);
+							// break;
 						end;
-					end;
-				14:begin
+					// end;
+				// 15:begin
 						if SameText(smartSelectionTag, '\[SelectionPath]') then begin
-							smartSelectionSwitch := i;
-							break;
+							resultStr := curPath;
+							// break;
 						end;
-					end;
-				15:begin
+					// end;
+				// 16:begin
+						if SameText(smartSelectionTag, '\[OverrideCount]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := OverrideCount(MasterOrSelf(curRecord));
+							// break;
+						end;
+					// end;
+				// 17:begin
+						if SameText(smartSelectionTag, '\[OverrideIndex]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := IntToStr(OverrideIndex(curRecord) + 1); //to make it easy for users of the formula-parser to understand
+							// break;
+						end;
+					// end;
+				// 18:begin
+						if SameText(smartSelectionTag, '\[ReferencedByCount]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := ReferencedByCount(curRecord);
+							// break;
+						end;
+					// end;
+				// 19:begin
+						if SameText(smartSelectionTag, '\[Master]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := RecordToString(MasterOrSelf(curRecord));
+							// break;
+						end;
+					// end;
+				// 20:begin
+						if SameText(smartSelectionTag, '\[WinningOverride]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := RecordToString(WinningOverride(curRecord));
+							// break;
+						end;
+					// end;
+				// 21:begin
+						if SameText(smartSelectionTag, '\[NextOverride]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := RecordToString(NextOverride(curRecord));
+							// break;
+						end;
+					// end;
+				// 22:begin
+						if SameText(smartSelectionTag, '\[PreviousOverride]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := RecordToString(PreviousOverride(curRecord));
+							// break;
+						end;
+					// end;
+				// 23:begin
+						if SameText(smartSelectionTag, '\[RecordPath]') then begin
+							curRecord := MainRecordOrSelf2(curElement, rec, curPath);
+							resultStr := FullPath(curRecord);
+							// break;
+						end;
+					// end;
+				// 24:begin
 						if SameText(smartSelectionTag, '\[EditValue]') then begin
-							break;
-							smartSelectionSwitch := 0;
+							defaultSelection := true;
+							// break;
 						end;
-					end;
-			end;
-		end;
+					// end;
+				// 25:raise Exception.Create(Format('Invalid smartSelector in path. path: %s, smartSelector: %s',[smartPath, smartSelectionTag]));
+			// end; //end case
+		// end; //end for
 	end;
 	
 	// DebugLog(Format('curPath: %s, smartSelectionTag: %s, smartSelectionSwitch: %d',[curPath, smartSelectionTag, smartSelectionSwitch]));
 	
-	case smartSelectionSwitch of 
-		0:begin 
-				tmpStr := Path(rec);
-				tmpInt := Length(tmpStr);
-				curElement := ElementByPath(rec, curPath);
-				tmpStr := Path(curElement);
-				tmpStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
-				if (not SameText(tmpStr,'Record Header \ FormID')) and Assigned(LinksTo(curElement)) then begin
-					resultStr := RecordToString(LinksTo(curElement)); 
-				end else begin
-					resultStr := GetEditValue(ElementByPath(rec, curPath));
-				end;
-			end;
-		1:resultStr := IntToHex64(FormID(rec), 8);
-		2:begin
-				tmpStr := Path(rec); //to remove the useless first part of the path in a way that is compatible to cell records
-				tmpInt := Length(tmpStr);
-				curElement := ElementByPath(rec, curPath);
-				tmpStr := Path(curElement);
-				resultStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
-				//count the depth of the path and prepare indention for each level
-				i := 0;
-				tmpStr := '';
-				tmpInt := Pos('\',resultStr);
-				while tmpInt > 0 do begin
-					tmpStr := tmpStr + '     ';
-					inc(i);					
-					resultStr := Copy(resultStr,tmpInt +1 ,Length(resultStr) - tmpInt);
-					tmpInt := Pos('\',resultStr);
-				end;
-				resultStr := tmpStr + DisplayName(ElementByPath(rec, curPath));
-			end;
-		3:resultStr := DisplayName(ElementByPath(rec, curPath));
-		4:resultStr := BaseName(ElementByPath(rec, curPath));
-		5:begin
-				tmpStr := Path(rec); //to remove the useless first part of the path in a way that is compatible to cell records
-				tmpInt := Length(tmpStr);
-				curElement := ElementByPath(rec, curPath);
-				tmpStr := Path(curElement);
-				resultStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
-			end;
-		6:begin
-				resultStr := GetFileName(rec);
-			end;
-		7:begin
-				if SameText(curPath,'') then begin
-					curElement := rec;
-				end else begin
-					curElement := ElementByPath(rec, curPath);
-				end;
-				if Assigned(curElement) then begin
-					resultStr := 'true';
-				end else begin
-					resultStr := 'false';
-				end;
-			end;
-		8:begin
-				if SameText(curPath,'') then begin
-					curElement := rec;
-				end else begin
-					curElement := ElementByPath(rec, curPath);
-				end;
-				tmpInt := 0;
-				while Assigned(ElementByIndex(curElement, tmpInt)) do begin 
-					inc(tmpInt);
-				end;
-				resultStr := IntToStr(tmpInt);
-			end;
-		9:begin
-				if SameText(curPath,'') then begin
-					curElement := rec;
-				end else begin
-					curElement := ElementByPath(rec, curPath);
-				end;
-				tmpElement := ElementByPath(curElement, '..\');
-				resultStr := IntToStr(IndexOf(tmpElement, curElement));
-			end;
-		10:begin
-				tmpStr := FullPath(rec); //to remove the useless first part of the path in a way that is compatible to cell records
-				tmpInt := Length(tmpStr);
-				curElement := ElementByPath(rec, curPath);
-				tmpStr := FullPath(curElement);
-				resultStr := Copy(tmpStr, tmpInt + 4, Length(tmpStr));
-			end;
-		11:begin
-				resultStr := '';
-				if Assigned(rec) then begin 
-					if IsMaster(rec) then begin
-						resultStr := 'true';
-					end else begin
-						resultStr := 'false';
-					end;
-				end;
-			end;
-		12:begin
-				resultStr := '';
-				if Assigned(rec) then begin 
-					if IsWinningOverride(rec) then begin
-						resultStr := 'true';
-					end else begin
-						resultStr := 'false';
-					end;
-				end;
-			end;
-		13:begin
-				curElement := ElementByPath(rec, curPath);
-				resultStr := SortKey(curElement, True);
-			end;
-		14:resultStr := curPath;
+	if defaultSelection then begin 
+		tmpStr := Path(curElement);
+		tmpInt := Length(tmpStr);
+		if tmpInt > 22 then begin 
+			tmpStr := Copy(tmpStr, tmpInt - 21, tmpInt);
+		end;
+		if (not SameText(tmpStr,'Record Header \ FormID')) and Assigned(LinksTo(curElement)) then begin
+			resultStr := RecordToString(LinksTo(curElement)); 
+		end else begin
+			resultStr := GetEditValue(ElementByPath(rec, curPath));
+		end;
 	end;
 	
 	Result := resultStr;
@@ -716,10 +1115,11 @@ end;
 //=========================================================================
 function ReadRecords(const recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter : String;) : String;
 var 	
-	i, j, k  : Integer;
-	tmpStr, resultStr, curPathStr, curValueStr : String;
-	records, paths, curResolvedPaths : TStringList;
+	i, j, p, r  : Integer;
+	tmpStr, resultStr, curPathStr, curRecordStr, curValueStr : String;
+	records, paths, curResolvedPaths, curResolvedRecords : TStringList;
 	curRecord : IInterface;
+	curIsSmartPath, curIsSmartRecordString : Boolean;
 begin
 	LogFunctionStart('ReadRecords');
 	
@@ -727,50 +1127,65 @@ begin
 	records := TStringList.Create;
 	paths := TStringList.Create;
 	curResolvedPaths := TStringList.Create;
+	curResolvedRecords := TStringList.Create;
 	
 	try
 		StringToStringList(recordsStr, ';', records);
 		StringToStringList(pathsStr, ';', paths);
 		
+		// DebugLog(Format('recordsStr: %s, pathsStr: %s, records.Count: %d, paths.Count: %d',[recordsStr, pathsStr, records.Count, paths.Count]));
+		
 		resultStr := '';
 		i := 0;
 		while i < records.Count do begin
-			curRecord := StringToRecord(records[i]);
-			if i > 0 then
-				resultStr := resultStr + recordsDelimiter;
-			j:= 0;
-			while j < paths.Count do begin
-				if j > 0 then
-					resultStr := resultStr + elementsDelimiter;
+			// DebugLog(Format('i: %d, records[i]: %s',[i, records[i]]));
+			curRecordStr := records[i];
+			curIsSmartRecordString := ResolveSmartRecordString(curRecordStr, curResolvedRecords);
+			
+			r := 0;
+			repeat
+				if curIsSmartRecordString then
+					curRecordStr := curResolvedRecords[r];
+						
+				curRecord := StringToRecord(curRecordStr);
 				
-				if Assigned(curRecord) then begin
-					curPathStr := paths[j];
+				if (i > 0) or (r > 0) then
+					resultStr := resultStr + recordsDelimiter;
 					
-					if ResolveSmartPath(curRecord, curPathStr, curResolvedPaths) then begin 
-						// DebugLog(Format('resolvedPaths: %s',[curResolvedPaths.Text]));
-						k := 0;
-						while k < curResolvedPaths.Count do begin 
-							curPathStr := curResolvedPaths[k];
+				j:= 0;
+				while j < paths.Count do begin
+					if j > 0 then
+						resultStr := resultStr + elementsDelimiter;
+					
+					if Assigned(curRecord) then begin
+						curPathStr := paths[j];
+						curIsSmartPath := ResolveSmartPath(curRecord, curPathStr, curResolvedPaths);
+						
+						p := 0;
+						repeat
+							if curIsSmartPath then 
+								curPathStr := curResolvedPaths[p];
 							curValueStr := ElementInfoBySmartPath(curRecord, curPathStr);
-							if k = 0 then begin
+							if p = 0 then begin
 								tmpStr := EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
 							end else begin
 								tmpStr := tmpStr + elementsDelimiter + EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
 							end;
-							inc(k);
-						end;
-					end else begin
-						curValueStr := ElementInfoBySmartPath(curRecord, curPathStr);
-						tmpStr := EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
+							inc(p);
+						until p >= curResolvedPaths.Count;
+						
+					end else begin 
+						tmpStr := EscapeStringIfNecessary(emptyReturnValue, '"', recordsDelimiter, elementsDelimiter);
+						// DebugLog('curRecord not assigned');
 					end;
-				end else begin 
-					tmpStr := EscapeStringIfNecessary(emptyReturnValue, '"', recordsDelimiter, elementsDelimiter);
+					
+					resultStr := resultStr + tmpStr;
+					
+					inc(j);
 				end;
-				
-				resultStr := resultStr + tmpStr;
-				
-				inc(j);
-			end;
+				inc(r);
+			until r >= curResolvedRecords.Count;
+			
 			inc(i);
 		end;
 	finally
@@ -780,6 +1195,8 @@ begin
 		paths := nil;
 		curResolvedPaths.Free;
 		curResolvedPaths := nil;
+		curResolvedRecords.Free;
+		curResolvedRecords := nil;
 	end;
 	
 	Result:=resultStr;
@@ -790,7 +1207,7 @@ end;
 //=========================================================================
 //  check if any plugin already uses an EditorID
 //=========================================================================
-function EditorIdIsInUse(edid: string;): Boolean;
+function EditorIdIsInUse(const edid: string;): Boolean;
 var
 	i,j : integer;
 	tmpRec : IInterface;

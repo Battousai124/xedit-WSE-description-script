@@ -159,7 +159,6 @@ begin
 	try
 		StringToStringList(tableStr, rowDelimiter, outerList);
 		// DebugLog(Format('all rows: %s',[outerList.Text]));
-		DebugLog(Format('before loop',['']));
 		
 		rowsCount := outerList.Count;
 		
@@ -288,6 +287,56 @@ begin
 	
 	Result:= endPos;
 	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  Count how many times a string appears in a string
+//	returns 0 if not found
+//=========================================================================
+function CountStringInString(const findStr, withinStr : String; const startPos : Integer; endPos : Integer) : Integer;
+var 
+	tmpInt, counter : Integer;
+	tmpStr : String;
+begin
+	// LogFunctionStart('CountStringInString');
+	
+	if endPos < startPos then
+		endpos := Length(withinStr);
+	
+	//cut down the string to the part we want to search in
+	tmpStr := Copy(withinStr, startPos, endPos - startPos + 1); 
+	
+	counter := 0;
+	tmpInt := Pos(findStr, tmpStr);
+	while tmpInt > 0 do begin
+		inc(counter);
+		tmpStr := Copy(tmpStr, tmpInt + Length(findStr), Length(tmpStr) - tmpInt - Length(findStr) + 1);
+		tmpInt := Pos(findStr, tmpStr);
+	end;
+
+	Result:= counter;
+	// LogFunctionEnd;
+end;
+
+//=========================================================================
+//  Count how many times a string appears in a string
+//	returns 0 if not found
+//=========================================================================
+function RepeatString(const s : String; const numberOfTimes : Integer) : String;
+var 
+	i : Integer;
+begin
+	// LogFunctionStart('RepeatString');
+	
+	Result := '';
+	
+	i := 0;
+	while i < numberOfTimes do begin
+		Result := Result + s;
+		inc(i);
+	end;
+
+	// LogFunctionEnd;
 end;
 
 end.
