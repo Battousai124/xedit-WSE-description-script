@@ -339,4 +339,99 @@ begin
 	// LogFunctionEnd;
 end;
 
+
+//=========================================================================
+//  format string from Excel format string
+//=========================================================================
+function FormatStringWithExcelFormatString(const formatString, strValue : String;) : String;
+var
+	i, inFormat : Integer;
+	curChar, format1: String;
+begin
+	LogFunctionStart('FormatFloatWithExcelFormatString');
+	
+	format1:='';
+	
+	inFormat := 1;
+	for i := 1 to Length(formatString) do begin
+		curChar := Copy(formatString,i,1);
+		
+		if SameText(curChar,';') then begin
+			inc(inFormat);
+			continue;
+		end;
+	
+		if inFormat = 4 then 
+			format1 := format1 + curChar;
+	end;
+	
+	Result := strValue;
+	
+	//if there is a string format
+	if inFormat > 3 then begin 
+		if SameText(format1,'') then begin
+			Result := '';
+		end else begin
+			//Excel string placeholder is @
+			Result := StringReplace(format1,'@',strValue, [rfIgnoreCase,rfReplaceAll]);
+		end;
+	end;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  format PASCAL float from Excel format string
+//=========================================================================
+function FormatFloatWithExcelFormatString(const formatString : String; const floatValue : Double;) : String;
+var
+	i, inFormat : Integer;
+	curChar, format1, format2, format3: String;
+begin
+	LogFunctionStart('FormatFloatWithExcelFormatString');
+	
+	format1:='';
+	format2:='';
+	format3:='';
+	
+	if Length(formatString) = 0 then
+		format2 := '-""';
+	
+	inFormat := 1;
+	for i := 1 to Length(formatString) do begin
+		curChar := Copy(formatString,i,1);
+		
+		if SameText(curChar,';') then begin
+			inc(inFormat);
+			continue;
+		end;
+	
+		case inFormat of 
+			1 : format1 := format1 + curChar;
+			2 : format2 := format2 + curChar;
+			3 : format3 := format3 + curChar;
+		end;
+	end;
+	
+	if SameText(format1,'') then
+		format1 := '""';
+	if SameText(format2,'') then
+		format2 := '""';
+	if SameText(format3,'') then
+		format3 := '""';
+	
+	case inFormat of
+		1 : begin  //if only 1 format is given, automatically set the other 2
+			format2 := '-'+format1;
+			format3 := format1;
+		end; //if only 2 formats are given, automatically set the 3rd
+		2 : format3 := format1;
+	end;
+	
+	Result := FormatFloat(Format('%s;%s;%s',[format1,format2,format3]),floatValue);
+	
+	LogFunctionEnd;
+end;
+
+
 end.

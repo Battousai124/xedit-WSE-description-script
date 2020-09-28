@@ -296,7 +296,7 @@ var
 	totalCount, index : integer;
 	masterRec : IInterface;
 begin
-	LogFunctionStart('OverrideIndex');
+	// LogFunctionStart('OverrideIndex');
 	Result := -1;
 
 	if Assigned(rec) then begin 
@@ -321,7 +321,7 @@ begin
 		end;
 	end;
 	
-	LogFunctionEnd;
+	// LogFunctionEnd;
 end;
 
 //=========================================================================
@@ -777,6 +777,8 @@ begin
 		end;
 	end;
 	
+	// DebugLog(Format('curRecordStr: %s, smartSelectionTag: %s',[curRecordStr, smartSelectionTag]));
+	
 	if not SameText(smartSelectionTag,'') then begin
 		Result := true;
 		// for i := 1 to 7 do begin //this is basically for avoiding deep IF-ELSE nesting
@@ -1203,6 +1205,274 @@ begin
 	
 	LogFunctionEnd;
 end;
+
+
+//=========================================================================
+//  Read information from records utilizing smartPaths and smartSelectors and return them as CSV formatted String
+// 	for isMasterFilterMode and isWinningOverrideFilterMode: if 0: no filtering, if 1: has to be true, if 2: has to be false
+//	the result is returned in two ways, as semicolon delimited string and at the same time as a TStringList
+//=========================================================================
+function FindRecords(const pluginFilterStr, signatureFilterStr : String; const isMasterFilterMode, isWinningOverrideFilterMode : Integer; resultList : TStringList;) : String;
+var 	
+	i, j, k, pluginsCount, signaturesCount, elementCount, counter : Integer;
+	resultStr, curPluginName, curSignature, curRecordStr : String;
+	plugins, signatures : TStringList;
+	curPlugin, curGroup, curRecord : IInterface;
+	isFilteredOut : Boolean;
+begin
+	LogFunctionStart('FindRecords');
+	
+	//now resolve the two lists 
+	plugins := TStringList.Create;
+	signatures := TStringList.Create;
+	
+	try
+		resultList.Clear;
+		
+		if SameText(pluginFilterStr,'') then begin 
+			pluginsCount := FileCount;
+		end else begin
+			StringToStringList(pluginFilterStr, ';', plugins);
+			pluginsCount := plugins.Count;
+		end;
+		if SameText(signatureFilterStr,'') then begin
+			signaturesCount := 0; //just initialized, will be overwritten in the loop
+		end else begin
+			StringToStringList(signatureFilterStr, ';', signatures);
+			signaturesCount := signatures.Count;
+		end;
+		
+		// DebugLog(Format('pluginFilterStr: %s, signatureFilterStr: %s, isMasterFilterMode: %d, isWinningOverrideFilterMode: %d, pluginsCount: %d, signaturesCount: %d', [pluginFilterStr, signatureFilterStr, isMasterFilterMode, isWinningOverrideFilterMode, pluginsCount, signaturesCount]));
+		
+		counter := 0;
+		
+		i := 0;
+		while i < pluginsCount do begin
+			if SameText(pluginFilterStr,'') then begin 
+				curPlugin := FileByIndex(i);
+				curPluginName := GetFileName(curPlugin);
+			end else begin
+				curPluginName := plugins[i];
+				curPlugin := FileByName(curPluginName);
+			end;
+			
+			if SameText(signatureFilterStr,'') then 
+				signaturesCount := ElementCount2(curPlugin);
+			
+			j := 0;
+			while j < signaturesCount do begin
+				if SameText(signatureFilterStr,'') then begin
+					curSignature := Signature(ElementByIndex(curPlugin, j));
+					
+					if SameText(curSignature, 'GRUP') then 
+						curSignature := Signature(ElementByIndex(ElementByIndex(curPlugin, j),0));
+						
+					if SameText(curSignature,'') then begin
+						inc(j);
+						continue;
+					end;
+						
+					curGroup := GroupBySignature(curPlugin, curSignature);
+					// DebugLog(Format('curPluginName: %s, curSignature: %s, j: %d',[curPluginName, curSignature, j]));
+					// if Assigned(curGroup) then DebugLog(Format('group Assigned - j: %d',[j]));
+				end else begin
+					curSignature := signatures[j];
+					if SameText(curSignature,'') then begin
+						inc(j);
+						continue;
+					end;
+					curGroup := GroupBySignature(curPlugin, curSignature);
+				end;
+				
+				if SameText(curSignature,'') then begin
+					inc(j);
+					continue;
+				end;
+				
+				elementCount := ElementCount2(curGroup);
+				
+				k := 0;
+				while k < elementCount do begin
+					curRecord := ElementByIndex(curGroup,k);
+					
+					if not (ElementType(curRecord) = etMainRecord) then begin
+						inc(k);
+						continue;
+					end;
+					
+					if Assigned(curRecord) then begin 
+						isFilteredOut := false;
+						case isMasterFilterMode of 
+							1:if not IsMaster(curRecord) then
+									isFilteredOut := true;
+							2:if IsMaster(curRecord) then
+									isFilteredOut := true;
+						end;
+						
+						case isWinningOverrideFilterMode of 
+							1:if not IsWinningOverride(curRecord) then
+									isFilteredOut := true;
+							2:if IsWinningOverride(curRecord) then
+									isFilteredOut := true;
+						end;
+						
+						if not isFilteredOut then begin
+							curRecordStr := RecordToString(curRecord);
+							resultList.Add(curRecordStr);
+							if counter = 0 then begin
+								resultStr := curRecordStr;
+							end else begin
+								resultStr := resultStr + ';' + curRecordStr;
+							end;
+							inc(counter);
+						end;
+					end;
+					
+					inc(k);
+				end;
+				
+				inc(j);
+			end;
+			
+			inc(i);
+		end;
+		
+	finally
+		plugins.Free;
+		plugins := nil;
+		signatures.Free;
+		signatures := nil;
+	end;
+	
+	Result:=resultStr;
+	
+	LogFunctionEnd;
+end;
+
+
+//=========================================================================
+//  Read information from records utilizing smartPaths and smartSelectors and return them as CSV formatted String
+// 	for isMasterFilterMode and isWinningOverrideFilterMode: if 0: no filtering, if 1: has to be true, if 2: has to be false
+//	the result is returned in two ways, as semicolon delimited string and at the same time as a TStringList
+//=========================================================================
+function FilterRecords(const recordsStr, pluginFilterStr, signatureFilterStr : String; const isMasterFilterMode, isWinningOverrideFilterMode : Integer; resultList : TStringList;) : String;
+var 	
+	i, j, recordsCount, resolvedRecordsCount, counter, tmpInt : Integer;
+	resultStr, curPluginName, curSignature, curRecordStr : String;
+	records, plugins, signatures, curResolvedRecords : TStringList;
+	curRecord : IInterface;
+	isFilteredOut, curIsSmartRecordString : Boolean;
+begin
+	LogFunctionStart('FilterRecords');
+	
+	if SameText(recordsStr,'') then begin 
+		LogFunctionEnd;
+		Exit;
+	end;
+	
+	//resolve the lists 
+	records := TStringList.Create;
+	curResolvedRecords := TStringList.Create;
+	plugins := TStringList.Create;
+	plugins.Sorted := true; //so that .Find() works
+	signatures := TStringList.Create;
+	signatures.Sorted := true; //so that .Find() works
+	
+	try
+		resultList.Clear;
+	
+		StringToStringList(recordsStr, ';', records);
+		if not SameText(pluginFilterStr,'') then  
+			StringToStringList(pluginFilterStr, ';', plugins);
+		if not SameText(signatureFilterStr,'') then 
+			StringToStringList(signatureFilterStr, ';', signatures);
+		
+		counter := 0;
+		recordsCount := records.Count;
+		i := 0;
+		while i < recordsCount do begin
+			curRecordStr := records[i];
+			curIsSmartRecordString := ResolveSmartRecordString(curRecordStr, curResolvedRecords);
+			
+			if curIsSmartRecordString then begin
+				resolvedRecordsCount := curResolvedRecords.Count;
+			end else begin
+				resolvedRecordsCount := 1;
+			end;
+			
+			j := 0;
+			while j < resolvedRecordsCount do begin 
+				isFilteredOut := false;
+			
+				if curIsSmartRecordString then
+					curRecordStr := curResolvedRecords[j];
+					
+				curRecord := StringToRecord(curRecordStr);
+				
+				//always filter out records that do not exist
+				if not Assigned(curRecord) then begin
+					inc(j);
+					continue;
+				end;
+				
+				if not SameText(pluginFilterStr,'') then begin 
+					curPluginName := GetFileName(curRecord);
+					if not plugins.Find(curPluginName, tmpInt) then
+						isFilteredOut := true;
+				end;
+				
+				if not SameText(signatureFilterStr,'') then begin 
+					curSignature := Signature(curRecord);
+					if not signatures.Find(curSignature, tmpInt) then
+						isFilteredOut := true;
+				end;
+				
+				case isMasterFilterMode of 
+					1:if not IsMaster(curRecord) then
+							isFilteredOut := true;
+					2:if IsMaster(curRecord) then
+							isFilteredOut := true;
+				end;
+				
+				case isWinningOverrideFilterMode of 
+					1:if not IsWinningOverride(curRecord) then
+							isFilteredOut := true;
+					2:if IsWinningOverride(curRecord) then
+							isFilteredOut := true;
+				end;
+				
+				if not isFilteredOut then begin
+					resultList.Add(curRecordStr);
+					if counter = 0 then begin
+						resultStr := curRecordStr;
+					end else begin
+						resultStr := resultStr + ';' + curRecordStr;
+					end;
+					inc(counter);
+				end;
+				
+				inc(j);
+			end;
+			
+			inc(i);
+		end;
+		
+	finally
+		records.Free;
+		records := nil;
+		curResolvedRecords.Free;
+		curResolvedRecords := nil;
+		plugins.Free;
+		plugins := nil;
+		signatures.Free;
+		signatures := nil;
+	end;
+	
+	Result:=resultStr;
+	
+	LogFunctionEnd;
+end;
+
 
 //=========================================================================
 //  check if any plugin already uses an EditorID

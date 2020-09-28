@@ -101,6 +101,7 @@ begin
 	functions.Add('ReadRecords('); 
 	functions.Add('SelectedRecords('); 
 	functions.Add('FindRecords('); 
+//functions.Add('FindPlugins('); ???
 //functions.Add('FindFiles('); ???
 //functions.Add('ChangeRecords('); --returns a string that can contain every change that was necessary
 
@@ -244,10 +245,10 @@ function ParseFormula(const variableName : String; formula : String; const formu
 const 
 	maxRecursionLevel = 50;
 var 	
-	i, tmpInt, curType, maxPartToResolve : Integer;
+	i, tmpInt, curType, maxParameterToParse, maxParameterToResolve, curParameter : Integer;
 	tmpStr, resultStr, resultFloatStr, resultTypeStr, functionName : String;
 	resultFloat : Double;
-	resolveParts, parsePartDetails, isCustomFunction : Boolean;
+	resolveParts, isCustomFunction : Boolean;
 	formulaParts, formulaPartTypes, tempVariables : TStringList;
 begin
 	LogFunctionStart('ParseFormula');
@@ -263,16 +264,15 @@ begin
 		raise Exception.Create('Maximum formula nesting reached. Operation Aborted. Check for circular references.');
 	end;
 	
-	maxPartToResolve := -1;
+	maxParameterToParse := -1;
+	maxParameterToResolve := -1;
 	resultStr := '';
 	resultFloat := nil; // only set if there is a numeric result
 	resultFloatStr := ''; // only set if there is a numeric result
 	formulaParts := TStringList.Create;
 	formulaPartTypes := TStringList.Create;
 	tempVariables := TStringList.Create;
-	parsePartDetails :=true;
-	resolveParts := true;
-
+	
 	//0:unknown,1:String,2:Formula,3:Numeric,4:Operator,5:Pointer,6:Functions,7:Separator,8:Boolean
 	try
 		i:=0;
@@ -287,20 +287,29 @@ begin
 			formula := Copy(formula,tmpInt+1,Length(formula)-tmpInt-1);
 			
 			if SameText(functionName,'if') or SameText(functionName,'choose') then begin
-				parsePartDetails := false;
-				maxPartToResolve := 1;
+				maxParameterToParse := 0;
+				maxParameterToResolve := 1;
 			end;
 			
 			if SameText(functionName,'formulaText') then
-				resolveParts := false;
+				// resolveParts := false;
+				maxParameterToResolve := 0;
 			
 			if SameText(functionName,'with') or SameText(functionName,'switch') then
-				parsePartDetails := false;
+				maxParameterToParse := 0;
 			
+			if SameText(functionName,'formulaText') then
+				maxParameterToResolve := 0;
+			
+			if SameText(functionName,'FindRecords') then begin
+				maxParameterToParse := 5;
+				maxParameterToResolve := 5;
+			end;
+				
 			// DebugLog(Format('functionName: %s, formula: %s',[functionName, formula]));
 		end;
 	
-		GetFormulaParts(formula, operators, functions, tempVariables, formulaParts, formulaPartTypes, formulas, parsePartDetails);
+		GetFormulaParts(formula, operators, functions, tempVariables, formulaParts, formulaPartTypes, formulas, maxParameterToParse);
 		
 		if formulaParts.Count > 0 then begin 
 			//a variable defined as custom function may not contain other parts
@@ -359,19 +368,24 @@ begin
 						formulaParts.Delete(i);
 					end;
 				end;
-				if SameText(functionName,'FindRecords') then begin
-					
-				end;
 			end;
 			
+			curParameter := 1;
+			resolveParts := not (maxParameterToResolve = 0);
 			if resolveParts then begin
-				if maxPartToResolve < 0 then
-					maxPartToResolve := formulaParts.Count;
 			
 				i:=0;
-				while i < maxPartToResolve do begin
+				while i < formulaParts.Count do begin
 					curType := StrToInt(formulaPartTypes[i]);
 					case curType of 
+						7 : begin //count parameters
+							inc(curParameter);
+							if maxParameterToResolve > -1 then begin
+								if curParameter > maxParameterToResolve then
+									break;
+							end;
+						end;
+						
 						2 : begin //resolve sub-formulas
 							tmpStr := ParseFormula(Format('%s_part%d',[variableName,i]), formulaParts[i], formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
 							formulaPartTypes[i] := Copy(tmpStr,1,1);
@@ -425,7 +439,7 @@ begin
 					inc(i);
 				end;
 				
-				//calculate the rest ...this is only parts that are on the same level
+				//calculate the rest ...this is only parts that are on the same level and in between separators
 				resultStr := CalculateFormulaParts(formula, operators, formulaParts, formulaPartTypes);
 				resultTypeStr := formulaPartTypes[0];
 			end;
@@ -433,25 +447,15 @@ begin
 		
 		//calculate Function
 		if isFunction then begin 
-			if SameText(functionName,'calculate') then begin
-				if not (formulaParts.Count = 1) then 
-					raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, formulaParts.Count]));
-				
-				//formulaPartTypes[0] := 2;
+			resultStr := CalculateFunction(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, functionName, formulaParts, formulaPartTypes);
+			resultTypeStr := formulaPartTypes[0];
+			
+			if SameText(resultTypeStr,'2') then begin
+				// DebugLog(Format('before parsing result. formulaParts: %s, formulaPartTypes: %s',[formulaParts.Text, formulaPartTypes.Text]));
 				tmpStr := ParseFormula(Format('%s_part%d',[variableName,0]), formulaParts[0], formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+				// DebugLog(Format('after parsing result. formulaParts: %s, formulaPartTypes: %s',[formulaParts.Text, formulaPartTypes.Text]));
 				resultTypeStr := Copy(tmpStr,1,1);
 				resultStr := Copy(tmpStr,3,Length(tmpStr)-2);
-			end else begin			
-				resultStr := CalculateFunction(functionName, formula, formulaParts, formulaPartTypes, results, formulas);
-				resultTypeStr := formulaPartTypes[0];
-				
-				if SameText(resultTypeStr,'2') then begin
-					// DebugLog(Format('before parsing result. formulaParts: %s, formulaPartTypes: %s',[formulaParts.Text, formulaPartTypes.Text]));
-					tmpStr := ParseFormula(Format('%s_part%d',[variableName,0]), formulaParts[0], formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-					// DebugLog(Format('after parsing result. formulaParts: %s, formulaPartTypes: %s',[formulaParts.Text, formulaPartTypes.Text]));
-					resultTypeStr := Copy(tmpStr,1,1);
-					resultStr := Copy(tmpStr,3,Length(tmpStr)-2);
-				end;
 			end;
 		end;
 		
@@ -493,7 +497,7 @@ end;
 //=========================================================================
 function ParseReadRecords(const formula : String; formulaParts, formulaPartTypes : TStringList;) : String;
 var 	
-	i, tmpInt, partsCount, curSeparator  : Integer;
+	i, tmpInt, partsCount, curSeparator : Integer;
 	recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter : String;
 begin
 	LogFunctionStart('ParseReadRecords');
@@ -559,6 +563,135 @@ begin
 end;
 
 //=========================================================================
+//  find or filter records
+//=========================================================================
+function ParseFindRecords(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, outerTempVariables : TStringList; const recursionLevel : Integer; formulaParts, formulaPartTypes : TStringList;) : String;
+var 	
+	i, counter, partsCount, curSeparator, isMasterFilterMode, isWinningOverrideFilterMode, maxParameters : Integer;
+	recordsStr, pluginFilterStr, signatureFilterStr, conditionFormula, tmpStr, curRecordStr : String;
+	tmpList, tempVariables : TStringList;
+begin
+	LogFunctionStart('ParseFindRecords');
+	
+	tmpList := TStringList.Create;
+	tempVariables := TStringList.Create;
+	
+	try
+		partsCount := formulaParts.Count;
+		
+		// if partsCount < 1 then
+			// raise Exception.Create(Format('Function FindRecords was called with too less parameters. Formula: %s',[formula]));
+		
+		//set default values
+		isMasterFilterMode := 0;
+		isWinningOverrideFilterMode := 0;
+		
+		//read optional parameters
+		curSeparator := 0;
+		maxParameters := 6;
+		i := 0;
+		while curSeparator < maxParameters do begin
+			// stop the loop if we counted higher than the number of parameters that are present
+			if (i >= partsCount) then 
+				break;
+			// DebugLog(Format('curSeparator: %d, i: %d',[curSeparator, i]));
+			
+			if SameText(formulaPartTypes[i],'7') then begin
+				inc(i);
+				inc(curSeparator);
+			end;
+			
+			// stop the loop if we counted higher than the number of parameters that are present
+			if (i >= partsCount) then 
+				break;
+			// DebugLog(Format('curSeparator: %d, i: %d, formulaPartTypes[i]: %s, formulaParts[i]: %s, partsCount: %d',[curSeparator, i, formulaPartTypes[i], formulaParts[i], partsCount]));
+			
+			if not SameText(formulaPartTypes[i],'7') then begin
+				case curSeparator of 
+					0: recordsStr := formulaParts[i];
+					1: pluginFilterStr := formulaParts[i];
+					2: signatureFilterStr := formulaParts[i];
+					3:begin
+							tmpStr := formulaParts[i];
+							if SameText(tmpStr, 'true') then begin
+								isMasterFilterMode := 1;
+							end else begin 
+								if SameText(tmpStr, 'false') then 
+									isMasterFilterMode := 2;
+							end;
+						end;
+					4:begin 
+							tmpStr := formulaParts[i];
+							if SameText(tmpStr, 'true') then begin
+								isWinningOverrideFilterMode := 1;
+							end else begin 
+								if SameText(tmpStr, 'false') then 
+									isWinningOverrideFilterMode := 2;
+							end;
+						end;
+					5: conditionFormula := formulaParts[i];
+				end;
+				inc(i);
+			end;
+		end;
+		
+		//-> all parameters read from formulaParts;
+		// DebugLog(Format('recordsStr: %s, pluginFilterStr: %s, signatureFilterStr: %s, isMasterFilterMode: %d, isWinningOverrideFilterMode: %d, conditionFormula: %s, curSeparator: %d, i: %d',[recordsStr, pluginFilterStr, signatureFilterStr, isMasterFilterMode, isWinningOverrideFilterMode, conditionFormula, curSeparator, i]));
+		
+		//process the basic "Find" of "Filter" operations
+		if SameText(recordsStr,'') then begin
+			Result := FindRecords(pluginFilterStr, signatureFilterStr, isMasterFilterMode, isWinningOverrideFilterMode, tmpList);
+		end else begin
+			Result := FilterRecords(recordsStr, pluginFilterStr, signatureFilterStr, isMasterFilterMode, isWinningOverrideFilterMode, tmpList);
+		end;
+		
+		//now for each found record: 
+		//create the respective temporary variables, call the filter formula and only keep the record if the result is "true" 
+		if not SameText(conditionFormula,'') then begin
+			counter := 0;
+			Result := '';
+			
+			//copy outer variables to inner
+			i := 0;
+			while i < outerTempVariables.Count do begin
+				tempVariables.Add(outerTempVariables[i])
+				inc(i);
+			end;
+			
+			i := 0;
+			while i < tmpList.Count do begin
+				curRecordStr := tmpList[i];
+				//set temporary variable for record
+				tempVariables.Values['rec'] := '1|' + curRecordStr;
+				
+				// DebugLog(Format('i: %d, curRecordStr: %s', [i, curRecordStr]));
+				
+				//calculate the formula
+				tmpStr := ParseFormula(Format('%s_rec%d',[variableName,i]), conditionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+				//if it returns true
+				if SameText(Copy(tmpStr,3,Length(tmpStr)),'true') then begin
+					if counter = 0 then begin
+						Result := curRecordStr;
+					end else begin
+						Result := Result + ';' + curRecordStr;
+					end;
+					inc(counter);
+				end;
+				inc(i);
+			end;
+		end;
+		
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		tempVariables.Free;
+		tempVariables := nil;
+	end;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
 //  check if there is an operator between each formula part
 //=========================================================================
 procedure CheckIfThereAreOperatorsBetweenParts(const formula : String; const formulaPartTypes : TStringList;);
@@ -603,19 +736,20 @@ end;
 //=========================================================================
 //  get the parts of a formula
 //=========================================================================
-procedure GetFormulaParts(const formula : String; const operators, functions, tempVariables : TStringList; formulaParts, formulaPartTypes : TStringList; const formulas : TStringList; const parsePartDetails : Boolean);
+procedure GetFormulaParts(const formula : String; const operators, functions, tempVariables : TStringList; formulaParts, formulaPartTypes : TStringList; const formulas : TStringList; const maxParameterToParse : Integer;);
 var
-	curPos, endPos, i, counter, tmpInt, lastSeparatorEnd, previousSeparatorEnd : Integer;
+	curPos, endPos, i, counter, tmpInt, lastSeparatorEnd, previousSeparatorEnd, curParameter : Integer;
 	curPart, curChar, operator, tmpStr : String;
 	curPartType : Integer; //0:unknown,1:String,2:Formula,3:Numeric,4:Operator,5:Pointer,6:Functions,7:Separator,8:Boolean
-	isFirstPartOrAfterSeparator : Boolean;
+	isFirstPartOrAfterSeparator, parsePartDetails : Boolean;
 begin
 	LogFunctionStart('GetFormulaParts');
 	
 	formulaParts.Clear;
 	counter := 1;
 	curPos := 1;
-	
+	curParameter := 1;
+	parsePartDetails := (not (maxParameterToParse = 0));
 	// DebugLog(Format('Length of formula: %d',[Length(formula)]));
 	
 	isFirstPartOrAfterSeparator:=true;
@@ -728,6 +862,11 @@ begin
 		end;
 		
 		if (curPartType > 0) then begin
+			if (maxParameterToParse > -1) then begin 
+				if curParameter > maxParameterToParse then
+					parsePartDetails := false;
+			end;
+			
 			if parsePartDetails then begin 
 				if isFirstPartOrAfterSeparator then begin
 					if curPartType = 4 and (SameText(curPart,'-') or SameText(curPart,'+')) then begin 
@@ -742,6 +881,8 @@ begin
 				DebugLog(Format('new Formlua part added: type: %d, part: %s',[curPartType,curPart]));
 				isFirstPartOrAfterSeparator := (curPartType = 7);
 				curPart := '';
+				if curPartType = 7 then
+					inc(curParameter);
 			end else begin 
 				//everything is a formula between separators
 				if curPartType = 7 then begin
@@ -755,6 +896,7 @@ begin
 					formulaPartTypes.Add(IntToStr(curPartType));
 					DebugLog(Format('new Formlua part added: type: %d, part: %s',[curPartType,curPart]));
 					curPart := '';
+					inc(curParameter);
 				end;
 			end;
 		end else 
@@ -948,7 +1090,7 @@ end;
 //=========================================================================
 //  calculate a function
 //=========================================================================
-function CalculateFunction(const functionName, formula : String; formulaParts, formulaPartTypes, results : TStringList; const formulas : TStringList;) : String;
+function CalculateFunction(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, tempVariables : TStringList; const recursionLevel : Integer; const functionName : String; formulaParts, formulaPartTypes : TStringList;) : String;
 var
 	i, separatorsCount, partsCount, tmpInt, pickResult, intValue1, intValue2, ifLoop : Integer;
 	boolStr, resultStr, strValue1, strValue2, resultType, type1, type2, tmpStr : String;
@@ -2134,6 +2276,18 @@ begin
 						// break;
 					end;
 			
+			// ???:////////////   CALCULATE   /////////////
+					if SameText(functionName,'Calculate') then begin 
+						if not (formulaParts.Count = 1) then 
+							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+						
+						//formulaPartTypes[0] := 2;
+						resultStr := ParseFormula(variableName, formulaParts[0], formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+						resultType := Copy(resultStr,1,1);
+						resultStr := Copy(resultStr,3,Length(resultStr)-2);
+						// break;
+					end;
+
 			// 43:////////////   TRANSPOSE   /////////////
 					if SameText(functionName,'transpose') then begin 
 						if (partsCount < 1) then 
@@ -2326,6 +2480,13 @@ begin
 			// 52:////////////   READRECORDS   /////////////
 					if SameText(functionName,'ReadRecords') then begin 
 						resultStr := ParseReadRecords(formula, formulaParts, formulaPartTypes);
+						resultType := '1';
+						// break;
+					end;
+			
+			// ???:////////////   FINDRECORDS   /////////////
+					if SameText(functionName,'FindRecords') then begin 
+						resultStr := ParseFindRecords(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, formulaParts, formulaPartTypes);
 						resultType := '1';
 						// break;
 					end;
@@ -2607,99 +2768,6 @@ begin
 		end;
 		else Result := false;
 	end;	
-	
-	LogFunctionEnd;
-end;
-
-//=========================================================================
-//  format string from Excel format string
-//=========================================================================
-function FormatStringWithExcelFormatString(const formatString, strValue : String;) : String;
-var
-	i, inFormat : Integer;
-	curChar, format1: String;
-begin
-	LogFunctionStart('FormatFloatWithExcelFormatString');
-	
-	format1:='';
-	
-	inFormat := 1;
-	for i := 1 to Length(formatString) do begin
-		curChar := Copy(formatString,i,1);
-		
-		if SameText(curChar,';') then begin
-			inc(inFormat);
-			continue;
-		end;
-	
-		if inFormat = 4 then 
-			format1 := format1 + curChar;
-	end;
-	
-	Result := strValue;
-	
-	//if there is a string format
-	if inFormat > 3 then begin 
-		if SameText(format1,'') then begin
-			Result := '';
-		end else begin
-			//Excel string placeholder is @
-			Result := StringReplace(format1,'@',strValue, [rfIgnoreCase,rfReplaceAll]);
-		end;
-	end;
-	
-	LogFunctionEnd;
-end;
-
-//=========================================================================
-//  format PASCAL float from Excel format string
-//=========================================================================
-function FormatFloatWithExcelFormatString(const formatString : String; const floatValue : Double;) : String;
-var
-	i, inFormat : Integer;
-	curChar, format1, format2, format3: String;
-begin
-	LogFunctionStart('FormatFloatWithExcelFormatString');
-	
-	format1:='';
-	format2:='';
-	format3:='';
-	
-	if Length(formatString) = 0 then
-		format2 := '-""';
-	
-	inFormat := 1;
-	for i := 1 to Length(formatString) do begin
-		curChar := Copy(formatString,i,1);
-		
-		if SameText(curChar,';') then begin
-			inc(inFormat);
-			continue;
-		end;
-	
-		case inFormat of 
-			1 : format1 := format1 + curChar;
-			2 : format2 := format2 + curChar;
-			3 : format3 := format3 + curChar;
-		end;
-	end;
-	
-	if SameText(format1,'') then
-		format1 := '""';
-	if SameText(format2,'') then
-		format2 := '""';
-	if SameText(format3,'') then
-		format3 := '""';
-	
-	case inFormat of
-		1 : begin  //if only 1 format is given, automatically set the other 2
-			format2 := '-'+format1;
-			format3 := format1;
-		end; //if only 2 formats are given, automatically set the 3rd
-		2 : format3 := format1;
-	end;
-	
-	Result := FormatFloat(Format('%s;%s;%s',[format1,format2,format3]),floatValue);
 	
 	LogFunctionEnd;
 end;
