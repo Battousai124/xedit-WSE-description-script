@@ -1212,7 +1212,7 @@ end;
 // 	for isMasterFilterMode and isWinningOverrideFilterMode: if 0: no filtering, if 1: has to be true, if 2: has to be false
 //	the result is returned in two ways, as semicolon delimited string and at the same time as a TStringList
 //=========================================================================
-function FindRecords(const pluginFilterStr, signatureFilterStr : String; const isMasterFilterMode, isWinningOverrideFilterMode : Integer; resultList : TStringList;) : String;
+function FindRecords(const pluginFilterStr, signatureFilterStr, delimiter : String; const isMasterFilterMode, isWinningOverrideFilterMode, maxNumberOfResults : Integer; resultList : TStringList;) : String;
 var 	
 	i, j, k, pluginsCount, signaturesCount, elementCount, counter : Integer;
 	resultStr, curPluginName, curSignature, curRecordStr : String;
@@ -1322,9 +1322,14 @@ begin
 							if counter = 0 then begin
 								resultStr := curRecordStr;
 							end else begin
-								resultStr := resultStr + ';' + curRecordStr;
+								resultStr := resultStr + delimiter + curRecordStr;
 							end;
 							inc(counter);
+							if counter = maxNumberOfResults then begin
+								k := elementCount;
+								j := signaturesCount;
+								i := pluginsCount;
+							end;
 						end;
 					end;
 					
@@ -1355,7 +1360,7 @@ end;
 // 	for isMasterFilterMode and isWinningOverrideFilterMode: if 0: no filtering, if 1: has to be true, if 2: has to be false
 //	the result is returned in two ways, as semicolon delimited string and at the same time as a TStringList
 //=========================================================================
-function FilterRecords(const recordsStr, pluginFilterStr, signatureFilterStr : String; const isMasterFilterMode, isWinningOverrideFilterMode : Integer; resultList : TStringList;) : String;
+function FilterRecords(const recordsStr, pluginFilterStr, signatureFilterStr, delimiter : String; const isMasterFilterMode, isWinningOverrideFilterMode, maxNumberOfResults : Integer; resultList : TStringList;) : String;
 var 	
 	i, j, recordsCount, resolvedRecordsCount, counter, tmpInt : Integer;
 	resultStr, curPluginName, curSignature, curRecordStr : String;
@@ -1446,9 +1451,13 @@ begin
 					if counter = 0 then begin
 						resultStr := curRecordStr;
 					end else begin
-						resultStr := resultStr + ';' + curRecordStr;
+						resultStr := resultStr + delimiter + curRecordStr;
 					end;
 					inc(counter);
+					if counter = maxNumberOfResults then begin
+						j := resolvedRecordsCount;
+						i := recordsCount;
+					end;
 				end;
 				
 				inc(j);

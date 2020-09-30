@@ -91,7 +91,6 @@ begin
 //functions.Add('ExecutionCount(') NoOfExecution() returns numeric count of executions of the formula engine - during the first execution it will return 1
 	functions.Add('GetOutput('); //additional functions for easy scripting
 	functions.Add('SetOutput('); 
-	functions.Add('AddToOutput('); 
 //functions.Add('ReadFromFile('); FileToString(filename,returnValueIfNotFound) if filename is empty, put up a file selection box, returns the context of the file as string, and the returnValueIfNotFound if it couldnt find the file. if returnValueIfNotFound is not set, it will throw an error if it didn't find the file
 //functions.Add('SaveToFile(');  SaveToFile(varToSave,FileName,overwriteCondition,returnValue) if varToSave is empty, save all results so far, if filename is empty, show save popup, if returnValue is not set: return fileName
 //functions.Add('MsgBox('); 
@@ -302,10 +301,15 @@ begin
 				maxParameterToResolve := 0;
 			
 			if SameText(functionName,'FindRecords') then begin
-				maxParameterToParse := 5;
-				maxParameterToResolve := 5;
+				maxParameterToParse := 7;
+				maxParameterToResolve := 7;
 			end;
-				
+			
+			if SameText(functionName,'SelectedRecords') then begin
+				maxParameterToParse := 1;
+				maxParameterToResolve := 1;
+			end;
+			
 			// DebugLog(Format('functionName: %s, formula: %s',[functionName, formula]));
 		end;
 	
@@ -404,7 +408,9 @@ begin
 							if tmpInt > -1 then begin
 								resultTypeStr := tempVariables.Values[tmpStr];
 								formulaPartTypes[i] := Copy(resultTypeStr,1,1);
-								formulaParts[i] := Copy(resultTypeStr,3,Length(resultTypeStr)-2);
+								resultTypeStr := Copy(resultTypeStr,3,Length(resultTypeStr)-2);
+								formulaParts[i] := resultTypeStr;
+								DebugLog(Format('temporary variable read: %s, value: %s',[tmpStr, resultTypeStr]));
 							end else begin 
 								tmpInt := results.IndexOfName(tmpStr);
 								if tmpInt < 0 then begin
@@ -424,7 +430,7 @@ begin
 											if not SameText(resultTypeStr,'') then
 												results.Add(tmpStr + '=');
 										end;
-										DebugLog(Format('variableName: %s, value: %s',[tmpStr, resultStr]));
+										DebugLog(Format('function calculated: %s, value: %s',[tmpStr, resultStr]));
 									end;
 									formulaPartTypes[i] := resultTypeStr;
 									formulaParts[i] := resultStr;
@@ -567,14 +573,17 @@ end;
 //=========================================================================
 function ParseFindRecords(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, outerTempVariables : TStringList; const recursionLevel : Integer; formulaParts, formulaPartTypes : TStringList;) : String;
 var 	
-	i, counter, partsCount, curSeparator, isMasterFilterMode, isWinningOverrideFilterMode, maxParameters : Integer;
-	recordsStr, pluginFilterStr, signatureFilterStr, conditionFormula, tmpStr, curRecordStr : String;
-	tmpList, tempVariables : TStringList;
+	i, partsCount, curSeparator, isMasterFilterMode, isWinningOverrideFilterMode, maxParameters, maxNumberOfResults : Integer;
+	recordsStr, pluginFilterStr, signatureFilterStr, conditionFormula, tmpStr, curRecordStr, delimiter, selectionFormula : String;
+	tmpList, tempVariables, parameters, parameterTypes, results : TStringList;
 begin
 	LogFunctionStart('ParseFindRecords');
 	
 	tmpList := TStringList.Create;
 	tempVariables := TStringList.Create;
+	parameters := TStringList.Create;
+	parameterTypes := TStringList.Create;
+	results := TStringList.Create;
 	
 	try
 		partsCount := formulaParts.Count;
@@ -582,100 +591,101 @@ begin
 		// if partsCount < 1 then
 			// raise Exception.Create(Format('Function FindRecords was called with too less parameters. Formula: %s',[formula]));
 		
-		//set default values
 		isMasterFilterMode := 0;
 		isWinningOverrideFilterMode := 0;
 		
-		//read optional parameters
-		curSeparator := 0;
-		maxParameters := 6;
-		i := 0;
-		while curSeparator < maxParameters do begin
-			// stop the loop if we counted higher than the number of parameters that are present
-			if (i >= partsCount) then 
-				break;
-			// DebugLog(Format('curSeparator: %d, i: %d',[curSeparator, i]));
-			
-			if SameText(formulaPartTypes[i],'7') then begin
-				inc(i);
-				inc(curSeparator);
+		//set default values 
+		parameters.Values['5'] := ';';
+		parameters.Values['6'] := '1000';
+		parameterTypes.Values['6'] := '3';
+		
+		//read parameters
+		ReadParameters(9, formulaParts, formulaPartTypes, parameters, parameterTypes);
+		recordsStr := parameters.Values['0'];
+		pluginFilterStr := parameters.Values['1'];
+		signatureFilterStr := parameters.Values['2'];
+		if not SameText(parameterTypes.Values['3'],'') then begin 
+			tmpStr := parameters.Values['3'];
+			if SameText(tmpStr, 'true') then begin
+				isMasterFilterMode := 1;
+			end else begin 
+				if SameText(tmpStr, 'false') then 
+					isMasterFilterMode := 2;
 			end;
-			
-			// stop the loop if we counted higher than the number of parameters that are present
-			if (i >= partsCount) then 
-				break;
-			// DebugLog(Format('curSeparator: %d, i: %d, formulaPartTypes[i]: %s, formulaParts[i]: %s, partsCount: %d',[curSeparator, i, formulaPartTypes[i], formulaParts[i], partsCount]));
-			
-			if not SameText(formulaPartTypes[i],'7') then begin
-				case curSeparator of 
-					0: recordsStr := formulaParts[i];
-					1: pluginFilterStr := formulaParts[i];
-					2: signatureFilterStr := formulaParts[i];
-					3:begin
-							tmpStr := formulaParts[i];
-							if SameText(tmpStr, 'true') then begin
-								isMasterFilterMode := 1;
-							end else begin 
-								if SameText(tmpStr, 'false') then 
-									isMasterFilterMode := 2;
-							end;
-						end;
-					4:begin 
-							tmpStr := formulaParts[i];
-							if SameText(tmpStr, 'true') then begin
-								isWinningOverrideFilterMode := 1;
-							end else begin 
-								if SameText(tmpStr, 'false') then 
-									isWinningOverrideFilterMode := 2;
-							end;
-						end;
-					5: conditionFormula := formulaParts[i];
+		end;
+		if not SameText(parameterTypes.Values['4'],'') then begin 
+			tmpStr := parameters.Values['4'];
+			if SameText(tmpStr, 'true') then begin
+				isWinningOverrideFilterMode := 1;
+			end else begin 
+				if SameText(tmpStr, 'false') then 
+					isWinningOverrideFilterMode := 2;
+			end;
+		end;
+		delimiter := parameters.Values['5'];
+		if not SameText(parameterTypes.Values['6'], '3') then 
+			raise Exception.Create(Format('Function FindRecords was called with a non numeric maxNumberOfResults parameter. Formula: %s',[formula]));
+		maxNumberOfResults := StrToInt(parameters.Values['6']);
+		conditionFormula := parameters.Values['7'];
+		selectionFormula := parameters.Values['8'];
+		
+		//-> all parameters read from formulaParts;
+		DebugLog(Format('parameters: recordsStr: %s, pluginFilterStr: %s, signatureFilterStr: %s, isMasterFilterMode: %d, isWinningOverrideFilterMode: %d, delimiter: %s, maxNumberOfResults: %d, conditionFormula: %s, selectionFormula: %s',[recordsStr, pluginFilterStr, signatureFilterStr, isMasterFilterMode, isWinningOverrideFilterMode, delimiter, maxNumberOfResults, conditionFormula, selectionFormula]));
+		
+		//process the basic "Find" of "Filter" operations
+		if SameText(recordsStr,'') then begin
+			Result := FindRecords(pluginFilterStr, signatureFilterStr, delimiter, isMasterFilterMode, isWinningOverrideFilterMode, maxNumberOfResults, tmpList);
+		end else begin
+			Result := FilterRecords(recordsStr, pluginFilterStr, signatureFilterStr, delimiter, isMasterFilterMode, isWinningOverrideFilterMode, maxNumberOfResults, tmpList);
+		end;
+		
+		if (not SameText(conditionFormula,'')) or (not SameText(selectionFormula,'')) then begin
+			//copy outer variables to inner
+			CopyList(outerTempVariables, tempVariables);
+		end;
+		
+		//now for each found record: 
+		//create the respective temporary variables, call the filter formula and only keep the record if the result is "true" 
+		if SameText(conditionFormula,'') then begin
+			if not SameText(selectionFormula,'') then begin
+				CopyList(tmpList,results);
+			end;
+		end else begin 
+			i := 0;
+			while i < tmpList.Count do begin
+				curRecordStr := tmpList[i];
+				//set temporary variables
+				tempVariables.Values['i'] := '3|' + IntToStr(i + 1);
+				tempVariables.Values['rec'] := '1|' + curRecordStr;
+				// DebugLog(Format('i: %d, curRecordStr: %s', [i, curRecordStr]));
+				
+				//calculate the formula
+				tmpStr := ParseFormula(Format('%s_cond_rec%d',[variableName,i]), conditionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+				//if it returns true
+				if SameText(Copy(tmpStr,3,Length(tmpStr)),'true') then begin
+					results.Add(curRecordStr);
 				end;
 				inc(i);
 			end;
 		end;
 		
-		//-> all parameters read from formulaParts;
-		// DebugLog(Format('recordsStr: %s, pluginFilterStr: %s, signatureFilterStr: %s, isMasterFilterMode: %d, isWinningOverrideFilterMode: %d, conditionFormula: %s, curSeparator: %d, i: %d',[recordsStr, pluginFilterStr, signatureFilterStr, isMasterFilterMode, isWinningOverrideFilterMode, conditionFormula, curSeparator, i]));
-		
-		//process the basic "Find" of "Filter" operations
-		if SameText(recordsStr,'') then begin
-			Result := FindRecords(pluginFilterStr, signatureFilterStr, isMasterFilterMode, isWinningOverrideFilterMode, tmpList);
-		end else begin
-			Result := FilterRecords(recordsStr, pluginFilterStr, signatureFilterStr, isMasterFilterMode, isWinningOverrideFilterMode, tmpList);
-		end;
-		
-		//now for each found record: 
-		//create the respective temporary variables, call the filter formula and only keep the record if the result is "true" 
-		if not SameText(conditionFormula,'') then begin
-			counter := 0;
+		if (not SameText(conditionFormula,'')) or (not SameText(selectionFormula,'')) then begin
 			Result := '';
-			
-			//copy outer variables to inner
 			i := 0;
-			while i < outerTempVariables.Count do begin
-				tempVariables.Add(outerTempVariables[i])
-				inc(i);
-			end;
-			
-			i := 0;
-			while i < tmpList.Count do begin
-				curRecordStr := tmpList[i];
-				//set temporary variable for record
-				tempVariables.Values['rec'] := '1|' + curRecordStr;
-				
-				// DebugLog(Format('i: %d, curRecordStr: %s', [i, curRecordStr]));
-				
-				//calculate the formula
-				tmpStr := ParseFormula(Format('%s_rec%d',[variableName,i]), conditionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-				//if it returns true
-				if SameText(Copy(tmpStr,3,Length(tmpStr)),'true') then begin
-					if counter = 0 then begin
-						Result := curRecordStr;
-					end else begin
-						Result := Result + ';' + curRecordStr;
-					end;
-					inc(counter);
+			while i < results.Count do begin
+				curRecordStr := results[i];
+				if not SameText(selectionFormula,'') then begin 
+					//set temporary variables
+					tempVariables.Values['i'] := '3|' + IntToStr(i + 1);
+					tempVariables.Values['rec'] := '1|' + curRecordStr;
+					//calculate the formula
+					tmpStr := ParseFormula(Format('%s_sel_rec%d',[variableName,i]), selectionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+					curRecordStr := Copy(tmpStr,3,Length(tmpStr));
+				end;
+				if i = 0 then begin
+					Result := curRecordStr;
+				end else begin
+					Result := Result + delimiter + curRecordStr;
 				end;
 				inc(i);
 			end;
@@ -686,6 +696,12 @@ begin
 		tmpList := nil;
 		tempVariables.Free;
 		tempVariables := nil;
+		parameters.Free;
+		parameters := nil;
+		parameterTypes.Free;
+		parameterTypes := nil;
+		results.Free;
+		results := nil;
 	end;
 	
 	LogFunctionEnd;
@@ -863,7 +879,7 @@ begin
 		
 		if (curPartType > 0) then begin
 			if (maxParameterToParse > -1) then begin 
-				if curParameter > maxParameterToParse then
+				if curParameter >= maxParameterToParse then
 					parsePartDetails := false;
 			end;
 			
@@ -1090,12 +1106,13 @@ end;
 //=========================================================================
 //  calculate a function
 //=========================================================================
-function CalculateFunction(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, tempVariables : TStringList; const recursionLevel : Integer; const functionName : String; formulaParts, formulaPartTypes : TStringList;) : String;
+function CalculateFunction(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, outerTempVariables : TStringList; const recursionLevel : Integer; const functionName : String; formulaParts, formulaPartTypes : TStringList;) : String;
 var
-	i, separatorsCount, partsCount, tmpInt, pickResult, intValue1, intValue2, ifLoop : Integer;
-	boolStr, resultStr, strValue1, strValue2, resultType, type1, type2, tmpStr : String;
+	i, separatorsCount, curSeparator, partsCount, maxParameters, tmpInt, pickResult, intValue1, intValue2, ifLoop, counter : Integer;
+	boolStr, resultStr, strValue1, strValue2, resultType, type1, type2, tmpStr, curItm : String;
 	onePartIsAString, bothPartsAreNumeric, resultBool : Boolean;
 	floatValue1, floatValue2, resultFloat : Double;
+	parameters, parameterTypes, tempVariables, tmpList : TStringList;
 begin
 	LogFunctionStart('CalculateFunction');
 	
@@ -1103,6 +1120,7 @@ begin
 	partsCount := formulaParts.Count;
 	resultStr:='';
 	separatorsCount := 0;
+		
 	i:= 0;
 	while i <= (partsCount-1) do begin
 		if SameText(formulaPartTypes[i],'7') then begin
@@ -1111,1392 +1129,1338 @@ begin
 		inc(i);
 	end;
 	
-	//0:unknown,1:String,2:Formula,3:Numeric,4:Operator,5:Pointer,6:Functions,7:Separator,8:Boolean
+	parameters := TStringList.Create;
+	parameterTypes := TStringList.Create;
+	tmpList := TStringList.Create;
+	tempVariables := TStringList.Create;
 	
-	// for ifLoop := 1 to 52 do begin //this is basically for avoiding deep IF-ELSE nesting
-		// case ifLoop of 
-			
-			// 1:////////////   IF   /////////////
-					if SameText(functionName,'if') then begin 
-						if (separatorsCount < 1) or (separatorsCount > 2) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
+	try
+		//0:unknown,1:String,2:Formula,3:Numeric,4:Operator,5:Pointer,6:Functions,7:Separator,8:Boolean
+
+		// 1:////////////   IF   /////////////
+				if SameText(functionName,'if') then begin 
+					if (separatorsCount < 1) or (separatorsCount > 2) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					strValue1:= formulaParts[0];
+					type1:=formulaPartTypes[0];
+					
+					if not (SameText(type1,'8') or SameText(type1,'3') or SameText(strValue1,'true') or SameText(strValue1,'false')) then 
+						raise Exception.Create(Format('The first argument is no boolean or numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+					
+					if SameText(type1,'3') then begin
+						floatValue1 := StrToFloat(strValue1);
+						resultBool := (not (floatValue1 = 0));
+					end else begin
+						resultBool := SameText(strValue1,'true');
+					end;
+					
+					resultType:= '';
+					if resultBool then begin //pick the thenValue (3rd part)
+						resultStr := formulaParts[2];
+						resultType := formulaPartTypes[2];
+					end else begin //pick the elseValue (last part)
+						//pick the last result. 
+						resultStr := formulaParts[partsCount-1];
+						resultType := formulaPartTypes[partsCount-1];
+					end;
+					
+					//if there is none defined (empty between separators or after last separator), initialize with empty string
+					if SameText(resultType,'') or SameText(resultType,'7') then begin
+						resultType := '1';
+						resultStr := '';
+					end;
+					// break;
+				end;
+		
+		// 2:////////////   AND   /////////////
+				if SameText(functionName,'and') then begin 
+					if not (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultStr := 'false';
+					resultType := '8';
+					tmpInt := 0;
+					
+					//count the number of true elements and compare to total elements
+					for i := 0 to partsCount-1 do begin 
+						type1 := formulaPartTypes[i];
+						strValue1 := formulaParts[i];
 						
-						strValue1:= formulaParts[0];
-						type1:=formulaPartTypes[0];
+						if SameText(type1,'7') then 
+							continue;
 						
-						if not (SameText(type1,'8') or SameText(type1,'3') or SameText(strValue1,'true') or SameText(strValue1,'false')) then 
-							raise Exception.Create(Format('The first argument is no boolean or numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+						if SameText(type1,'8') then begin
+							if SameText(strValue1,'true') then 
+								inc(tmpInt);
+							continue;
+						end;
 						
 						if SameText(type1,'3') then begin
 							floatValue1 := StrToFloat(strValue1);
-							resultBool := (not (floatValue1 = 0));
-						end else begin
-							resultBool := SameText(strValue1,'true');
+							if not (floatValue1 = 0) then
+								inc(tmpInt);
+							continue;
 						end;
 						
-						resultType:= '';
-						if resultBool then begin //pick the thenValue (3rd part)
-							resultStr := formulaParts[2];
-							resultType := formulaPartTypes[2];
-						end else begin //pick the elseValue (last part)
-							//pick the last result. 
-							resultStr := formulaParts[partsCount-1];
-							resultType := formulaPartTypes[partsCount-1];
-						end;
-						
-						//if there is none defined (empty between separators or after last separator), initialize with empty string
-						if SameText(resultType,'') or SameText(resultType,'7') then begin
-							resultType := '1';
-							resultStr := '';
-						end;
-						// break;
+						raise Exception.Create(Format('One of the arguments is neither a boolean nor a numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
 					end;
-			
-			// 2:////////////   AND   /////////////
-					if SameText(functionName,'and') then begin 
-						resultStr := 'false';
-						resultType := '8';
-						tmpInt := 0;
+					
+					if (tmpInt = (partsCount-separatorsCount)) then  
+						resultStr := 'true';
+					// break;
+				end;
+		
+		// 3:////////////   OR   /////////////
+				if SameText(functionName,'or') then begin 
+					if not (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultStr := 'false';
+					resultType := '8';
+					tmpInt := 0;
+					
+					//count the number of true elements and compare to total elements
+					for i := 0 to partsCount-1 do begin 
+						type1 := formulaPartTypes[i];
+						strValue1 := formulaParts[i];
 						
-						//count the number of true elements and compare to total elements
-						for i := 0 to partsCount-1 do begin 
-							type1 := formulaPartTypes[i];
-							strValue1 := formulaParts[i];
-							
-							if SameText(type1,'7') then 
-								continue;
-							
-							if SameText(type1,'8') then begin
-								if SameText(strValue1,'true') then 
-									inc(tmpInt);
-								continue;
-							end;
-							
-							if SameText(type1,'3') then begin
-								floatValue1 := StrToFloat(strValue1);
-								if not (floatValue1 = 0) then
-									inc(tmpInt);
-								continue;
-							end;
-							
-							raise Exception.Create(Format('One of the arguments is neither a boolean nor a numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-						end;
-						
-						if (tmpInt = (partsCount-separatorsCount)) then  
-							resultStr := 'true';
-						// break;
-					end;
-			
-			// 3:////////////   OR   /////////////
-					if SameText(functionName,'or') then begin 
-						resultStr := 'false';
-						resultType := '8';
-						tmpInt := 0;
-						
-						//count the number of true elements and compare to total elements
-						for i := 0 to partsCount-1 do begin 
-							type1 := formulaPartTypes[i];
-							strValue1 := formulaParts[i];
-							
-							if SameText(type1,'7') then 
-								continue;
-							
-							if SameText(type1,'8') then begin
-								if SameText(strValue1,'true') then 
-									inc(tmpInt);
-								continue;
-							end;
-							
-							if SameText(type1,'3') then begin
-								floatValue1 := StrToFloat(strValue1);
-								if not (floatValue1 = 0) then
-									inc(tmpInt);
-								continue;
-							end;
-							
-							raise Exception.Create(Format('One of the arguments is neither a boolean nor a numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-						end;
-						
-						if (tmpInt > 0) then  
-							resultStr := 'true';
-						// break;
-					end;
-			
-			// 4:////////////   XOR   /////////////
-					if SameText(functionName,'xor') then begin 
-						resultStr := 'false';
-						resultType := '8';
-						tmpInt := 0;
-						
-						//count the number of true elements and compare to total elements
-						for i := 0 to partsCount-1 do begin 
-							type1 := formulaPartTypes[i];
-							strValue1 := formulaParts[i];
-							
-							if SameText(type1,'7') then 
-								continue;
-							
-							if SameText(type1,'8') then begin
-								if SameText(strValue1,'true') then 
-									inc(tmpInt);
-								continue;
-							end;
-							
-							if SameText(type1,'3') then begin
-								floatValue1 := StrToFloat(strValue1);
-								if not (floatValue1 = 0) then
-									inc(tmpInt);
-								continue;
-							end;
-							
-							raise Exception.Create(Format('One of the arguments is neither a boolean nor a numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-						end;
-						
-						if (tmpInt = 1) then  
-							resultStr := 'true';
-						// break;
-					end;
-			
-			// 5:////////////   NOT   /////////////
-					if SameText(functionName,'not') then begin 
-						resultStr := '';
-						resultBool := false;
-						resultType := '8';
-						
-						if not (partsCount = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
+						if SameText(type1,'7') then 
+							continue;
 						
 						if SameText(type1,'8') then begin
-							resultBool := not SameText(strValue1,'true');
-						end else begin 
-							if SameText(type1,'3') then begin
-								floatValue1 := StrToFloat(strValue1);
-								resultBool := (floatValue1 = 0);
-							end else begin 
-								raise Exception.Create(Format('The first argument is no numeric or boolean type. functionName: %s, argument: %s',[functionName, strValue1]));
-							end;
+							if SameText(strValue1,'true') then 
+								inc(tmpInt);
+							continue;
 						end;
+						
+						if SameText(type1,'3') then begin
+							floatValue1 := StrToFloat(strValue1);
+							if not (floatValue1 = 0) then
+								inc(tmpInt);
+							continue;
+						end;
+						
+						raise Exception.Create(Format('One of the arguments is neither a boolean nor a numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+					end;
+					
+					if (tmpInt > 0) then  
+						resultStr := 'true';
+					// break;
+				end;
+		
+		// 4:////////////   XOR   /////////////
+				if SameText(functionName,'xor') then begin 
+					if not (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultStr := 'false';
+					resultType := '8';
+					tmpInt := 0;
+					
+					//count the number of true elements and compare to total elements
+					for i := 0 to partsCount-1 do begin 
+						type1 := formulaPartTypes[i];
+						strValue1 := formulaParts[i];
+						
+						if SameText(type1,'7') then 
+							continue;
+						
+						if SameText(type1,'8') then begin
+							if SameText(strValue1,'true') then 
+								inc(tmpInt);
+							continue;
+						end;
+						
+						if SameText(type1,'3') then begin
+							floatValue1 := StrToFloat(strValue1);
+							if not (floatValue1 = 0) then
+								inc(tmpInt);
+							continue;
+						end;
+						
+						raise Exception.Create(Format('One of the arguments is neither a boolean nor a numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+					end;
+					
+					if (tmpInt = 1) then  
+						resultStr := 'true';
+					// break;
+				end;
+		
+		// 5:////////////   NOT   /////////////
+				if SameText(functionName,'not') then begin 
+					resultStr := '';
+					resultBool := false;
+					resultType := '8';
+					
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if SameText(type1,'8') then begin
+						resultBool := not SameText(strValue1,'true');
+					end else begin 
+						if SameText(type1,'3') then begin
+							floatValue1 := StrToFloat(strValue1);
+							resultBool := (floatValue1 = 0);
+						end else begin 
+							raise Exception.Create(Format('The first argument is no numeric or boolean type. functionName: %s, argument: %s',[functionName, strValue1]));
+						end;
+					end;
+					
+					if resultBool then begin 
+						resultStr := 'true';
+					end else begin
+						resultStr := 'false';
+					end;
+					// break;
+				end;
+		
+		// 6:////////////   ISLOGICAL   /////////////
+				if SameText(functionName,'isLogical') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					
+					if SameText(type1,'8') then begin
+						resultStr := 'true';
+					end else begin
+						resultStr := 'false';
+					end;
+					
+					resultType := '8';
+					// break;
+				end;
+		
+		// 7:////////////   SWITCH   /////////////
+				if SameText(functionName,'switch') then begin 
+					//extra function - needed more variables than available here
+					tmpStr := CalculateSwitch(separatorsCount,formulaParts,formulaPartTypes);
+					resultType := Copy(tmpStr,1,1);
+					resultStr := Copy(tmpStr,3,Length(tmpStr)-2);
+					// break;
+				end;
+				
+		// 8:////////////   CHOOSE   /////////////
+				if SameText(functionName,'choose') then begin 
+					if not (separatorsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultType := '1';
+					resultStr := '';
+					
+					//set default values 
+					parameters.Values['0'] := '0';
+					
+					//read parameters
+					ReadParameters(separatorsCount + 1, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					strValue1 := parameters.Values['0'];//the selected index - stored as string for string comparison
+					
+					for tmpInt:= 1 to separatorsCount do begin
+						if SameText(IntToStr(tmpInt),strValue1) then begin
+							resultType := parameterTypes.Values[strValue1];
+							if SameText(resultType,'') then begin
+								resultStr := '0';
+								resultType := '3';
+							end else begin
+								resultStr := parameters.Values[strValue1];
+							end;
+							break;
+						end;
+					end;
+					// break;
+				end;
+		
+		// 9:////////////   ABS   /////////////
+				if SameText(functionName,'abs') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultType := formulaPartTypes[0];
+					
+					if not (SameText(resultType,'3') or SameText(resultType,'8')) then 
+						raise Exception.Create(Format('The first argument is no numeric or boolean type. functionName: %s, argument: %s',[functionName, boolStr]));
+					
+					if SameText(resultType,'8') then begin 
+						boolStr := formulaParts[0];
+						
+						if not (SameText(boolStr,'true') or SameText(boolStr,'false')) then
+							raise Exception.Create(Format('Could not read boolean argument. functionName: %s, argument: %s',[functionName, boolStr]));
+						
+						resultBool := SameText(boolStr,'true');
 						
 						if resultBool then begin 
-							resultStr := 'true';
-						end else begin
-							resultStr := 'false';
-						end;
-						// break;
-					end;
-			
-			// 6:////////////   ISLOGICAL   /////////////
-					if SameText(functionName,'isLogical') then begin 
-						if not (partsCount = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						
-						if SameText(type1,'8') then begin
-							resultStr := 'true';
-						end else begin
-							resultStr := 'false';
-						end;
-						
-						resultType := '8';
-						// break;
-					end;
-			
-			// 7:////////////   SWITCH   /////////////
-					if SameText(functionName,'switch') then begin 
-						//extra function - needed more variables than available here
-						tmpStr := CalculateSwitch(separatorsCount,formulaParts,formulaPartTypes);
-						resultType := Copy(tmpStr,1,1);
-						resultStr := Copy(tmpStr,3,Length(tmpStr)-2);
-						// break;
-					end;
-					
-			// 8:////////////   CHOOSE   /////////////
-					if SameText(functionName,'choose') then begin 
-						resultType := '1';
-						resultStr := '';
-						
-						if not (separatorsCount > 0) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						strValue1 := '0'; //the selected index - stored as string for implicit conversion
-						i:=0; 
-						
-						if not SameText(formulaPartTypes[0],'7') then begin
-							strValue1 := formulaParts[0];
-							inc(i); //the loop will start with the index of the first separator
-						end;
-						
-						intValue1 := 0; //current separators counted
-						for tmpInt:= 1 to separatorsCount do begin //the amount of separators is the number of options
-							while intValue1 < tmpInt do begin 
-								if SameText(formulaPartTypes[i],'7') then begin
-									inc(intValue1);
-									inc(i);
-								end else begin
-									inc(i);
-								end;
-							end;
-							
-							if SameText(strValue1,IntToStr(tmpInt)) then begin
-								
-								resultType := '3';
-								resultStr := '0';
-								
-								//try to read out the value
-								if i < partsCount then begin
-									tmpStr := formulaPartTypes[i];
-									if not SameText(tmpStr,'7') then begin
-										resultType := tmpStr;
-										resultStr := formulaParts[i];
-										break;
-									end;
-								end;
-							end;
-						end;
-						// break;
-					end;
-			
-			// 9:////////////   ABS   /////////////
-					if SameText(functionName,'abs') then begin 
-						if not (separatorsCount = 0) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultType := formulaPartTypes[0];
-						
-						if not (SameText(resultType,'3') or SameText(resultType,'8')) then 
-							raise Exception.Create(Format('The first argument is no numeric or boolean type. functionName: %s, argument: %s',[functionName, boolStr]));
-						
-						if SameText(resultType,'8') then begin 
-							boolStr := formulaParts[0];
-							
-							if not (SameText(boolStr,'true') or SameText(boolStr,'false')) then
-								raise Exception.Create(Format('Could not read boolean argument. functionName: %s, argument: %s',[functionName, boolStr]));
-							
-							resultBool := SameText(boolStr,'true');
-							
-							if resultBool then begin 
-								resultStr := '1';
-							end else begin 
-								resultStr := '0';
-							end;
-						end else begin
-							resultFloat := StrToFloat(formulaParts[0]);
-							resultFloat := abs(resultFloat);
-							resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
-						end;
-						
-						resultType := '3';
-						// break;
-					end;
-			
-			// 10:////////////   ROUND   /////////////
-					if SameText(functionName,'round') then begin 
-						if (separatorsCount > 1) or (partsCount < 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						if not (SameText(type1,'3')) then 
-							raise Exception.Create(Format('The first argument is no numeric type. functionName: %s, argument: %s',[functionName, strValue1]));
-					
-						tmpInt := 0;
-						
-						if partsCount > 2 then begin
-							type2 := formulaPartTypes[2];
-							strValue2 := formulaParts[2];
-							if not (SameText(type2,'3')) then 
-								raise Exception.Create(Format('The second argument is no numeric type. functionName: %s, argument: %s',[functionName, strValue2]));
-							tmpInt := StrToInt(strValue2);
-						end;
-					
-						floatValue1 := StrToFloat(strValue1);
-						resultFloat := RoundTo(floatValue1,tmpInt*-1);
-						resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
-						resultType := '3';
-						// break;
-					end;
-			
-			// 11:////////////   SIGN   /////////////
-					if SameText(functionName,'sign') then begin 
-						if (separatorsCount > 0) or (partsCount < 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						if not (SameText(type1,'3') or SameText(type1,'8')) then 
-							raise Exception.Create(Format('The first argument is no numeric or boolean value. functionName: %s, argument: %s',[functionName, strValue1]));
-
-						if SameText(type1,'3') then begin 
-							floatValue1 := StrToFloat(strValue1);
-							if floatValue1 = 0 then
-								resultStr := '0';
-							if floatValue1 < 0 then 
-								resultStr := '-1';
-							if floatValue1 > 0 then 
-								resultStr := '1';
-						end else begin
+							resultStr := '1';
+						end else begin 
 							resultStr := '0';
-							if SameText(strValue1,'true') then
-								resultStr := '1';
 						end;
-					
-						resultType := '3';
-						// break;
+					end else begin
+						resultFloat := StrToFloat(formulaParts[0]);
+						resultFloat := abs(resultFloat);
+						resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
 					end;
-			
-			// 12:////////////   MOD   /////////////
-					if SameText(functionName,'mod') then begin 
-						if (separatorsCount > 1) or (not (partsCount = 3)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
+					
+					resultType := '3';
+					// break;
+				end;
+		
+		// 10:////////////   ROUND   /////////////
+				if SameText(functionName,'round') then begin 
+					if (separatorsCount > 1) or (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if not (SameText(type1,'3')) then 
+						raise Exception.Create(Format('The first argument is no numeric type. functionName: %s, argument: %s',[functionName, strValue1]));
+				
+					tmpInt := 0;
+					
+					if partsCount > 2 then begin
 						type2 := formulaPartTypes[2];
 						strValue2 := formulaParts[2];
-								
-						if not (SameText(type1,'3') and SameText(type2,'3')) then 
-							raise Exception.Create(Format('At least one of the arguments is no numeric type. functionName: %s, first argument: %s, second argument: %s',[functionName, strValue1, strValue2]));
-					
-						floatValue1 := StrToFloat(strValue1);
-						floatValue2 := StrToFloat(strValue2);
-						resultFloat := floatValue1 - floatValue2 * Int(floatValue1 / floatValue2);
-						resultBool := (floatValue1 < 0) xor (floatValue2 < 0);
-						if resultBool then 
-							resultFloat := resultFloat + floatValue2;
-						resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
-						resultType := '3';
-						// break;
+						if not (SameText(type2,'3')) then 
+							raise Exception.Create(Format('The second argument is no numeric type. functionName: %s, argument: %s',[functionName, strValue2]));
+						tmpInt := StrToInt(strValue2);
 					end;
-			
-			// 13:////////////   POWER   /////////////
-					if SameText(functionName,'power') then begin 
-						if not ((separatorsCount = 1) and (partsCount > 1) and (partsCount < 4)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						if not SameText(type1,'3') then 
-							raise Exception.Create(Format('The first argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-						floatValue1 := StrToFloat(strValue1);
-						
-						floatValue2 := 0;
-						if partsCount = 3 then begin 
-							type2 := formulaPartTypes[2];
-							strValue2 := formulaParts[2];
-								
-							if not SameText(type2,'3') then 
-								raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+				
+					floatValue1 := StrToFloat(strValue1);
+					resultFloat := RoundTo(floatValue1,tmpInt*-1);
+					resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
+					resultType := '3';
+					// break;
+				end;
+		
+		// 11:////////////   SIGN   /////////////
+				if SameText(functionName,'sign') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if not (SameText(type1,'3') or SameText(type1,'8')) then 
+						raise Exception.Create(Format('The first argument is no numeric or boolean value. functionName: %s, argument: %s',[functionName, strValue1]));
 
-							floatValue2 := StrToFloat(strValue2);
-						end;
-						
-						if floatValue1 = 0 then begin
-							resultStr := 0;
-						end else begin
-							
-							resultFloat := Power(floatValue1,floatValue2);
-							resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
-						end;
-						resultType := '3';
-						// break;
-					end;
-			
-			// 14:////////////   MAX   /////////////
-					if SameText(functionName,'max') then begin 
-						if not (partsCount > 0) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultFloat := 0;
-						
-						i := 0;
-						resultBool := false; 
-						while i < partsCount do begin
-							type1 := formulaPartTypes[i];
-							
-							if SameText(type1,'7') then begin
-								if i > 0 then begin
-									if SameText(formulaPartTypes[i-1],'7') then begin
-										resultBool := true;
-										if 0 > resultFloat then
-											resultFloat := 0;
-									end;
-								end else begin
-									if (i = 0) or (i = (partsCount-1)) then begin
-										resultBool := true;
-										if 0 > resultFloat then
-											resultFloat := 0;
-									end;
-								end;
-							end else begin
-								strValue1 := formulaParts[i];
-								if not SameText(type1,'3') then 
-									raise Exception.Create(Format('At least one of the arguments is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-								
-								if not resultBool then begin //always initialize with the first value
-									resultFloat := StrToFloat(strValue1);
-									resultBool := true;
-								end else begin
-									floatValue1 := StrToFloat(strValue1);
-									if floatValue1 > resultFloat then 
-										resultFloat := floatValue1;
-								end;
-							end;
-							
-							inc(i);
-						end;
-						resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
-						resultType := '3';
-						// break;
-					end;
-			
-			// 15:////////////   MIN   /////////////
-					if SameText(functionName,'min') then begin 
-						if not (partsCount > 0) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultFloat := 0;
-						
-						i := 0;
-						resultBool := false; 
-						while i < partsCount do begin
-							type1 := formulaPartTypes[i];
-							
-							if SameText(type1,'7') then begin
-								if i > 0 then begin
-									if SameText(formulaPartTypes[i-1],'7') then begin
-										resultBool := true;
-										if 0 < resultFloat then
-											resultFloat := 0;
-									end;
-								end else begin
-									if (i = 0) or (i = (partsCount-1)) then begin
-										resultBool := true;
-										if 0 < resultFloat then
-											resultFloat := 0;
-									end;
-								end;
-							end else begin
-								strValue1 := formulaParts[i];
-								if not SameText(type1,'3') then 
-									raise Exception.Create(Format('At least one of the arguments is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-								
-								if not resultBool then begin //always initialize with the first value
-									resultFloat := StrToFloat(strValue1);
-									resultBool := true;
-								end else begin
-									floatValue1 := StrToFloat(strValue1);
-									if floatValue1 < resultFloat then 
-										resultFloat := floatValue1;
-								end;
-							end;
-							
-							inc(i);
-						end;
-						resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
-						resultType := '3';
-						// break;
-					end;
-			
-			// 16:////////////   SUM   /////////////
-					if SameText(functionName,'sum') then begin 
-						if not (partsCount > 0) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultFloat := 0;
-						
-						i := 0;
-						while i < partsCount do begin
-							type1 := formulaPartTypes[i];
-							
-							if not SameText(type1,'7') then begin
-								strValue1 := formulaParts[i];
-								if not SameText(type1,'3') then 
-									raise Exception.Create(Format('At least one of the arguments is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-								
-								floatValue1 := StrToFloat(strValue1);
-								resultFloat := resultFloat + floatValue1;
-							end;
-							
-							inc(i);
-						end;
-						resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
-						resultType := '3';
-						// break;
-					end;
-			
-			// 17:////////////   ISODD   /////////////
-					if SameText(functionName,'isOdd') then begin 
-						if not (partsCount = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						if not SameText(type1,'3') then 
-							raise Exception.Create(Format('The first argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-						
+					if SameText(type1,'3') then begin 
 						floatValue1 := StrToFloat(strValue1);
-						
-						//resultBool := Odd(floatValue1); //does not work in xEdit scripts -> use modulo		
-						floatValue2 := 2;
-						resultFloat := floatValue1 mod floatValue2; //works with built in modulo function, no need to calculate it manually
-						//resultFloat := floatValue1 - floatValue2 * Int(floatValue1 / floatValue2);
-						// resultBool := (floatValue1 < 0) xor (floatValue2 < 0);
-						// if resultBool then 
-							// resultFloat := resultFloat + floatValue2;
-						
-						resultBool := not(resultFloat = 0);
-						
-						if resultBool then begin
-							resultStr := 'true';
-						end else begin
-							resultStr := 'false';
-						end;
-						resultType := '8';
-						// break;
+						if floatValue1 = 0 then
+							resultStr := '0';
+						if floatValue1 < 0 then 
+							resultStr := '-1';
+						if floatValue1 > 0 then 
+							resultStr := '1';
+					end else begin
+						resultStr := '0';
+						if SameText(strValue1,'true') then
+							resultStr := '1';
 					end;
-			
-			// 18:////////////   ISEVEN   /////////////
-					if SameText(functionName,'isEven') then begin 
-						if not (partsCount = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						if not SameText(type1,'3') then 
-							raise Exception.Create(Format('The first argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-						
-						floatValue1 := StrToFloat(strValue1);
-						
-						//resultBool := Odd(floatValue1); //does not work in xEdit scripts -> use modulo		
-						floatValue2 := 2;
-						resultFloat := floatValue1 mod floatValue2; //works with built in modulo function, no need to calculate it manually
-						//resultFloat := floatValue1 - floatValue2 * Int(floatValue1 / floatValue2);
-						// resultBool := (floatValue1 < 0) xor (floatValue2 < 0);
-						// if resultBool then 
-							// resultFloat := resultFloat + floatValue2;
-						
-						resultBool := (resultFloat = 0);
-						
-						if resultBool then begin
-							resultStr := 'true';
-						end else begin
-							resultStr := 'false';
-						end;
-						resultType := '8';
-						// break;
-					end;
-			
-			// 19:////////////   ISNUMBER   /////////////
-					if SameText(functionName,'isNumber') then begin 
-						if not (partsCount = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						
-						if SameText(type1,'3') then begin
-							resultStr := 'true';
-						end else begin
-							resultStr := 'false';
-						end;
-						
-						resultType := '8';
-						// break;
-					end;
-			
-			// 20:////////////   DEC2HEX   /////////////
-					if SameText(functionName,'dec2hex') then begin 
-						if not ((separatorsCount < 2) and (partsCount > 0) and (partsCount < 4)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						if not (SameText(type1,'3')) then 
-							raise Exception.Create(Format('The first argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
-							
-						floatValue1 := StrToFloat(strValue1);
-						intValue1 := Int(floatValue1);
-
-						intValue2 := -1;
-						if partsCount = 3 then begin
-							type2 := formulaPartTypes[2];
-							strValue2 := formulaParts[2];
-									
-							if not (SameText(type2,'3')) then 
-								raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-									
-							floatValue2 := StrToFloat(strValue2);
-							intValue2 := Int(floatValue2);
-						end;
-						
-						//how it is used in some xEdit internals
-						//IntToHex64((FormID.ToCardinal and $00FFFFFF),6)
-						//IntToHex64(wbCRC32App, 8)
-						//IntToHex(Int64(Cardinal(CurrentRec.Signature)), 8)
-						//IntToHex(i, 3)
-						//RecordByFormID(f, StrToInt('$' + id), true);
+				
+					resultType := '3';
+					// break;
+				end;
+		
+		// 12:////////////   MOD   /////////////
+				if SameText(functionName,'mod') then begin 
+					if (separatorsCount > 1) or (not (partsCount = 3)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
 					
-						resultStr := IntToHex64(intValue1, intValue2);
-						resultType := '1';
-						// break;
-					end;
-			
-			// 21:////////////   HEX2DEC   /////////////
-					if SameText(functionName,'hex2dec') then begin 
-						if not ((separatorsCount = 0) and (partsCount = 1)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						intValue1 := StrToInt('$'+strValue1);
-						//floatValue1 := StrToFloat('$'+strValue1);
-						
-						resultStr := IntToStr(intValue1);
-						//resultStr := FormatFloat('0.##########;-0.##########;"0"',floatValue1);
-						resultType := '3';
-						// break;
-					end;
-			
-			// 22:////////////   UPPER   /////////////
-					if SameText(functionName,'upper') then begin 
-						if (separatorsCount > 0) or (not (partsCount = 1)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-								
-						resultStr := UpperCase(strValue1);
-						resultType := '1';
-						// break;
-					end;
-			
-			// 23:////////////   LOWER   /////////////
-					if SameText(functionName,'lower') then begin 
-						if (separatorsCount > 0) or (not (partsCount = 1)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-								
-						resultStr := LowerCase(strValue1);
-						resultType := '1';
-						// break;
-					end;
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					type2 := formulaPartTypes[2];
+					strValue2 := formulaParts[2];
+							
+					if not (SameText(type1,'3') and SameText(type2,'3')) then 
+						raise Exception.Create(Format('At least one of the arguments is no numeric type. functionName: %s, first argument: %s, second argument: %s',[functionName, strValue1, strValue2]));
+				
+					floatValue1 := StrToFloat(strValue1);
+					floatValue2 := StrToFloat(strValue2);
+					resultFloat := floatValue1 - floatValue2 * Int(floatValue1 / floatValue2);
+					resultBool := (floatValue1 < 0) xor (floatValue2 < 0);
+					if resultBool then 
+						resultFloat := resultFloat + floatValue2;
+					resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
+					resultType := '3';
+					// break;
+				end;
+		
+		// 13:////////////   POWER   /////////////
+				if SameText(functionName,'power') then begin 
+					if not ((separatorsCount = 1) and (partsCount > 1) and (partsCount < 4)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
 					
-			// 24:////////////   LEFT   /////////////
-					if SameText(functionName,'left') then begin 
-						if (separatorsCount > 1) or (partsCount < 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						tmpInt := 1;
-						
-						if partsCount > 2 then begin
-							type2 := formulaPartTypes[2];
-							strValue2 := formulaParts[2];
-							
-							if not (SameText(type2,'3')) then 
-								raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-							
-							tmpInt := StrToInt(strValue2);
-						end;
-						
-						resultStr := Copy(strValue1,1,tmpInt);
-						resultType := '1';
-						// break;
-					end;
-			
-			// 25:////////////   RIGHT   /////////////
-					if SameText(functionName,'right') then begin 
-						if (separatorsCount > 1) or (partsCount < 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						tmpInt := 1;
-						
-						if partsCount > 2 then begin
-							type2 := formulaPartTypes[2];
-							strValue2 := formulaParts[2];
-							
-							if not (SameText(type2,'3')) then 
-								raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-							
-							tmpInt := StrToInt(strValue2);
-						end;
-						
-						resultStr := ReverseString(Copy(ReverseString(strValue1),1,tmpInt));
-						resultType := '1';
-						// break;
-					end;
-			
-			// 26:////////////   MID   /////////////
-					if SameText(functionName,'mid') then begin 
-						if (separatorsCount < 1) or (separatorsCount > 2) or (partsCount < 3) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if not SameText(type1,'3') then 
+						raise Exception.Create(Format('The first argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+					floatValue1 := StrToFloat(strValue1);
+					
+					floatValue2 := 0;
+					if partsCount = 3 then begin 
 						type2 := formulaPartTypes[2];
 						strValue2 := formulaParts[2];
-						
+							
 						if not SameText(type2,'3') then 
 							raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-						intValue2 := StrToInt(strValue2);
-						
-						tmpInt := 1;
-						
-						if partsCount > 4 then begin
-							type2 := formulaPartTypes[4]; //re-used
-							strValue2 := formulaParts[4];
-							
-							if not (SameText(type2,'3')) then 
-								raise Exception.Create(Format('The third argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-							
-							tmpInt := StrToInt(strValue2);
-						end;
-						
-						resultStr := Copy(strValue1,intValue2,tmpInt);
-						resultType := '1';
-						// break;
+
+						floatValue2 := StrToFloat(strValue2);
 					end;
-			
-			// 27:////////////   TRIM   /////////////
-					if SameText(functionName,'trim') then begin 
-						if (separatorsCount > 0) or (not (partsCount = 1)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
+					
+					if floatValue1 = 0 then begin
+						resultStr := 0;
+					end else begin
 						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-								
-						resultStr := Trim(strValue1);
-						resultType := '1';
-						// break;
+						resultFloat := Power(floatValue1,floatValue2);
+						resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
 					end;
-			
-			// 28:////////////   TRIMLEFT   /////////////
-					if SameText(functionName,'trimLeft') then begin 
-						if (separatorsCount > 0) or (not (partsCount = 1)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
+					resultType := '3';
+					// break;
+				end;
+		
+		// 14:////////////   MAX   /////////////
+				if SameText(functionName,'max') then begin 
+					if not (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultFloat := 0;
+					
+					i := 0;
+					resultBool := false; 
+					while i < partsCount do begin
+						type1 := formulaPartTypes[i];
 						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-								
-						resultStr := TrimLeft(strValue1);
-						resultType := '1';
-						// break;
-					end;
-			
-			// 29:////////////   TRIMRIGHT   /////////////
-					if SameText(functionName,'trimRight') then begin 
-						if (separatorsCount > 0) or (not (partsCount = 1)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-								
-						resultStr := TrimRight(strValue1);
-						resultType := '1';
-						// break;
-					end;
-			
-			
-			// 30:////////////   LEN   /////////////
-					if SameText(functionName,'len') then begin 
-						if (separatorsCount > 0) or (not (partsCount = 1)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-								
-						resultStr := Length(strValue1);
-						resultType := '3';
-						// break;
-					end;
-			
-			// 31:////////////   TEXT   /////////////
-					if SameText(functionName,'text') then begin 
-						if (separatorsCount > 1) or (partsCount < 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						if SameText(type1,'3') then 
-							floatValue1 := StrToFloat(strValue1);
-						
-						if partsCount > 2 then begin
-							type2 := formulaPartTypes[2];
-							strValue2 := formulaParts[2];
-							
-							if not (SameText(type2,'1')) then 
-								raise Exception.Create(Format('The second argument is no string value. functionName: %s, argument: %s',[functionName, strValue2]));
-							
-							if SameText(type1,'3') then begin
-								resultStr := FormatFloatWithExcelFormatString(strValue2,floatValue1);
+						if SameText(type1,'7') then begin
+							if i > 0 then begin
+								if SameText(formulaPartTypes[i-1],'7') then begin
+									resultBool := true;
+									if 0 > resultFloat then
+										resultFloat := 0;
+								end;
 							end else begin
-								resultStr := FormatStringWithExcelFormatString(strValue2,strValue1);
+								if (i = 0) or (i = (partsCount-1)) then begin
+									resultBool := true;
+									if 0 > resultFloat then
+										resultFloat := 0;
+								end;
 							end;
-						end else begin //this is how Excel behaves if no format was given
-							if SameText(type1,'3') then begin 
-								resultStr := FormatFloat('"";-"";""',floatValue1); 
+						end else begin
+							strValue1 := formulaParts[i];
+							if not SameText(type1,'3') then 
+								raise Exception.Create(Format('At least one of the arguments is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+							
+							if not resultBool then begin //always initialize with the first value
+								resultFloat := StrToFloat(strValue1);
+								resultBool := true;
 							end else begin
-								resultStr := strValue1;
+								floatValue1 := StrToFloat(strValue1);
+								if floatValue1 > resultFloat then 
+									resultFloat := floatValue1;
 							end;
 						end;
 						
-						resultType := '1';
-						// break;
+						inc(i);
 					end;
-			
-			// 32:////////////   VALUE   /////////////
-					if SameText(functionName,'value') then begin 
-						if (separatorsCount > 1) or (partsCount < 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
+					resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
+					resultType := '3';
+					// break;
+				end;
+		
+		// 15:////////////   MIN   /////////////
+				if SameText(functionName,'min') then begin 
+					if not (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultFloat := 0;
+					
+					i := 0;
+					resultBool := false; 
+					while i < partsCount do begin
+						type1 := formulaPartTypes[i];
 						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						// DebugLog(Format('strValue1: %s',[strValue1]));
-						
-						type2 := '1'; //string
-						strValue2 := ''; //default default value
-						
-						if partsCount > 2 then begin
-							type2 := formulaPartTypes[2];
-							strValue2 := formulaParts[2]; //defined default value
+						if SameText(type1,'7') then begin
+							if i > 0 then begin
+								if SameText(formulaPartTypes[i-1],'7') then begin
+									resultBool := true;
+									if 0 < resultFloat then
+										resultFloat := 0;
+								end;
+							end else begin
+								if (i = 0) or (i = (partsCount-1)) then begin
+									resultBool := true;
+									if 0 < resultFloat then
+										resultFloat := 0;
+								end;
+							end;
+						end else begin
+							strValue1 := formulaParts[i];
+							if not SameText(type1,'3') then 
+								raise Exception.Create(Format('At least one of the arguments is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+							
+							if not resultBool then begin //always initialize with the first value
+								resultFloat := StrToFloat(strValue1);
+								resultBool := true;
+							end else begin
+								floatValue1 := StrToFloat(strValue1);
+								if floatValue1 < resultFloat then 
+									resultFloat := floatValue1;
+							end;
 						end;
+						
+						inc(i);
+					end;
+					resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
+					resultType := '3';
+					// break;
+				end;
+		
+		// 16:////////////   SUM   /////////////
+				if SameText(functionName,'sum') then begin 
+					if not (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values - none 					
+					//read parameters
+					ReadParameters(separatorsCount + 1, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					
+					resultFloat := 0;
+					i := 0;
+					while i < parameters.Count do begin
+						type1 := parameterTypes.ValueFromIndex[i];
+						if not SameText(type1,'3') then 
+							raise Exception.Create(Format('At least one of the arguments is no numeric value. functionName: %s, formula: %s',[functionName, formula]));
+						strValue1 := parameters.ValueFromIndex[i];
+						floatValue1 := StrToFloat(strValue1);
+						resultFloat := resultFloat + floatValue1;
+						inc(i);
+					end;
+					
+					resultStr := FormatFloat('0.##########;-0.##########;"0"',resultFloat);
+					resultType := '3';
+					// break;
+				end;
+		
+		// 17:////////////   ISODD   /////////////
+				if SameText(functionName,'isOdd') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if not SameText(type1,'3') then 
+						raise Exception.Create(Format('The first argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+					
+					floatValue1 := StrToFloat(strValue1);
+					
+					//resultBool := Odd(floatValue1); //does not work in xEdit scripts -> use modulo		
+					floatValue2 := 2;
+					resultFloat := floatValue1 mod floatValue2; //works with built in modulo function, no need to calculate it manually
+					//resultFloat := floatValue1 - floatValue2 * Int(floatValue1 / floatValue2);
+					// resultBool := (floatValue1 < 0) xor (floatValue2 < 0);
+					// if resultBool then 
+						// resultFloat := resultFloat + floatValue2;
+					
+					resultBool := not(resultFloat = 0);
+					
+					if resultBool then begin
+						resultStr := 'true';
+					end else begin
+						resultStr := 'false';
+					end;
+					resultType := '8';
+					// break;
+				end;
+		
+		// 18:////////////   ISEVEN   /////////////
+				if SameText(functionName,'isEven') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if not SameText(type1,'3') then 
+						raise Exception.Create(Format('The first argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+					
+					floatValue1 := StrToFloat(strValue1);
+					
+					//resultBool := Odd(floatValue1); //does not work in xEdit scripts -> use modulo		
+					floatValue2 := 2;
+					resultFloat := floatValue1 mod floatValue2; //works with built in modulo function, no need to calculate it manually
+					//resultFloat := floatValue1 - floatValue2 * Int(floatValue1 / floatValue2);
+					// resultBool := (floatValue1 < 0) xor (floatValue2 < 0);
+					// if resultBool then 
+						// resultFloat := resultFloat + floatValue2;
+					
+					resultBool := (resultFloat = 0);
+					
+					if resultBool then begin
+						resultStr := 'true';
+					end else begin
+						resultStr := 'false';
+					end;
+					resultType := '8';
+					// break;
+				end;
+		
+		// 19:////////////   ISNUMBER   /////////////
+				if SameText(functionName,'isNumber') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					
+					if SameText(type1,'3') then begin
+						resultStr := 'true';
+					end else begin
+						resultStr := 'false';
+					end;
+					
+					resultType := '8';
+					// break;
+				end;
+		
+		// 20:////////////   DEC2HEX   /////////////
+				if SameText(functionName,'dec2hex') then begin 
+					if not ((separatorsCount < 2) and (partsCount > 0) and (partsCount < 4)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if not (SameText(type1,'3')) then 
+						raise Exception.Create(Format('The first argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue1]));
+						
+					floatValue1 := StrToFloat(strValue1);
+					intValue1 := Int(floatValue1);
+
+					intValue2 := -1;
+					if partsCount = 3 then begin
+						type2 := formulaPartTypes[2];
+						strValue2 := formulaParts[2];
+								
+						if not (SameText(type2,'3')) then 
+							raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+								
+						floatValue2 := StrToFloat(strValue2);
+						intValue2 := Int(floatValue2);
+					end;
+					
+					//how it is used in some xEdit internals
+					//IntToHex64((FormID.ToCardinal and $00FFFFFF),6)
+					//IntToHex64(wbCRC32App, 8)
+					//IntToHex(Int64(Cardinal(CurrentRec.Signature)), 8)
+					//IntToHex(i, 3)
+					//RecordByFormID(f, StrToInt('$' + id), true);
+				
+					resultStr := IntToHex64(intValue1, intValue2);
+					resultType := '1';
+					// break;
+				end;
+		
+		// 21:////////////   HEX2DEC   /////////////
+				if SameText(functionName,'hex2dec') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					intValue1 := StrToInt('$'+strValue1);
+					//floatValue1 := StrToFloat('$'+strValue1);
+					
+					resultStr := IntToStr(intValue1);
+					//resultStr := FormatFloat('0.##########;-0.##########;"0"',floatValue1);
+					resultType := '3';
+					// break;
+				end;
+		
+		// 22:////////////   UPPER   /////////////
+				if SameText(functionName,'upper') then begin 
+					if (separatorsCount > 0) or (not (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+							
+					resultStr := UpperCase(strValue1);
+					resultType := '1';
+					// break;
+				end;
+		
+		// 23:////////////   LOWER   /////////////
+				if SameText(functionName,'lower') then begin 
+					if (separatorsCount > 0) or (not (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+							
+					resultStr := LowerCase(strValue1);
+					resultType := '1';
+					// break;
+				end;
+				
+		// 24:////////////   LEFT   /////////////
+				if SameText(functionName,'left') then begin 
+					if (separatorsCount > 1) or (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					tmpInt := 1;
+					
+					if partsCount > 2 then begin
+						type2 := formulaPartTypes[2];
+						strValue2 := formulaParts[2];
+						
+						if not (SameText(type2,'3')) then 
+							raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+						
+						tmpInt := StrToInt(strValue2);
+					end;
+					
+					resultStr := Copy(strValue1,1,tmpInt);
+					resultType := '1';
+					// break;
+				end;
+		
+		// 25:////////////   RIGHT   /////////////
+				if SameText(functionName,'right') then begin 
+					if (separatorsCount > 1) or (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					tmpInt := 1;
+					
+					if partsCount > 2 then begin
+						type2 := formulaPartTypes[2];
+						strValue2 := formulaParts[2];
+						
+						if not (SameText(type2,'3')) then 
+							raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+						
+						tmpInt := StrToInt(strValue2);
+					end;
+					
+					resultStr := ReverseString(Copy(ReverseString(strValue1),1,tmpInt));
+					resultType := '1';
+					// break;
+				end;
+		
+		// 26:////////////   MID   /////////////
+				if SameText(functionName,'mid') then begin 
+					if (separatorsCount < 1) or (separatorsCount > 2) or (partsCount < 3) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					type2 := formulaPartTypes[2];
+					strValue2 := formulaParts[2];
+					
+					if not SameText(type2,'3') then 
+						raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+					intValue2 := StrToInt(strValue2);
+					
+					tmpInt := 1;
+					
+					if partsCount > 4 then begin
+						type2 := formulaPartTypes[4]; //re-used
+						strValue2 := formulaParts[4];
+						
+						if not (SameText(type2,'3')) then 
+							raise Exception.Create(Format('The third argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+						
+						tmpInt := StrToInt(strValue2);
+					end;
+					
+					resultStr := Copy(strValue1,intValue2,tmpInt);
+					resultType := '1';
+					// break;
+				end;
+		
+		// 27:////////////   TRIM   /////////////
+				if SameText(functionName,'trim') then begin 
+					if (separatorsCount > 0) or (not (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+							
+					resultStr := Trim(strValue1);
+					resultType := '1';
+					// break;
+				end;
+		
+		// 28:////////////   TRIMLEFT   /////////////
+				if SameText(functionName,'trimLeft') then begin 
+					if (separatorsCount > 0) or (not (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+							
+					resultStr := TrimLeft(strValue1);
+					resultType := '1';
+					// break;
+				end;
+		
+		// 29:////////////   TRIMRIGHT   /////////////
+				if SameText(functionName,'trimRight') then begin 
+					if (separatorsCount > 0) or (not (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+							
+					resultStr := TrimRight(strValue1);
+					resultType := '1';
+					// break;
+				end;
+		
+		
+		// 30:////////////   LEN   /////////////
+				if SameText(functionName,'len') then begin 
+					if (separatorsCount > 0) or (not (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+							
+					resultStr := Length(strValue1);
+					resultType := '3';
+					// break;
+				end;
+		
+		// 31:////////////   TEXT   /////////////
+				if SameText(functionName,'text') then begin 
+					if (separatorsCount > 1) or (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if SameText(type1,'3') then 
+						floatValue1 := StrToFloat(strValue1);
+					
+					if partsCount > 2 then begin
+						type2 := formulaPartTypes[2];
+						strValue2 := formulaParts[2];
+						
+						if not (SameText(type2,'1')) then 
+							raise Exception.Create(Format('The second argument is no string value. functionName: %s, argument: %s',[functionName, strValue2]));
 						
 						if SameText(type1,'3') then begin
-							resultStr := strValue1;
-							resultType := type1;
+							resultStr := FormatFloatWithExcelFormatString(strValue2,floatValue1);
 						end else begin
-							if SameText(type2,'8') then begin //bool -> always return default value
+							resultStr := FormatStringWithExcelFormatString(strValue2,strValue1);
+						end;
+					end else begin //this is how Excel behaves if no format was given
+						if SameText(type1,'3') then begin 
+							resultStr := FormatFloat('"";-"";""',floatValue1); 
+						end else begin
+							resultStr := strValue1;
+						end;
+					end;
+					
+					resultType := '1';
+					// break;
+				end;
+		
+		// 32:////////////   VALUE   /////////////
+				if SameText(functionName,'value') then begin 
+					if (separatorsCount > 0) or (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					// DebugLog(Format('strValue1: %s',[strValue1]));
+					
+					type2 := '1'; //string
+					strValue2 := ''; //default default value
+					
+					if partsCount > 2 then begin
+						type2 := formulaPartTypes[2];
+						strValue2 := formulaParts[2]; //defined default value
+					end;
+					
+					if SameText(type1,'3') then begin
+						resultStr := strValue1;
+						resultType := type1;
+					end else begin
+						if SameText(type2,'8') then begin //bool -> always return default value
+							resultStr := strValue2;
+							resultType := type2;
+						end else begin 
+							//val(strValue1,floatValue1,tmpInt); //not allowed in xEdit scripts
+							if isNumeric(strValue1) then begin
+								floatValue1 := StrToFloat(strValue1);
+								resultStr := FormatFloat('0.##########;-0.##########;"0"',floatValue1);
+								resultType := '3';
+							end else begin
 								resultStr := strValue2;
 								resultType := type2;
-							end else begin 
-								//val(strValue1,floatValue1,tmpInt); //not allowed in xEdit scripts
-								if isNumeric(strValue1) then begin
-									floatValue1 := StrToFloat(strValue1);
-									resultStr := FormatFloat('0.##########;-0.##########;"0"',floatValue1);
-									resultType := '3';
-								end else begin
-									resultStr := strValue2;
-									resultType := type2;
-								end;
 							end;
 						end;
-						// break;
 					end;
-			
-			// 33:////////////   SEARCH   /////////////
-					if SameText(functionName,'search') then begin 
-						if (separatorsCount < 1) or (separatorsCount > 2) or (partsCount < 3) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						strValue1 := formulaParts[0];
-						strValue2 := formulaParts[2];
-						
-						intValue1 := 1;
-						
-						if partsCount > 4 then begin
-							type2 := formulaPartTypes[4]; //re-used
-							tmpStr := formulaParts[4];
-							
-							if not (SameText(type2,'3')) then 
-								raise Exception.Create(Format('The third argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-							
-							intValue1 := StrToInt(tmpStr);
-						end;
-						
-						resultStr := '0';
-						
-						intValue2 := Pos(strValue1,Copy(strValue2,intValue1,Length(strValue2)-intValue1+1));
-						if intValue2 > 0 then begin
-							intValue2 := intValue2 + intValue1 - 1;
-							resultStr := IntToStr(intValue2);
-						end;
-						
-						resultType := '3';
-						// break;
+					// break;
+				end;
+		
+		// 33:////////////   SEARCH   /////////////
+				if SameText(functionName,'search') then begin 
+					if (separatorsCount < 1) or (separatorsCount > 2) or (partsCount < 3) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values 
+					parameters.Values['2'] := '1';
+					parameterTypes.Values['2'] := '3';
+					
+					//read parameters
+					ReadParameters(3, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					strValue1 := parameters.Values['0'];//findText
+					strValue2 := parameters.Values['1'];//withinText
+					tmpStr := parameters.Values['2'];//startPos 
+					type1 := parameterTypes.Values['2'];//startPos type
+					if not (SameText(type1,'3')) then 
+						raise Exception.Create(Format('The third argument is no numeric value. functionName: %s, formula: %s',[functionName, formula]));
+					intValue1 := StrToInt(tmpStr);
+					
+					resultStr := '0';
+					intValue2 := Pos(strValue1,Copy(strValue2,intValue1,Length(strValue2)-intValue1+1));
+					if intValue2 > 0 then begin
+						intValue2 := intValue2 + intValue1 - 1;
+						resultStr := IntToStr(intValue2);
 					end;
-			
-			// 34:////////////   SEARCHCOUNT   /////////////
-					if SameText(functionName,'searchCount') then begin 
-						if (separatorsCount < 1) or (separatorsCount > 3) or (partsCount < 3) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
+					
+					resultType := '3';
+					// break;
+				end;
+		
+		// 34:////////////   SEARCHCOUNT   /////////////
+				if SameText(functionName,'searchCount') then begin 
+					if (separatorsCount < 1) or (separatorsCount > 3) or (partsCount < 3) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values - none 
+					parameters.Values['2'] := '1';
+					parameters.Values['3'] := '0';
+					parameterTypes.Values['2'] := '3';
+					parameterTypes.Values['3'] := '3';
+					
+					//read parameters
+					ReadParameters(4, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					strValue1 := parameters.Values['0'];//findText
+					strValue2 := parameters.Values['1'];//withinText
+					type1 := parameterTypes.Values['2'];//startPos type
+					type2 := parameterTypes.Values['3'];//endPos type
+					if not (SameText(type1,'3')) then 
+						raise Exception.Create(Format('The third argument is no numeric value. functionName: %s, formula: %s',[functionName, formula]));
+					intValue1 := StrToInt(parameters.Values['2']);
+					if not (SameText(type2,'3')) then 
+						raise Exception.Create(Format('The fourth argument is no numeric value. functionName: %s, formula: %s',[functionName, formula]));
+					intValue2 := StrToInt(parameters.Values['3']);
+					
+					resultStr := IntToStr(CountStringInString(strValue1, strValue2, intValue1, intValue2));
+					resultType := '3';
+					// break;
+				end;
+		
+		// 35:////////////   SUBSTITUTE   /////////////
+				if SameText(functionName,'substitute') then begin 
+					if (separatorsCount < 2) or (separatorsCount > 3) or (partsCount < 5) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultStr := formulaParts[0];
+					strValue1 := formulaParts[2];
+					strValue2 := formulaParts[4];
+					
+					if partsCount > 6 then begin
+						type2 := formulaPartTypes[6]; //re-used
+						tmpStr := formulaParts[6];
 						
-						strValue1 := formulaParts[0];
-						strValue2 := formulaParts[2];
+						if not (SameText(type2,'3')) then 
+							raise Exception.Create(Format('The fourth argument is no numeric value. functionName: %s, argument: %s',[functionName, tmpStr]));
 						
-						intValue1 := 1;
-						if partsCount > 4 then begin
-							type2 := formulaPartTypes[4]; //re-used
-							tmpStr := formulaParts[4];
-							
-							if not (SameText(type2,'7')) then begin
-								if not (SameText(type2,'3')) then 
-									raise Exception.Create(Format('The third argument is no numeric value. functionName: %s, argument: %s',[functionName, tmpStr]));
-								
-								intValue1 := StrToInt(tmpStr);
-							end;
-						end;
+						intValue1 := StrToInt(tmpStr);
 						
-						intValue2 := 0;
-						if partsCount > 5 then begin
-							type2 := formulaPartTypes[partsCount-1]; //re-used
-							tmpStr := formulaParts[partsCount-1];
-							
-							if not (SameText(type2,'7')) then begin
-								if not (SameText(type2,'3')) then 
-									raise Exception.Create(Format('The fourth argument is no numeric value. functionName: %s, argument: %s',[functionName, tmpStr]));
-								
-								intValue2 := StrToInt(tmpStr);
-							end;
-						end;
-						
-						resultStr := IntToStr(CountStringInString(strValue1, strValue2, intValue1, intValue2));
-						resultType := '3';
-						// break;
-					end;
-			
-			// 35:////////////   SUBSTITUTE   /////////////
-					if SameText(functionName,'substitute') then begin 
-						if (separatorsCount < 2) or (separatorsCount > 3) or (partsCount < 5) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultStr := formulaParts[0];
-						strValue1 := formulaParts[2];
-						strValue2 := formulaParts[4];
-						
-						if partsCount > 6 then begin
-							type2 := formulaPartTypes[6]; //re-used
-							tmpStr := formulaParts[6];
-							
-							if not (SameText(type2,'3')) then 
-								raise Exception.Create(Format('The fourth argument is no numeric value. functionName: %s, argument: %s',[functionName, tmpStr]));
-							
-							intValue1 := StrToInt(tmpStr);
-							
-							if intValue1 = 1 then begin //do not waste time with looping when a normal function does the job
-								resultStr := StringReplace(resultStr, strValue1, strValue2, [rfIgnoreCase]);
-							end else begin
-								
-								i := 0; //this is our counter
-								tmpInt := Pos(strValue1,resultStr);
-								intValue2 := 0;
-								while tmpInt > 0 do begin
-									inc(i);
-									intValue2 := intValue2 + tmpInt;
-									
-									if i = intValue1 then begin
-										resultStr := Copy(resultStr, 1, intValue2 - 2) 
-											+ strValue2 
-											+ Copy(resultStr, intValue2 + Length(strValue1) - 1, Length(resultStr) - intValue2 - Length(strValue1) + 2);
-										break;
-									end;
-									
-									intValue2 := intValue2 + Length(strValue1);
-									tmpStr := Copy(resultStr, intValue2, Length(resultStr) - intValue2 + 1);
-									tmpInt := Pos(strValue1, tmpStr);
-								end;
-							end;
+						if intValue1 = 1 then begin //do not waste time with looping when a normal function does the job
+							resultStr := StringReplace(resultStr, strValue1, strValue2, [rfIgnoreCase]);
 						end else begin
-							resultStr := StringReplace(resultStr, strValue1, strValue2, [rfIgnoreCase,rfReplaceAll]);
+							
+							i := 0; //this is our counter
+							tmpInt := Pos(strValue1,resultStr);
+							intValue2 := 0;
+							while tmpInt > 0 do begin
+								inc(i);
+								intValue2 := intValue2 + tmpInt;
+								
+								if i = intValue1 then begin
+									resultStr := Copy(resultStr, 1, intValue2 - 2) 
+										+ strValue2 
+										+ Copy(resultStr, intValue2 + Length(strValue1) - 1, Length(resultStr) - intValue2 - Length(strValue1) + 2);
+									break;
+								end;
+								
+								intValue2 := intValue2 + Length(strValue1);
+								tmpStr := Copy(resultStr, intValue2, Length(resultStr) - intValue2 + 1);
+								tmpInt := Pos(strValue1, tmpStr);
+							end;
 						end;
-						
-						resultType := '1';
-						// break;
+					end else begin
+						resultStr := StringReplace(resultStr, strValue1, strValue2, [rfIgnoreCase,rfReplaceAll]);
 					end;
-			
-			// 36:////////////   REPLACE   /////////////
-					if SameText(functionName,'replace') then begin 
-						if not ((separatorsCount = 3) and (partsCount = 7)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultStr := formulaParts[0];
-						strValue1 := formulaParts[6];
-						
-						type2 := formulaPartTypes[2];
-						strValue2 := formulaParts[2];
-						if not SameText(type2,'3') then
-							raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-						intValue1 := StrToInt(strValue2);
-						
-						type2 := formulaPartTypes[4];
-						strValue2 := formulaParts[4];
-						if not SameText(type2,'3') then
-							raise Exception.Create(Format('The third argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-						intValue2 := StrToInt(strValue2);
-						
-						if (intValue1 > 0) and (intValue2 >= 0) then begin
-							resultStr := Copy(resultStr, 1, intValue1 - 1)
-								+ strValue1
-								+ Copy(resultStr, intValue1 + intValue2, Length(resultStr) - intValue1 - intValue2 + 1);
+					
+					resultType := '1';
+					// break;
+				end;
+		
+		// 36:////////////   REPLACE   /////////////
+				if SameText(functionName,'replace') then begin 
+					if not ((separatorsCount = 3) and (partsCount = 7)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultStr := formulaParts[0];
+					strValue1 := formulaParts[6];
+					
+					type2 := formulaPartTypes[2];
+					strValue2 := formulaParts[2];
+					if not SameText(type2,'3') then
+						raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+					intValue1 := StrToInt(strValue2);
+					
+					type2 := formulaPartTypes[4];
+					strValue2 := formulaParts[4];
+					if not SameText(type2,'3') then
+						raise Exception.Create(Format('The third argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+					intValue2 := StrToInt(strValue2);
+					
+					if (intValue1 > 0) and (intValue2 >= 0) then begin
+						resultStr := Copy(resultStr, 1, intValue1 - 1)
+							+ strValue1
+							+ Copy(resultStr, intValue1 + intValue2, Length(resultStr) - intValue1 - intValue2 + 1);
+					end;
+					
+					resultType := '1';
+					// break;
+				end;
+		
+		// 37:////////////   REPT   /////////////
+				if SameText(functionName,'rept') then begin 
+					if not ((separatorsCount = 1) and (partsCount = 3)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultStr := '';
+					strValue1 := formulaParts[0];
+					strValue2 := formulaParts[2];
+					type2 := formulaPartTypes[2];
+					
+					if not SameText(type2,'3') then
+						raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
+					intValue2 := StrToInt(strValue2);
+					
+					resultStr := RepeatString(strValue1, intValue2);
+					
+					resultType := '1';
+					// break;
+				end;
+		
+		// 38:////////////   CONCAT   /////////////
+				if SameText(functionName,'concat') then begin 
+					resultStr := '';
+					
+					i := 0;
+					while i < partsCount do begin
+						if not SameText(formulaPartTypes[i],'7') then 
+							resultStr := resultStr + formulaParts[i];
+						inc(i);
+					end;
+					
+					resultType := '1';
+					// break;
+				end;
+		
+		// 39:////////////   TEXTJOIN   /////////////
+				if SameText(functionName,'textJoin') then begin 
+					if not ((separatorsCount > 1) and (partsCount > 2)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values 
+					parameters.Values['1'] := 'true' ;//ignoreEmptyValues
+					
+					//read parameters
+					ReadParameters(separatorsCount + 1, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					strValue1 := parameters.Values['0'];//delimiter
+					resultBool :=  SameText(parameters.Values['1'],'true'); //used for condition
+					
+					resultStr := '';
+					i := 2;
+					counter := 0;
+					while i < (separatorsCount + 1) do begin						
+						tmpStr := parameters.Values[IntToStr(i)];
+						if (not resultBool) or (not SameText(tmpStr,'')) then begin
+							if counter = 0 then begin
+								resultStr := tmpStr;
+							end else begin
+								resultStr := resultStr + strValue1 + tmpStr;
+							end;
+							inc(counter);
 						end;
-						
-						resultType := '1';
-						// break;
+						inc(i);
 					end;
-			
-			// 37:////////////   REPT   /////////////
-					if SameText(functionName,'rept') then begin 
-						if not ((separatorsCount = 1) and (partsCount = 3)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultStr := '';
-						strValue1 := formulaParts[0];
-						strValue2 := formulaParts[2];
-						type2 := formulaPartTypes[2];
-						
-						if not SameText(type2,'3') then
-							raise Exception.Create(Format('The second argument is no numeric value. functionName: %s, argument: %s',[functionName, strValue2]));
-						intValue2 := StrToInt(strValue2);
-						
-						resultStr := RepeatString(strValue1, intValue2);
-						
-						resultType := '1';
-						// break;
+					
+					resultType := '1';
+					// break;
+				end;
+		
+		// 40:////////////   FORMULATEXT   /////////////
+				if SameText(functionName,'formulaText') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					strValue1 := formulaParts[0];
+					
+					if not SameText(type1,'5') then
+						raise Exception.Create(Format('The argument is no variable name. functionName: %s, argument: %s',[functionName, strValue1]));
+					
+					resultStr := formulas.Values[strValue1];
+					resultType := '1';
+					// break;
+				end;
+		
+		// 41:////////////   ISTEXT   /////////////
+				if SameText(functionName,'isText') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					type1 := formulaPartTypes[0];
+					
+					if SameText(type1,'1') then begin
+						resultStr := 'true';
+					end else begin
+						resultStr := 'false';
 					end;
-			
-			// 38:////////////   CONCAT   /////////////
-					if SameText(functionName,'concat') then begin 
+					
+					resultType := '8';
+					// break;
+				end;
+		
+		// 42:////////////   LINEBREAK   /////////////
+				if SameText(functionName,'linebreak') then begin 
+					if (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultType := '1';
+					resultStr := chr(13) + chr(10);
+					// break;
+				end;
+		
+		// ???:////////////   CALCULATE   /////////////
+				if SameText(functionName,'Calculate') then begin 
+					if not (formulaParts.Count = 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//formulaPartTypes[0] := 2;
+					resultStr := ParseFormula(variableName, formulaParts[0], formulas, results, resultTypes, operators, functions, outerTempVariables, recursionLevel+1, false);
+					resultType := Copy(resultStr,1,1);
+					resultStr := Copy(resultStr,3,Length(resultStr)-2);
+					// break;
+				end;
+
+		// 43:////////////   TRANSPOSE   /////////////
+				if SameText(functionName,'transpose') then begin 
+					if (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameters.Values['1'] := ',';
+					parameters.Values['2'] := chr(13) + chr(10);
+					
+					//read parameters
+					ReadParameters(3, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					strValue1 := parameters.Values['1'];
+					strValue2 := parameters.Values['2'];
+					
+					if SameText(parameterTypes[0], '') then 
+						raise Exception.Create(Format('The first argument was not provided. functionName: %s',[functionName]));
+
+					resultType := '1';
+					resultStr := TransposeTableString(resultStr, strValue1, strValue2);
+					// break;
+				end;
+		
+		// 44:////////////   LOGMSG   /////////////
+				if SameText(functionName,'logMsg') then begin 
+					if not (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameterTypes.Values['1'] := '1';
+					
+					//read parameters
+					ReadParameters(2, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					tmpStr := parameters.Values['0'];
+					resultStr := parameters.Values['1'];
+					resultType := parameterTypes.Values['1'];
+					
+					Log(tmpStr);
+					// break;
+				end;
+		
+		// 45:////////////   WITH   /////////////
+				if SameText(functionName,'with') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultType := formulaPartTypes[0];
+					resultStr := formulaParts[0];
+					// break;
+				end;
+		
+		// 46:////////////   FUNCTION   /////////////
+				if SameText(functionName,'function') then begin 
+					if not ((separatorsCount = 0) and (partsCount = 1)) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultType := formulaPartTypes[0];
+					resultStr := formulaParts[0];
+					// break;
+				end;
+		
+		// 47:////////////   ENDCALCULATION   /////////////
+				if SameText(functionName,'endCalculation') then begin 
+					if (partsCount > 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					FormulaParserStopExecution := true;
+					
+					//set default values
+					parameterTypes.Values['0'] := '1';
+					
+					//read parameters
+					ReadParameters(1, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					resultType := parameterTypes.Values['0'];
+					// break;
+				end;
+		
+		// 48:////////////   GETOUTPUT   /////////////
+				if SameText(functionName,'GetOutput') then begin 
+					if (partsCount > 0) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					resultType := '1';
+					resultStr := results.Values['---OUTPUT---'];
+					// break;
+				end;
+		
+		// 49:////////////   SETOUTPUT   /////////////
+				if SameText(functionName,'SetOutput') then begin 
+					if (partsCount > 3) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values - none
+					
+					//read parameters
+					ReadParameters(2, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					strValue1 := parameters.Values['0'];
+					strValue2 := parameters.Values['1'];
+					type1 := parameterTypes.Values['0'];
+					type2 := parameterTypes.Values['1'];
+					
+					tmpStr := '';
+					if SameText(type1,'') then begin //if the first parameter is not provided
+						//first remove the output, then read it
+						results.Values['---OUTPUT---'] := '';
+						tmpStr := results.Text;
+					end else begin
+						tmpStr := strValue1;
+					end;
+					
+					results.Values['---OUTPUT---'] := tmpStr;
+					
+					resultStr := strValue2;
+					resultType := type2;
+					if SameText(resultType,'') then
+						resultType := '1';
+					// break;
+				end;
+		
+		// 51:////////////   SELECTEDRECORDS   /////////////
+				if SameText(functionName,'SelectedRecords') then begin 
+					if (partsCount > 2) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameters.Values['0'] := ';';
+					
+					//read optional parameters
+					ReadParameters(2, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					strValue1 := parameters.Values['0'];
+					strValue2 := parameters.Values['1'];
+					
+					resultStr := results.Values['---SELECTEDRECORDS---'];
+					
+					if SameText(strValue2, '') then begin
+						if not SameText(strValue1,';') then 
+							resultStr := StringReplace(resultStr, ';', strValue1, [rfIgnoreCase,rfReplaceAll]);
+					end else begin
+						StringToStringList(resultStr, ';', tmpList);
 						resultStr := '';
 						
+						//add temporary variable for record and call formula
+						CopyList(outerTempVariables, tempVariables);
 						i := 0;
-						while i < partsCount do begin
-							if not SameText(formulaPartTypes[i],'7') then 
-								resultStr := resultStr + formulaParts[i];
+						while i < tmpList.Count do begin
+							curItm := tmpList[i];
+							tempVariables.Values['rec'] := '1|' + curItm;
+							tempVariables.Values['i'] := '3|' + IntToStr(i + 1);
+							tmpStr := ParseFormula(Format('%s_rec%d',[variableName,i]), strValue2, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+							tmpStr := Copy(tmpStr, 3, Length(tmpStr));
+							//if it returns true
+							if i = 0 then begin
+								resultStr := tmpStr;
+							end else begin
+								resultStr := resultStr + strValue1 + tmpStr;
+							end;
 							inc(i);
 						end;
-						
-						resultType := '1';
-						// break;
 					end;
-			
-			// 39:////////////   TEXTJOIN   /////////////
-					if SameText(functionName,'textJoin') then begin 
-						if not ((separatorsCount > 1) and (partsCount > 2)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultStr := '';
-						strValue1 := '';//delimiter
-						strValue2 := ''; //this text
-						tmpStr := ''; //last text
-						resultBool := true; //used for condition
-						tmpInt := 0; //to count separators
-						i := 0;
-						while i < partsCount do begin
-							if SameText(formulaPartTypes[i],'7') then begin
-								inc(tmpInt);
-								// if (tmpInt = 1) and SameText(formulaPartTypes[i-1],'7') then 
-									// resultBool := true;
-								if (tmpInt > 3) then begin //no delimiter for the first text parameter
-									if SameText(formulaPartTypes[i-1],'7') and (not resultBool) then //look back for left out previous argument
-										resultStr := resultStr + strValue1;
-									if i = (partsCount-1) and (not resultBool) then //look ahead for left out last argument
-										resultStr := resultStr + strValue1;
-								end;
-							end else begin
-								if i = 0 then begin 
-									strValue1 := formulaParts[i];
-								end else begin
-									if tmpInt = 1 then begin
-										resultBool := SameText(formulaParts[i],'true');
-									end else begin
-										strValue2 := formulaParts[i];
-										if tmpInt > 2 then begin //no delimiter for the first text parameter
-											if (not resultBool) or (not SameText(tmpStr,'')) then
-												resultStr := resultStr + strValue1;
-										end;
-										resultStr := resultStr + strValue2;
-										tmpStr := strValue2;
-									end;
-								end;
-							end;
-							
-							inc(i);
-						end;
-						
-						resultType := '1';
-						// break;
-					end;
-			
-			// 40:////////////   FORMULATEXT   /////////////
-					if SameText(functionName,'formulaText') then begin 
-						if not ((separatorsCount = 0) and (partsCount = 1)) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						strValue1 := formulaParts[0];
-						
-						if not SameText(type1,'5') then
-							raise Exception.Create(Format('The argument is no variable name. functionName: %s, argument: %s',[functionName, strValue1]));
-						
-						resultStr := formulas.Values[strValue1];
-						resultType := '1';
-						// break;
-					end;
-			
-			// 41:////////////   ISTEXT   /////////////
-					if SameText(functionName,'isText') then begin 
-						if not (partsCount = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						
-						if SameText(type1,'1') then begin
-							resultStr := 'true';
-						end else begin
-							resultStr := 'false';
-						end;
-						
-						resultType := '8';
-						// break;
-					end;
-			
-			// 42:////////////   LINEBREAK   /////////////
-					if SameText(functionName,'linebreak') then begin 
-						if (partsCount > 0) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultType := '1';
-						resultStr := chr(13) + chr(10);
-						// break;
-					end;
-			
-			// ???:////////////   CALCULATE   /////////////
-					if SameText(functionName,'Calculate') then begin 
-						if not (formulaParts.Count = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
-						
-						//formulaPartTypes[0] := 2;
-						resultStr := ParseFormula(variableName, formulaParts[0], formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-						resultType := Copy(resultStr,1,1);
-						resultStr := Copy(resultStr,3,Length(resultStr)-2);
-						// break;
-					end;
-
-			// 43:////////////   TRANSPOSE   /////////////
-					if SameText(functionName,'transpose') then begin 
-						if (partsCount < 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						if SameText(formulaPartTypes[0], '7') then 
-							raise Exception.Create(Format('The first argument was not provided. functionName: %s',[functionName]));
-
-						resultStr := formulaParts[0];
-						strValue1 := ',';
-						strValue2 := chr(13) + chr(10);
-						
-						tmpInt := 1;
-						i := 0;
-						while tmpInt <= separatorsCount do begin 
-							//spool to the formulapart that is the separator 
-							i := (tmpInt * 2) - 1;
-							
-							inc(i); //now we are at the part after the separator
-							if i >= partsCount then
-								break;
-							
-							if not SameText(formulaPartTypes[i], '7') then begin
-								case tmpInt of 
-									1: strValue1 := formulaParts[i];
-									2: strValue2 := formulaParts[i];
-								end;
-							end;
-							
-							inc(tmpInt);
-						end;
-						
-						resultType := '1';
-						resultStr := TransposeTableString(resultStr, strValue1, strValue2);
-						// break;
-					end;
-			
-			// 44:////////////   LOGMSG   /////////////
-					if SameText(functionName,'logMsg') then begin 
-						if not (partsCount > 0 and partsCount < 4) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						type1 := formulaPartTypes[0];
-						
-						tmpStr := '';
-						if not SameText(type1,'7') then
-							tmpStr := formulaParts[0];
-							
-						Log(tmpStr);
-						
-						resultStr := '';
-						resultType := '1';
-						
-						if partsCount > 2 then begin
-							resultType := formulaPartTypes[2];
-							resultStr := formulaParts[2];
-						end;
-						// break;
-					end;
-			
-			// 45:////////////   WITH   /////////////
-					if SameText(functionName,'with') then begin 
-						if not (partsCount = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultType := formulaPartTypes[0];
-						resultStr := formulaParts[0];
-						// break;
-					end;
-			
-			// 46:////////////   FUNCTION   /////////////
-					if SameText(functionName,'function') then begin 
-						if not (partsCount = 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultType := formulaPartTypes[0];
-						resultStr := formulaParts[0];
-						// break;
-					end;
-			
-			// 47:////////////   ENDCALCULATION   /////////////
-					if SameText(functionName,'endCalculation') then begin 
-						if (partsCount > 1) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						FormulaParserStopExecution := true;
-						
-						resultType := '1';
-						resultStr := '';
-						
-						if (partsCount > 0) then begin
-							resultType := formulaPartTypes[0];
-							resultStr := formulaParts[0];
-						end;
-						// break;
-					end;
-			
-			// 48:////////////   GETOUTPUT   /////////////
-					if SameText(functionName,'GetOutput') then begin 
-						if (partsCount > 0) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultType := '1';
-						resultStr := results.Values['---OUTPUT---'];
-						// break;
-					end;
-			
-			// 49:////////////   SETOUTPUT   /////////////
-					if SameText(functionName,'SetOutput') then begin 
-						if (partsCount > 3) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						tmpStr := '';
-						resultBool := false; //whether there was a parameter for newValue
-						if (partsCount > 0 ) then begin
-							if not SameText(formulaPartTypes[0],'7') then begin
-								tmpStr := formulaParts[0];
-								resultBool := true;
-							end;
-						end;
-						
-						if not resultBool then begin
-							//first remove the output, then read it
-							results.Values['---OUTPUT---'] := '';
-							tmpStr := results.Text;
-						end;
-						
-						results.Values['---OUTPUT---'] := tmpStr;
-						
-						resultType := '1';
-						resultStr := '';
-						
-						if partsCount > 1 then begin
-							tmpStr := formulaPartTypes[partsCount-1];
-							if not SameText(tmpStr,'7') then begin
-								resultType := tmpStr;
-								resultStr := formulaParts[partsCount-1];
-							end;
-						end;
-						// break;
-					end;
-			
-			// 50:////////////   ADDTOOUTPUT   /////////////
-					if SameText(functionName,'AddToOutput') then begin 
-						if (partsCount > 3) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						tmpStr := ''; //stuff to add
-						resultBool := false; //whether there was a parameter for newValue
-						strValue1 := results.Values['---OUTPUT---'];
-						
-						if (partsCount > 0 ) then begin
-							if not SameText(formulaPartTypes[0],'7') then begin
-								tmpStr := formulaParts[0];
-								resultBool := true;
-							end;
-						end;
-						
-						if not resultBool then begin
-							//first read the output, then remove it from results and read results
-							results.Values['---OUTPUT---'] := '';
-							tmpStr := results.Text;
-						end;
-						
-						results.Values['---OUTPUT---'] := strValue1 + tmpStr;
-						
-						resultType := '1';
-						resultStr := '';
-						
-						if partsCount > 1 then begin
-							tmpStr := formulaPartTypes[partsCount-1];
-							if not SameText(tmpStr,'7') then begin
-								resultType := tmpStr;
-								resultStr := formulaParts[partsCount-1];
-							end;
-						end;
-						// break;
-					end;
-			
-			// 51:////////////   SELECTEDRECORDS   /////////////
-					if SameText(functionName,'SelectedRecords') then begin 
-						if (partsCount > 0) then 
-							raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, number of arguments: %d',[functionName, partsCount-separatorsCount]));
-						
-						resultType := '1';
-						resultStr := results.Values['---SELECTEDRECORDS---'];
-						// break;
-					end;
-			
-			// 52:////////////   READRECORDS   /////////////
-					if SameText(functionName,'ReadRecords') then begin 
-						resultStr := ParseReadRecords(formula, formulaParts, formulaPartTypes);
-						resultType := '1';
-						// break;
-					end;
-			
-			// ???:////////////   FINDRECORDS   /////////////
-					if SameText(functionName,'FindRecords') then begin 
-						resultStr := ParseFindRecords(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, formulaParts, formulaPartTypes);
-						resultType := '1';
-						// break;
-					end;
+					
+					resultType := '1';
+					// break;
+				end;
+		
+		// 52:////////////   READRECORDS   /////////////
+				if SameText(functionName,'ReadRecords') then begin 
+					resultStr := ParseReadRecords(formula, formulaParts, formulaPartTypes);
+					resultType := '1';
+					// break;
+				end;
+		
+		// ???:////////////   FINDRECORDS   /////////////
+				if SameText(functionName,'FindRecords') then begin 
+					resultStr := ParseFindRecords(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, formulaParts, formulaPartTypes);
+					resultType := '1';
+					// break;
+				end;
 	
-		// end; //end of case
-	// end; //end of loop
-	
-	
-	
-	
+	finally
+		parameters.Free;
+		parameters := nil;
+		parameterTypes.Free;
+		parameterTypes := nil;
+		tmpList.Free;
+		tmpList := nil;
+	end;
 		
 	if partsCount > 0 then begin 
 		//empty out all the formula parts except the first one and set the result
@@ -2527,6 +2491,58 @@ begin
 	
 	LogFunctionEnd;
 end;
+
+//=========================================================================
+//  read parameters from formula parts, overwriting default parameters
+//=========================================================================
+procedure ReadParameters(const maxParameters : Integer; const formulaParts, formulaPartTypes : TStringList; parameters, parameterTypes : TStringList;);
+var
+	i, partsCount, curSeparator : Integer;
+	tmpStr : String;
+begin
+	partsCount := formulaParts.Count;
+
+	//read optional parameters
+	i := 0;
+	curSeparator := 0;
+	while curSeparator < maxParameters do begin
+		// stop the loop if we counted higher than the number of parameters that are present
+		if (i >= partsCount) then 
+			break;
+		// DebugLog(Format('curSeparator: %d, i: %d',[curSeparator, i]));
+		
+		if SameText(formulaPartTypes[i],'7') then begin
+			// if parameters.IndexOfName(IntToStr(curSeparator)) <= -1 then
+				// parameters.Add(IntToStr(curSeparator)+'=');
+			inc(i);
+			inc(curSeparator);
+		end;
+		
+		// stop the loop if we counted higher than the number of parameters that are present
+		if (i >= partsCount) then 
+			break;
+		// DebugLog(Format('curSeparator: %d, i: %d, formulaPartTypes[i]: %s, formulaParts[i]: %s, partsCount: %d',[curSeparator, i, formulaPartTypes[i], formulaParts[i], partsCount]));
+		
+		if SameText(formulaPartTypes[i],'7') then begin
+			// if parameters.IndexOfName(IntToStr(curSeparator)) <= -1 then
+				// parameters.Add(IntToStr(curSeparator)+'=');
+		end else begin
+			tmpStr := formulaParts[i];
+			if SameText(tmpStr, '') then begin
+				if parameters.IndexOfName(IntToStr(curSeparator)) <= -1 then
+					parameters.Add(IntToStr(curSeparator)+'=');
+			end else begin
+				parameters.Values[IntToStr(curSeparator)] := formulaParts[i];
+			end;
+			parameterTypes.Values[IntToStr(curSeparator)] := formulaPartTypes[i];
+			inc(i);
+		end;
+	end;
+	
+	// DebugLog(Format('parameters: %s, curSeparator: %d, i: %d',[parameters.Text, curSeparator, i]));
+	
+end;
+
 
 //=========================================================================
 //  calculate SWITCH compare values that are needed to decide which option is to select

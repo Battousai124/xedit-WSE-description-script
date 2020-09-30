@@ -139,6 +139,20 @@ begin
 end;
 
 //=========================================================================
+//  copy one list to another, keeping the order
+//=========================================================================
+procedure CopyList(const list : TStringList; results : TStringList;);
+var 	
+	i  : Integer;
+begin
+	i := 0;
+	while i < list.Count do begin
+		results.Add(list[i]);
+		inc(i);
+	end;
+end;
+
+//=========================================================================
 //  Transpose a string that represents a table (switch columns and rows)
 // 	(we assume that everything is correctly escaped -> no extra escaping in here)
 //=========================================================================
