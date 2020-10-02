@@ -1114,8 +1114,9 @@ end;
 
 //=========================================================================
 //  Read information from records utilizing smartPaths and smartSelectors and return them as CSV formatted String
+//	the result is returned in two ways, as a delimited string and at the same time as a TStringList with format recIndex,pathIndex=Value
 //=========================================================================
-function ReadRecords(const recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter : String;) : String;
+function ReadRecords(const recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter : String; resultList, resultVariables : TStringList;) : String;
 var 	
 	i, j, p, r  : Integer;
 	tmpStr, resultStr, curPathStr, curRecordStr, curValueStr : String;
@@ -1135,6 +1136,8 @@ begin
 		StringToStringList(recordsStr, ';', records);
 		StringToStringList(pathsStr, ';', paths);
 		
+		resultList.Clear;
+		
 		// DebugLog(Format('recordsStr: %s, pathsStr: %s, records.Count: %d, paths.Count: %d',[recordsStr, pathsStr, records.Count, paths.Count]));
 		
 		resultStr := '';
@@ -1148,7 +1151,8 @@ begin
 			repeat
 				if curIsSmartRecordString then
 					curRecordStr := curResolvedRecords[r];
-						
+				
+				resultVariables.Values[Format('%d,r',[i + r + 1])] := curRecordStr;
 				curRecord := StringToRecord(curRecordStr);
 				
 				if (i > 0) or (r > 0) then
@@ -1158,9 +1162,9 @@ begin
 				while j < paths.Count do begin
 					if j > 0 then
 						resultStr := resultStr + elementsDelimiter;
+					curPathStr := paths[j];
 					
 					if Assigned(curRecord) then begin
-						curPathStr := paths[j];
 						curIsSmartPath := ResolveSmartPath(curRecord, curPathStr, curResolvedPaths);
 						
 						p := 0;
@@ -1168,15 +1172,22 @@ begin
 							if curIsSmartPath then 
 								curPathStr := curResolvedPaths[p];
 							curValueStr := ElementInfoBySmartPath(curRecord, curPathStr);
+							resultList.Add(Format('%d,%d=%s',[i + r + 1, j + p + 1, curValueStr]));
+							//resultVariables.Values[Format('%d,%d,r',[i + r + 1, j + p + 1])] := curRecordStr;
+							resultVariables.Values[Format('%d,%d,p',[i + r + 1, j + p + 1])] := curPathStr;
+							curValueStr := EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
 							if p = 0 then begin
-								tmpStr := EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
+								tmpStr := curValueStr;
 							end else begin
-								tmpStr := tmpStr + elementsDelimiter + EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
+								tmpStr := tmpStr + elementsDelimiter + curValueStr;
 							end;
 							inc(p);
 						until p >= curResolvedPaths.Count;
 						
 					end else begin 
+						resultList.Add(Format('%d,%d=%s',[i + r + 1, j + 1, emptyReturnValue]));
+						//resultVariables.Values[Format('%d,%d,r',[i + r + 1, j + 1])] := curRecordStr;
+						resultVariables.Values[Format('%d,%d,p',[i + r + 1, j + 1])] := curPathStr;
 						tmpStr := EscapeStringIfNecessary(emptyReturnValue, '"', recordsDelimiter, elementsDelimiter);
 						// DebugLog('curRecord not assigned');
 					end;

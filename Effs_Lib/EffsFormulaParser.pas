@@ -300,6 +300,11 @@ begin
 			if SameText(functionName,'formulaText') then
 				maxParameterToResolve := 0;
 			
+			if SameText(functionName,'ReadRecords') then begin
+				maxParameterToParse := 4;
+				maxParameterToResolve := 4;
+			end;
+			
 			if SameText(functionName,'FindRecords') then begin
 				maxParameterToParse := 7;
 				maxParameterToResolve := 7;
@@ -501,69 +506,122 @@ end;
 //=========================================================================
 //  Read information from records
 //=========================================================================
-function ParseReadRecords(const formula : String; formulaParts, formulaPartTypes : TStringList;) : String;
+function ParseReadRecords(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, outerTempVariables : TStringList; const recursionLevel : Integer; formulaParts, formulaPartTypes, parameters, parameterTypes : TStringList;) : String;
 var 	
-	i, tmpInt, partsCount, curSeparator : Integer;
-	recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter : String;
+	i, tmpInt, partsCount, counter : Integer;
+	recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter, conditionFormula, selectionFormula, curPathStr, curRecordStr, tmpStr, curVal, curRecIndex, curPathIndex, lastRecIndex : String;
+	tmpList, tmpVarList, tempVariables : TStringList;
+	conditionMet : Boolean;
 begin
 	LogFunctionStart('ParseReadRecords');
 	
-	partsCount := formulaParts.Count;
+	tmpList := TStringList.Create;
+	tmpVarList := TStringList.Create;
+	tempVariables := TStringList.Create;
 	
-	if partsCount < 3 then
-		raise Exception.Create(Format('Function ReadRecords was called with too less parameters. Formula: %s',[formula]));
-	if SameText(formulaPartTypes[0],'7') then
-		raise Exception.Create(Format('Function ReadRecords was called without a records parameter. Formula: %s',[formula]));
-	if SameText(formulaPartTypes[2],'7') then
-		raise Exception.Create(Format('Function ReadRecords was called without a path parameter. Formula: %s',[formula]));
+	try
 	
-	//read mandatory parameters
-	recordsStr := formulaParts[0];
-	pathsStr := formulaParts[2];
-	
-	//set default values
-	emptyReturnValue := '';
-	recordsDelimiter := chr(13) + chr(10);
-	elementsDelimiter := ',';
-	
-	// DebugLog(Format('recordsStr: %s, pathsStr: %s, emptyReturnValue: %s, recordsDelimiter: %s, elementsDelimiter: %s',[recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter]));
-	
-	//read optional parameters
-	tmpInt := 0;
-	curSeparator := 2;
-	i := 0;
-	while i <= partsCount do begin
-		//spool forward if necessary
-		while tmpInt < curSeparator do begin
-			if i >= (partsCount - 1) then 
-				break;
-			if SameText(formulaPartTypes[i],'7') then 
-				inc(tmpInt);
-			if tmpInt < curSeparator then 
+		partsCount := formulaParts.Count;
+		
+		if partsCount < 3 then
+			raise Exception.Create(Format('Function ReadRecords was called with too less parameters. Formula: %s',[formula]));
+		if SameText(formulaPartTypes[0],'7') then
+			raise Exception.Create(Format('Function ReadRecords was called without a records parameter. Formula: %s',[formula]));
+		if SameText(formulaPartTypes[2],'7') then
+			raise Exception.Create(Format('Function ReadRecords was called without a path parameter. Formula: %s',[formula]));
+		
+		//set default values 
+		parameters.Values['2'] := chr(13) + chr(10);
+		parameters.Values['3'] := ',';
+		emptyReturnValue := '';
+		
+		//read parameters
+		ReadParameters(6, formulaParts, formulaPartTypes, parameters, parameterTypes);
+		recordsStr := parameters.Values['0'];
+		pathsStr := parameters.Values['1'];
+		recordsDelimiter := parameters.Values['2'];
+		elementsDelimiter := parameters.Values['3'];
+		conditionFormula := parameters.Values['4'];
+		selectionFormula := parameters.Values['5'];
+		
+		//-> all parameters read from formulaParts;
+		DebugLog(Format('parameters: recordsStr: %s, pathsStr: %s, emptyReturnValue: %s, recordsDelimiter: %s, elementsDelimiter: %s, conditionFormula: %s, selectionFormula: %s',[recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter, conditionFormula, selectionFormula]));
+		
+		Result := ReadRecords(recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter, tmpList, tmpVarList);
+		
+		if (not SameText(conditionFormula,'')) or (not SameText(selectionFormula,'')) then begin
+			Result := '';
+			//copy outer variables to inner
+			CopyList(outerTempVariables, tempVariables);
+			
+			//now for each found record: 
+			//create the respective temporary variables, call the filter formula and only keep the record if the result is "true" 
+			counter := 0;
+			i := 0;
+			while i < tmpList.Count do begin
+				conditionMet := true;
+				curVal := tmpList.ValueFromIndex[i];
+				tmpStr := tmpList.Names[i];
+				tmpInt := Pos(',', tmpStr);
+				curRecIndex := Copy(tmpStr, 1, tmpInt - 1);
+				curPathIndex := Copy(tmpStr, tmpInt + 1, Length(tmpStr) - tmpInt);
+				curRecordStr := tmpVarList.Values[curRecIndex+',r'];
+				curPathStr := tmpVarList.Values[tmpStr+',p'];
+				
+				//set temporary variables
+				tempVariables.Values['rec'] := '1|' + curRecordStr;
+				tempVariables.Values['path'] := '1|' + curPathStr;
+				tempVariables.Values['val'] := '1|' + curVal;
+				tempVariables.Values['i_rec'] := '3|' + curRecIndex;
+				tempVariables.Values['i_path'] := '3|' + curPathIndex;
+				
+				if not SameText(conditionFormula,'') then begin 
+					//set temporary variables
+					tempVariables.Values['i'] := '3|' + IntToStr(i + 1);
+					// DebugLog(Format('i: %d, curVal: %s', [i, curVal]));
+					//calculate the formula
+					tmpStr := ParseFormula(Format('%s_cond_val%d',[variableName,i]), conditionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+					if not SameText(Copy(tmpStr,3,Length(tmpStr)),'true') then begin
+						conditionMet := false;
+					end;
+				end;
+				
+				if conditionMet then begin 
+					if not SameText(selectionFormula,'') then begin 
+						//set temporary variables
+						tempVariables.Values['i'] := '3|' + IntToStr(counter + 1);
+						//calculate the formula
+						tmpStr := ParseFormula(Format('%s_sel_val%d',[variableName,i]), selectionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+						curVal := Copy(tmpStr,3,Length(tmpStr));
+					end;
+					
+					curVal := EscapeStringIfNecessary(curVal, '"', recordsDelimiter, elementsDelimiter);
+					
+					if counter = 0 then begin
+						Result := curVal;
+					end else begin
+						if not SameText(lastRecIndex, curRecIndex) then begin 
+							Result := Result + recordsDelimiter + curVal;
+						end else begin
+							Result := Result + elementsDelimiter + curVal;
+						end;
+					end;
+					lastRecIndex := curRecIndex;
+					inc(counter);
+				end;
 				inc(i);
-		end;
-		
-		//now we are the separator before the value interesting to us
-		inc(i);
-		
-		if i >= partsCount then 
-			break;
-		// DebugLog(Format('curSeparator: %d, i: %d, formulaPartTypes[i]: %s',[curSeparator, i, formulaPartTypes[i]]));
-		
-		if not SameText(formulaPartTypes[i],'7') then begin
-			case curSeparator of 
-				2: emptyReturnValue := formulaParts[i];
-				3: recordsDelimiter := formulaParts[i];
-				4: elementsDelimiter := formulaParts[i];
 			end;
 		end;
 		
-		inc(curSeparator);
+		
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		tmpVarList.Free;
+		tmpVarList := nil;
+		tempVariables.Free;
+		tempVariables := nil;
 	end;
-	//-> all parameters read from formulaParts;
-	// DebugLog(Format('emptyReturnValue: %s, recordsDelimiter: %s, elementsDelimiter: %s, curSeparator: %d, i: %d',[emptyReturnValue, recordsDelimiter, elementsDelimiter, curSeparator, i]));
-	
-	Result := ReadRecords(recordsStr, pathsStr, emptyReturnValue, recordsDelimiter, elementsDelimiter);
 	
 	LogFunctionEnd;
 end;
@@ -571,19 +629,17 @@ end;
 //=========================================================================
 //  find or filter records
 //=========================================================================
-function ParseFindRecords(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, outerTempVariables : TStringList; const recursionLevel : Integer; formulaParts, formulaPartTypes : TStringList;) : String;
+function ParseFindRecords(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, outerTempVariables : TStringList; const recursionLevel : Integer; formulaParts, formulaPartTypes, parameters, parameterTypes : TStringList;) : String;
 var 	
-	i, partsCount, curSeparator, isMasterFilterMode, isWinningOverrideFilterMode, maxParameters, maxNumberOfResults : Integer;
+	i, counter, partsCount, curSeparator, isMasterFilterMode, isWinningOverrideFilterMode, maxParameters, maxNumberOfResults : Integer;
 	recordsStr, pluginFilterStr, signatureFilterStr, conditionFormula, tmpStr, curRecordStr, delimiter, selectionFormula : String;
-	tmpList, tempVariables, parameters, parameterTypes, results : TStringList;
+	conditionMet : Boolean;
+	tmpList, tempVariables : TStringList;
 begin
 	LogFunctionStart('ParseFindRecords');
 	
 	tmpList := TStringList.Create;
 	tempVariables := TStringList.Create;
-	parameters := TStringList.Create;
-	parameterTypes := TStringList.Create;
-	results := TStringList.Create;
 	
 	try
 		partsCount := formulaParts.Count;
@@ -640,52 +696,47 @@ begin
 		end;
 		
 		if (not SameText(conditionFormula,'')) or (not SameText(selectionFormula,'')) then begin
+			Result := '';
 			//copy outer variables to inner
 			CopyList(outerTempVariables, tempVariables);
-		end;
-		
-		//now for each found record: 
-		//create the respective temporary variables, call the filter formula and only keep the record if the result is "true" 
-		if SameText(conditionFormula,'') then begin
-			if not SameText(selectionFormula,'') then begin
-				CopyList(tmpList,results);
-			end;
-		end else begin 
+			
+			//now for each found record: 
+			//create the respective temporary variables, call the filter formula and only keep the record if the result is "true" 
+			counter := 0;
 			i := 0;
 			while i < tmpList.Count do begin
+				conditionMet := true;
 				curRecordStr := tmpList[i];
-				//set temporary variables
-				tempVariables.Values['i'] := '3|' + IntToStr(i + 1);
-				tempVariables.Values['rec'] := '1|' + curRecordStr;
-				// DebugLog(Format('i: %d, curRecordStr: %s', [i, curRecordStr]));
 				
-				//calculate the formula
-				tmpStr := ParseFormula(Format('%s_cond_rec%d',[variableName,i]), conditionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-				//if it returns true
-				if SameText(Copy(tmpStr,3,Length(tmpStr)),'true') then begin
-					results.Add(curRecordStr);
-				end;
-				inc(i);
-			end;
-		end;
-		
-		if (not SameText(conditionFormula,'')) or (not SameText(selectionFormula,'')) then begin
-			Result := '';
-			i := 0;
-			while i < results.Count do begin
-				curRecordStr := results[i];
-				if not SameText(selectionFormula,'') then begin 
+				//set temporary variables
+				tempVariables.Values['rec'] := '1|' + curRecordStr;
+				
+				if not SameText(conditionFormula,'') then begin 
 					//set temporary variables
 					tempVariables.Values['i'] := '3|' + IntToStr(i + 1);
-					tempVariables.Values['rec'] := '1|' + curRecordStr;
+					// DebugLog(Format('i: %d, curRecordStr: %s', [i, curRecordStr]));
 					//calculate the formula
-					tmpStr := ParseFormula(Format('%s_sel_rec%d',[variableName,i]), selectionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-					curRecordStr := Copy(tmpStr,3,Length(tmpStr));
+					tmpStr := ParseFormula(Format('%s_cond_rec%d',[variableName,i]), conditionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+					if not SameText(Copy(tmpStr,3,Length(tmpStr)),'true') then begin
+						conditionMet := false;
+					end;
 				end;
-				if i = 0 then begin
-					Result := curRecordStr;
-				end else begin
-					Result := Result + delimiter + curRecordStr;
+				
+				if conditionMet then begin 
+					if not SameText(selectionFormula,'') then begin 
+						//set temporary variables
+						tempVariables.Values['i'] := '3|' + IntToStr(counter + 1);
+						//calculate the formula
+						tmpStr := ParseFormula(Format('%s_sel_rec%d',[variableName,i]), selectionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+						curRecordStr := Copy(tmpStr,3,Length(tmpStr));
+					end;
+					
+					if counter = 0 then begin
+						Result := curRecordStr;
+					end else begin
+						Result := Result + delimiter + curRecordStr;
+					end;
+					inc(counter);
 				end;
 				inc(i);
 			end;
@@ -696,12 +747,6 @@ begin
 		tmpList := nil;
 		tempVariables.Free;
 		tempVariables := nil;
-		parameters.Free;
-		parameters := nil;
-		parameterTypes.Free;
-		parameterTypes := nil;
-		results.Free;
-		results := nil;
 	end;
 	
 	LogFunctionEnd;
@@ -2441,14 +2486,14 @@ begin
 		
 		// 52:////////////   READRECORDS   /////////////
 				if SameText(functionName,'ReadRecords') then begin 
-					resultStr := ParseReadRecords(formula, formulaParts, formulaPartTypes);
+					resultStr := ParseReadRecords(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, formulaParts, formulaPartTypes, parameters, parameterTypes);
 					resultType := '1';
 					// break;
 				end;
 		
 		// ???:////////////   FINDRECORDS   /////////////
 				if SameText(functionName,'FindRecords') then begin 
-					resultStr := ParseFindRecords(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, formulaParts, formulaPartTypes);
+					resultStr := ParseFindRecords(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, formulaParts, formulaPartTypes, parameters, parameterTypes);
 					resultType := '1';
 					// break;
 				end;
