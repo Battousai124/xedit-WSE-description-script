@@ -20,7 +20,7 @@ var
   // =========================================================================
   // configuration form, opened as first form when the script is started - before any modifications
   // =========================================================================
-procedure CreateMainForm();
+procedure CreateMainForm(settings : TStringList);
 var
   lbl: TLabel; // label object - re-used/overwritten for every label
   i, tmpInt, curTopPos: Integer; // re-used/overwritten every time
@@ -188,16 +188,16 @@ begin
     end
 
 			
-		//  Grey out if no AWKR.esp located
-    // FuntionalDisplays
-    lbl := ConstructLabel(frm, gbMainSettings, pnlPluginNameNew.Top + pnlPluginNameNew.Height, 10, 16, gbMainSettings.Width - 30,
-      'FunctionalDisplay', '');
-    curTopPos := lbl.Top + 16;
-    cbMainFunctionalDisplay := ConstructCheckBox2(frm, gbMainSettings, lbl.Top + 20, lbl.Left + 10, gbGeneral.Width - 18, 'Copy Keywords [KYWD]', GlobConfig.CopyFunctionalDisplay,
-      'This will copy all the FunctionalDisplays Keywords into your Overwrite mod'+ chr(13) + chr(10) + 
-			'Make sure you have installed the patch from Armor keywords as this affects the KYWD'
+		// //  Grey out if no AWKR.esp located
+    // // FuntionalDisplays
+    // lbl := ConstructLabel(frm, gbMainSettings, pnlPluginNameNew.Top + pnlPluginNameNew.Height, 10, 16, gbMainSettings.Width - 30,
+      // 'FunctionalDisplay', '');
+    // curTopPos := lbl.Top + 16;
+    // cbMainFunctionalDisplay := ConstructCheckBox2(frm, gbMainSettings, lbl.Top + 20, lbl.Left + 10, gbGeneral.Width - 18, 'Copy Keywords [KYWD]', GlobConfig.CopyFunctionalDisplay,
+      // 'This will copy all the FunctionalDisplays Keywords into your Overwrite mod'+ chr(13) + chr(10) + 
+			// 'Make sure you have installed the patch from Armor keywords as this affects the KYWD'
 			
-			);
+			// );
 	
 
     // Buttons at the bottom
@@ -240,7 +240,7 @@ begin
         GlobConfig.PluginSelectionMode := GetPseudoRadioButtonGroupValue
           (rgPluginSelectionMode);
         GlobConfig.NewPluginName := tbFileName.Text;
-				GlobConfig.CopyFunctionalDisplay := (cbMainFunctionalDisplay.State = cbChecked); 
+				// GlobConfig.CopyFunctionalDisplay := (cbMainFunctionalDisplay.State = cbChecked); 
       end;
     end
     else

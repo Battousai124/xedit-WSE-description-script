@@ -27,18 +27,21 @@ uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Form';
 uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Config';
 uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_DescParser';
 uses 'Effs_Lib\EffsXEditTools';
+// uses 'Effs_Lib\EffsFormulaParser';
 
 const
   sPropertiesList = wbScriptsPath +
     'Gernashs_Lib\Gernashs description Renamer - Resource.txt';
   automaticPluginDescriptionStartStr =
     'Automatically created via Gernashs_OMOD_ReNamer script';
+	GuiSettingsFilename = wbScriptsPath + 'Gernashs_Lib\Gernashs_OMOD_ReNamer_GuiSettings.txt';
 
 var
-  slPropertyMap: TStringList;
+  slPropertyMap : TStringList;
   targetPlugin: IwbFile;
   ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList,
-    ChecksSuccessfulList, BeforeChangesList, AfterChangesList: TStringList;
+    ChecksSuccessfulList, BeforeChangesList, AfterChangesList,
+		GuiSettings : TStringList;
   bChecksFailed, bAborted, bModificationNecessary, bTargetPluginLoaded: Boolean;
   bSlPropertyMapTranslated, bThisIsTheFirstExecution: Boolean;
   { lastFileProcessed, } targetPluginName: String;
@@ -56,6 +59,7 @@ begin
   ModificationsDoneList := TStringList.Create;
   BeforeChangesList := TStringList.Create;
   AfterChangesList := TStringList.Create;
+	GuiSettings := TStringList.Create;
 
   slPropertyMap := TStringList.Create;
   slPropertyMap.LoadFromFile(sPropertiesList);
@@ -63,8 +67,8 @@ begin
     TranslateDescriptionConfigurationFile;
 
   ReadLoadOrder;
-
   bThisIsTheFirstExecution := true;
+	// ParseFormulasFile(GuiSettingsFilename, GuiSettings, '', '');
 
   LogFunctionEnd;
 end;
@@ -84,7 +88,7 @@ begin
   begin
     bThisIsTheFirstExecution := false;
 
-    CreateMainForm;
+    CreateMainForm(GuiSettings);
 
     if GlobConfig.MainAction = 2 then
     begin
@@ -108,10 +112,10 @@ function Finalize: Integer;
 begin
   LogFunctionStart('Finalize');
 
-	if GlobConfig.CopyFunctionalDisplay then
-		begin
-			CopyFunctionalDisplayKYWD;
-		end;
+	// if GlobConfig.CopyFunctionalDisplay then
+		// begin
+			// CopyFunctionalDisplayKYWD;
+		// end;
 
   if not GlobConfig.Cancelled then
   begin
@@ -776,5 +780,6 @@ begin
 
   LogFunctionEnd;
 end;
+
 
 end.
