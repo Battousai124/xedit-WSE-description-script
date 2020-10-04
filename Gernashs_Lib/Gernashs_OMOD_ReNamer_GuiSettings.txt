@@ -1,0 +1,179 @@
+////////////////////////////
+//variables from the config that are used for calculation and injected 
+////////////////////////////
+ShowResourceFileTranslationOption=false
+DebugLogEnabled=false
+PluginSelectionMode=0
+ExistingGernashsDescrPlugins=""
+NewPluginName=""
+LastPluginInLoadOrder=""
+
+//some calculations based on these variables, that are used several times
+ExistingGernashsDescrPlugins_Count=SearchCount(".esp", ExistingGernashsDescrPlugins)
+NoGernashsPluginsExist=ExistingGernashsDescrPlugins=""
+
+////////////////////////////
+//default values and default values per type:
+////////////////////////////
+// (will be processed if none are provided for the specific control)
+Left=10
+lbl_Top=10
+lbl_Height=16
+pnl_BevelOuter="bvNone"
+
+////////////////////////////
+//form for configuration:
+////////////////////////////
+frmConfig_Caption="Gernash's OMOD description renamer"
+frmConfig_Width=650
+frmConfig_Height=400
+
+/////left pane
+
+frmConfig_lbl_desc_Height=76
+frmConfig_lbl_desc_Width=frmConfig_Width - 30
+frmConfig_lbl_desc_Caption="This tool automatically creates proper descriptions for OMODs.
+It analyzes the actual changes an OMOD does and creates a description that considers the changes the plugins you use introduced. This way the OMOD description is true to your personal mod setup.
+
+Select the functionality you want the script to perform: (hover your mouse over an option and read the hints if something is unclear)"
+
+frmConfig_gb_gbGeneral_Top=lbl_Top + frmConfig_lbl_desc_Height + 12
+frmConfig_gb_gbGeneral_Left=7
+frmConfig_gb_gbGeneral_Height=With(x = frmConfig_Height - frmConfig_gb_gbGeneral_Top - 80, If(ShowResourceFileTranslationOption, Round(x) / 2 + 6, x))
+frmConfig_gb_gbGeneral_Width=(frmConfig_Width - 20) / 4 - 15
+frmConfig_gb_gbGeneral_Caption="General Settings "
+
+cbGeneralWriteDebugLog_Top=18
+cbGeneralWriteDebugLog_Width=frmConfig_gb_gbGeneral_Width - 18
+cbGeneralWriteDebugLog_Caption="Write Debug Log"
+cbGeneralWriteDebugLog_Checked=DebugLogEnabled
+cbGeneralWriteDebugLog_Hint="if checked: will write a detailed debug log into the Messages tab of xEdit - else only relevant outputs will be logged there
+(This comes in handy if there is an error, so you can follow the execution path in the script.)
+(At the end of the operation there will always be a result-window displayed.)"
+
+frmConfig_gb_gbTranslateResourceFile_Top=frmConfig_gb_gbGeneral_Top + frmConfig_gb_gbGeneral_Height
+frmConfig_gb_gbTranslateResourceFile_Left=8
+frmConfig_gb_gbTranslateResourceFile_Height=frmConfig_Height - frmConfig_gb_gbGeneral_Height - frmConfig_gb_gbGeneral_Top - 80
+frmConfig_gb_gbTranslateResourceFile_Width=frmConfig_gb_gbGeneral_Width
+frmConfig_gb_gbTranslateResourceFile_Caption="Translate File "
+
+pnlTranslate_Top=20
+pnlTranslate_Left=0
+pnlTranslate_Height=frmConfig_gb_gbTranslateResourceFile_Height
+pnlTranslate_Width=frmConfig_gb_gbTranslateResourceFile_Width
+
+lblTranslate_Width=pnlTranslate_Width - 12
+lblTranslate_Caption="create backup && then translate resource
+"
+
+btnTranslate_Top=pnlTranslate_Height - 55
+btnTranslate_Caption="Translate File"
+btnTranslate_ModalResult="mrCancel"
+
+
+/////right / main pane
+
+frmConfig_gb_gbMainSettings_Top=frmConfig_gb_gbGeneral_Top
+frmConfig_gb_gbMainSettings_Left=frmConfig_gb_gbGeneral_Width + 13
+frmConfig_gb_gbMainSettings_Height=frmConfig_Height - frmConfig_gb_gbGeneral_Top - 80
+frmConfig_gb_gbMainSettings_Width=frmConfig_Width - frmConfig_gb_gbGeneral_Width - 36
+frmConfig_gb_gbMainSettings_Caption="Check / Modification Settings "
+
+gbMainSettings_pnl_Width=frmConfig_gb_gbMainSettings_Width - 12
+
+lblPluginsHeader_Top=20
+lblPluginsHeader_Width=frmConfig_gb_gbMainSettings_Width - 30
+lblPluginsHeader_Caption="Plugin and Records:"
+
+rgPluginSelectionMode_Top=lblPluginsHeader_Top + 16
+rgPluginSelectionMode_Height=20
+rgPluginSelectionMode_Width=gbMainSettings_pnl_Width
+rgPluginSelectionMode_LabelText="Plugin to store changes"
+rgPluginSelectionMode_LabelWidth=gbMainSettings_pnl_Width / 3
+rgPluginSelectionMode_Hint="defines where changes are stored - e.g. a new plugin can be created at the end of the load order or an existing plugin can be used"
+rgPluginSelectionMode_Items="automatic,create new,last in load order"
+rgPluginSelectionMode_ItemWidth=(frmConfig_gb_gbMainSettings_Width - rgPluginSelectionMode_LabelWidth - 20) / 3
+rgPluginSelectionMode_IndexChecked=PluginSelectionMode
+
+pnlPluginNameSelect_Top=rgPluginSelectionMode_Top + rgPluginSelectionMode_Height
+pnlPluginNameSelect_Height=22
+pnlPluginNameSelect_Visible=IF(PluginSelectionMode=1, true, false)
+
+pnlPluginNameSelect_lbl_Top=3
+pnlPluginNameSelect_lbl_Width=(frmConfig_gb_gbMainSettings_Width - 16) / 3
+pnlPluginNameSelect_lbl_Caption=IF(NoGernashsPluginsExist, "New plugin name", "Select from found plugins")
+pnlPluginNameSelect_lbl_Hint=IF(NoGernashsPluginsExist, "There was no plugin found in the current load order that was automatically created by this script. Therefore a new plugin will be created with a default name.", "Lists all plugins that were automatically created by this script before. The one lowest in the load order is selected by default.")
+pnlPluginNameSelect_lbl_FontColor=IF(NoGernashsPluginsExist, "clGray", "")
+
+pnlPluginNameSelect_ddl_Left=Left + pnlPluginNameSelect_lbl_Width
+pnlPluginNameSelect_ddl_Height=26
+pnlPluginNameSelect_ddl_Width=rgPluginSelectionMode_ItemWidth * 2
+pnlPluginNameSelect_ddl_SelectedItemIndex=ExistingGernashsDescrPlugins_Count - 1
+pnlPluginNameSelect_ddl_Items=ExistingGernashsDescrPlugins
+pnlPluginNameSelect_ddl_Hint=pnlPluginNameSelect_lbl_Hint
+pnlPluginNameSelect_ddl_DisabledText=IF(NoGernashsPluginsExist, NewPluginName & ".esp", "")
+
+pnlPluginNameNew_Top=pnlPluginNameSelect_Top
+pnlPluginNameNew_Height=21
+pnlPluginNameNew_Visible=IF(PluginSelectionMode=2, true, false)
+
+pnlPluginNameNew_lbl_Top=pnlPluginNameSelect_lbl_Top
+
+pnlPluginNameNew_lblPluginNameNew_Width=pnlPluginNameSelect_lbl_Width
+pnlPluginNameNew_lblPluginNameNew_Caption="New plugin name"
+pnlPluginNameNew_lblPluginNameNew_Hint="Enter a plugin name for the new plugin (without file extension)."
+
+pnlPluginNameNew_ed_Left=Left + pnlPluginNameNew_lblPluginNameNew_Width
+pnlPluginNameNew_ed_Height=pnlPluginNameNew_Height
+pnlPluginNameNew_ed_Width=pnlPluginNameSelect_ddl_Width
+pnlPluginNameNew_ed_Text=NewPluginName
+pnlPluginNameNew_ed_Hint="name for new ESP to be created"
+
+pnlPluginNameNew_lblPluginNameNewExt_Left=pnlPluginNameNew_ed_Left + pnlPluginNameNew_ed_Width
+pnlPluginNameNew_lblPluginNameNewExt_Width=20
+pnlPluginNameNew_lblPluginNameNewExt_Caption=".esp"
+
+pnlPluginNameNew_lblPluginNameNotAllowed_Left=pnlPluginNameNew_lblPluginNameNewExt_Left + pnlPluginNameNew_lblPluginNameNewExt_Width + 20
+pnlPluginNameNew_lblPluginNameNotAllowed_Width=pnlPluginNameNew_lblPluginNameNew_Width - pnlPluginNameNew_lblPluginNameNewExt_Left - pnlPluginNameNew_lblPluginNameNewExt_Width
+pnlPluginNameNew_lblPluginNameNotAllowed_Caption="not allowed"
+pnlPluginNameNew_lblPluginNameNotAllowed_Hint="The name you entered is not allowed (e.g. because it starts or ends with a space, contains forbidden characters or it already exists in the load order or the game''s Data folder)."
+pnlPluginNameNew_lblPluginNameNotAllowed_FontColor="clRed"
+pnlPluginNameNew_lblPluginNameNotAllowed_Visible=false
+// -> False, because the initial suggestion is always allowed. It is validated before showing the GUI.
+
+pnlPluginNameDisplay_Top=pnlPluginNameSelect_Top
+pnlPluginNameDisplay_Height=pnlPluginNameNew_Height
+pnlPluginNameDisplay_Visible=IF(PluginSelectionMode=3, true, false)
+
+pnlPluginNameDisplay_lbl_Top=pnlPluginNameSelect_lbl_Top
+pnlPluginNameDisplay_lbl_FontColor="$0080FF"
+// -> darker orange
+pnlPluginNameDisplay_lbl_Hint="automatically selects the last plugin in your load order
+ATTENTION: this could be a master or a vanilla plugin or something you do not want to overwrite!
+Don't use this option if you are not sure."
+
+pnlPluginNameDisplay_lblPluginNameDisplay_Width=pnlPluginNameSelect_lbl_Width
+pnlPluginNameDisplay_lblPluginNameDisplay_Caption="Plugin name"
+
+pnlPluginNameDisplay_lblPluginNameDisplayName_Left=Left + pnlPluginNameDisplay_lblPluginNameDisplay_Width
+pnlPluginNameDisplay_lblPluginNameDisplayName_Width=gbMainSettings_pnl_Width - pnlPluginNameDisplay_lblPluginNameDisplayName_Left
+pnlPluginNameDisplay_lblPluginNameDisplayName_Caption=LastPluginInLoadOrder
+
+/////buttons at the bottom:
+
+frmConfig_pnl_pnlButtons_BevelOuter="bvRaised"
+frmConfig_pnl_pnlButtons_Top=frmConfig_Height - 75
+frmConfig_pnl_pnlButtons_Left=-5
+frmConfig_pnl_pnlButtons_Height=75
+frmConfig_pnl_pnlButtons_Width=frmConfig_Width + 10
+
+pnlButtons_btn_Top=6
+pnlButtons_btn_Width=75
+
+pnlButtons_btn_btnCancel_Left=frmConfig_pnl_pnlButtons_Width - 18 - 87
+pnlButtons_btn_btnCancel_Caption="Cancel"
+pnlButtons_btn_btnCancel_ModalResult="mrCancel"
+
+pnlButtons_btn_btnOk_Left=pnlButtons_btn_btnCancel_Left - pnlButtons_btn_Width - 5
+pnlButtons_btn_btnOk_Caption="Next"
+pnlButtons_btn_btnOk_ModalResult="mrOk"

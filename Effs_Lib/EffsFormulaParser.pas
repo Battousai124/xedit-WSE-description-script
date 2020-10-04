@@ -156,8 +156,11 @@ begin
 		InitializeFormulaParser;
 	
 	formulas := TStringList.Create;
-	formulas.NameValueSeparator := '=';
+	//formulas.NameValueSeparator := '=';
 	try
+		CopyList(results, formulas);
+		results.Clear;
+	
 		LoadFormulasFromFile(filename,formulas);
 		if formulas.Count = 0 then 
 			raise Exception.Create(Format('Could not load any formulas from file. filename: %s',[filename]));
@@ -363,7 +366,7 @@ begin
 						tmpInt := Pos('=',resultStr);
 						if tmpInt < 0 then
 							raise Exception.Create(Format('could not find name for temporary variable in WITH function. expected to find "=" in formula part: %s',[resultStr]));
-						resultTypeStr := Copy(resultStr,1,tmpInt-1); //variable name
+						resultTypeStr := Trim(Copy(resultStr,1,tmpInt-1)); //variable name
 						if formulas.IndexOfName(resultTypeStr) > -1 then
 							raise Exception.Create(Format('Function tries to create a temporary variable that would overwrite a real variable. variableName: %s',[resultTypeStr]));
 						resultStr := Copy(resultStr,tmpInt+1,Length(resultStr)-tmpInt); //formula
@@ -973,7 +976,7 @@ begin
 	
 	//add part after last separator
 	if (not parsePartDetails) and (lastSeparatorEnd > 0) then begin 
-		tmpStr := Copy(formula,lastSeparatorEnd+1,curPos-lastSeparatorEnd);
+		tmpStr := Trim(Copy(formula,lastSeparatorEnd+1,curPos-lastSeparatorEnd));
 		if Length(tmpStr) > 0 then begin
 			formulaParts.Add(tmpStr);
 			formulaPartTypes.Add('2');
@@ -1010,6 +1013,11 @@ begin
 		end;
 		
 		curChar:=Copy(formula,curPos,1);
+		
+		if SameText(curChar,' ') then begin
+			endPos:= curPos-1;
+			break;
+		end;
 		
 		if SameText(curChar,')') then begin
 			endPos:= curPos-1;
@@ -2783,7 +2791,7 @@ var
 	i, countComma, countNumber, tmpInt, countNotAllowed : Integer;
 	curChar : String;
 begin
-	LogFunctionStart('FormatFloatWithExcelFormatString');
+	LogFunctionStart('isNumeric');
 	
 	Result := false;
 	if SameText(Trim(strValue),'') then begin
@@ -2956,7 +2964,7 @@ begin
 						resultType := '1';
 					end else begin 
 						if not (SameText(type1,'3') and SameText(type2,'3')) then //1-string,3-numeric,8-boolean
-							raise Exception.Create(Format('Since none of the two values is a string, this operator can only be used for calculating 2 numeric values. operator: %s, 1st value: %s, 2nd value: %s, formula: %s',[operator, strValue1, strValue2, formula]));
+							raise Exception.Create(Format('Since none of the two values is a string, this operator can only be used for calculating 2 numeric values. operator: %s, 1st value: %s, 2nd value: %s, 1st type: %s, 2nd type: %s, formula: %s',[operator, strValue1, strValue2, type1, type2, formula]));
 						floatValue1 := StrToFloat(strValue1);
 						floatValue2 := StrToFloat(strValue2);
 						resultFloat := floatValue1 + floatValue2;
@@ -3135,15 +3143,18 @@ end;
 //=========================================================================
 procedure LoadFormulasFromFile(const filename : String; formulas : TStringList;);
 var 	
-	allLines : TStringList;
+	allLines, predefinedFormulas : TStringList;
 	i, posEqual, posApostrophe, counter, lengthToNextApostrophe : Integer;
 	line, variableName, formula : String;
 	lineEndsWithinAStringValue, prevlineEndsWithinAStringValue : Boolean;
 begin
 	LogFunctionStart('LoadFormulasFromFile');
 	allLines := TStringList.Create;
+	predefinedFormulas := TStringList.Create;
 	
 	try
+		CopyList(formulas, predefinedFormulas);
+	
 		allLines.LoadFromFile(filename);
 		variableName := '';
 		formula:='';
@@ -3198,9 +3209,19 @@ begin
 			DebugLog(Format('added formulaEntry - variableName: %s, formula: %s',[variableName,formula]));
 		end;
 		
+		i := 0;
+		while i < predefinedFormulas.Count do begin
+			variableName := predefinedFormulas.Names[i];
+			formula := predefinedFormulas.ValueFromIndex[i];
+			formulas.Values[variableName] := formula;
+			inc(i);
+		end;
+		
 	finally
 		allLines.Free;
 		allLines := nil;
+		predefinedFormulas.Free;
+		predefinedFormulas := nil;
 	end;
 	
 	LogFunctionEnd;

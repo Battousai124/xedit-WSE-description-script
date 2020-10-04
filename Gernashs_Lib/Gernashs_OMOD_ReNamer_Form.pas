@@ -5,9 +5,7 @@ interface
 implementation
 
 uses xEditAPI, Classes, SysUtils, StrUtils, Windows;
-
 uses ClipBrd;
-
 uses StdCtrls;
 
 var
@@ -17,15 +15,14 @@ var
   btnOk: TButton;
   lblPluginNameNotAllowed: TLabel;
 
-  // =========================================================================
-  // configuration form, opened as first form when the script is started - before any modifications
-  // =========================================================================
+// =========================================================================
+// configuration form, opened as first form when the script is started - before any modifications
+// =========================================================================
 procedure CreateMainForm(settings : TStringList);
 var
   lbl: TLabel; // label object - re-used/overwritten for every label
-  i, tmpInt, curTopPos: Integer; // re-used/overwritten every time
+  i: Integer; // re-used/overwritten every time
   tmpStringList: TStringList; // re-used/overwritten every time
-  tmpStr: String; // re-used/overwritten every time
   tmpCbState: TCheckBoxState; // re-used/overwritten every time
   frm: TForm;
   gbGeneral, gbMainSettings, gbTranslateResourceFile: TGroupBox;
@@ -34,159 +31,56 @@ var
   btnCancel, btnTranslate: TButton;
 begin
   LogFunctionStart('CreateMainForm');
-  frm := TForm.Create(nil);
+	frm := FormFromSettings('frmConfig', settings);
   tmpStringList := TStringList.Create;
 
   try
-    frm.Caption := 'Gernash''s OMOD description renamer';
-    frm.Width := 650;
-    frm.Height := 400;
-    frm.Position := poScreenCenter;
-
-    lbl := ConstructLabel(frm, frm, 10, 10, 0, frm.Width - 30,
-      'This tool automatically creates proper descriptions for OMODs. ' +
-      chr(13) + chr(10) +
-      'It analyzes the actual changes an OMOD does and creates a description that considers the changes the plugins you use introduced. This way the OMOD description is true to your personal mod setup.'
-      + chr(13) + chr(10) + chr(13) + chr(10) +
-      'Select the functionality you want the script to perform: (hover your mouse over an option and read the hints if something is unclear)',
-      '');
-    curTopPos := lbl.Top + lbl.Height + 12;
-
-    // general settings
-    tmpInt := frm.Height - curTopPos - 65;
-    if GlobConfig.ShowResourceFileTranslationOption then
-      tmpInt := (tmpInt / 2) + 6;
-    gbGeneral := ConstructGroupBox(frm, frm, curTopPos, 10, tmpInt,
-      (frm.Width - 20) / 4, 'General Settings ', '');
-    cbGeneralWriteDebugLog := ConstructCheckBox2(frm, gbGeneral, 18, 10,
-      gbGeneral.Width - 18, 'Write Debug Log', EnableDebugLog,
-      'if checked: will write a detailed debug log into the Messages tab of xEdit - else only relevant outputs will be logged there'
-      + chr(13) + chr(10) +
-      '(This comes in handy if there is an error, so you can follow the execution path in the script.)'
-      + chr(13) + chr(10) +
-      '(At the end of the operation there will always be a result-window displayed.)');
-
+		lbl := LabelFromSettings(frm, frm, 'frmConfig', 'desc', settings);
+		
+		// general settings
+    gbGeneral := GroupBoxFromSettings(frm, frm, 'frmConfig', 'gbGeneral', settings);
+		cbGeneralWriteDebugLog := CheckBoxFromSettings(frm, gbGeneral, 'gbGeneral', 'cbGeneralWriteDebugLog', settings);
+		
     // special stuff
     if GlobConfig.ShowResourceFileTranslationOption then
     begin
-      gbTranslateResourceFile := ConstructGroupBox(frm, frm,
-        gbGeneral.Top + gbGeneral.Height, 10, frm.Height - gbGeneral.Height -
-        gbGeneral.Top - 65, (frm.Width - 20) / 4, 'Translate File ', '');
-      pnlTranslate := ConstructPanel(frm, gbTranslateResourceFile, 20, 0,
-        gbTranslateResourceFile.Height, gbTranslateResourceFile.Width, '', '');
-      pnlTranslate.BevelOuter := bvNone;
-      lbl := ConstructLabel(frm, pnlTranslate, 10, 10, 0, pnlTranslate.Width,
-        'create backup & then translate resorce' + chr(13) + chr(10), '');
-      btnTranslate := ConstructButton(frm, pnlTranslate,
-        pnlTranslate.Height - 55, 10, 0, 0, 'Translate File');
-      btnTranslate.OnClick := OnClickTranslate;
-      btnTranslate.ModalResult := mrCancel;
-
+			gbTranslateResourceFile := GroupBoxFromSettings(frm, frm, 'frmConfig', 'gbTranslateResourceFile', settings);
+			pnlTranslate := PanelFromSettings(frm, gbTranslateResourceFile, 'gbTranslateResourceFile', 'pnlTranslate', settings);
+      lbl := LabelFromSettings(frm, pnlTranslate, 'pnlTranslate', 'lblTranslate', settings);
+			btnTranslate := ButtonFromSettings(frm, pnlTranslate, 'pnlTranslate', 'btnTranslate', settings);
+			btnTranslate.OnClick := OnClickTranslate;
     end;
 
     // main settings
-    gbMainSettings := ConstructGroupBox(frm, frm, gbGeneral.Top,
-      gbGeneral.Width + 16, frm.Height - gbGeneral.Top - 65,
-      frm.Width - gbGeneral.Width - 25, 'Check / Modification Settings ', '');
-
+		gbMainSettings := GroupBoxFromSettings(frm, frm, 'frmConfig', 'gbMainSettings', settings);
+    
     // Plugin and Records
-    lbl := ConstructLabel(frm, gbMainSettings, 20, 10, 16,
-      gbMainSettings.Width - 30, 'Plugin and Records:', '');
-    curTopPos := lbl.Top + 16;
-
-    // plugin selection mode
-    tmpStringList.Clear;
-    tmpStringList.Add('automatic');
-    tmpStringList.Add('create new');
-    tmpStringList.Add('last in load order');
-    rgPluginSelectionMode := ConstructPseudoRadioGroup(frm, gbMainSettings,
-      curTopPos, 10, 20, gbMainSettings.Width - 12, 'Plugin to store changes',
-      (gbMainSettings.Width - 12) / 3,
-      'defines where changes are stored - e.g. a new plugin can be created at the end of the load order or an existing plugin can be used',
-      tmpStringList, (gbMainSettings.Width - (gbMainSettings.Width - 12) / 3 -
-      20) / tmpStringList.Count, GlobConfig.PluginSelectionMode, '');
-
-    for i := 1 to tmpStringList.Count do
-    begin
+		lbl := LabelFromSettings(frm, gbMainSettings, 'gbMainSettings', 'lblPluginsHeader', settings);
+    
+		// plugin selection mode
+		rgPluginSelectionMode := PseudoRadioGroupFromSettings(frm, gbMainSettings, 'gbMainSettings', 'rgPluginSelectionMode', settings, tmpStringList);
+		for i := 1 to tmpStringList.Count do begin
       rgPluginSelectionMode.Controls[i].OnClick := OnChangePluginSelectionMode;
     end;
-
-    // plugin name
-    pnlPluginNameSelect := ConstructPanel(frm, gbMainSettings,
-      rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 22,
-      rgPluginSelectionMode.Width, '', '');
-    pnlPluginNameSelect.BevelOuter := bvNone;
-    lbl := ConstructLabel(frm, pnlPluginNameSelect, 3, 10, 16,
-      (gbMainSettings.Width - 16) / 3, 'Select from found plugins',
-      'Lists all plugins that were automatically created by this script before. The one lowest in the load order is selected by default.');
-    if GlobConfig.ExistingGernashsDescrPlugins.Count > 0 then
-      tmpStr := ''
-    else
-      tmpStr := GlobConfig.NewPluginName + '.esp';
-    ddlPluginNameSelect := ConstructDropdown(frm, pnlPluginNameSelect, 0,
-      lbl.Left + lbl.Width, 26,
-      (gbMainSettings.Width - (gbMainSettings.Width - 12) / 3 - 20) * 2 / 3,
-      GlobConfig.ExistingGernashsDescrPlugins.Count - 1,
-      GlobConfig.ExistingGernashsDescrPlugins, lbl.Hint, tmpStr);
+		
+		// plugin name
+    pnlPluginNameSelect := PanelFromSettings(frm, gbMainSettings, 'gbMainSettings', 'pnlPluginNameSelect', settings);
+		lbl := LabelFromSettings(frm, pnlPluginNameSelect, 'pnlPluginNameSelect', 'lblPluginSelection', settings);
+		ddlPluginNameSelect := DropdownFromSettings(frm, pnlPluginNameSelect, 'pnlPluginNameSelect', 'ddlPluginNameSelect', settings, tmpStringList);
     ddlPluginNameSelect.Controls[1].OnChange := OnChangeExistingPluginDropdown;
-    if GlobConfig.ExistingGernashsDescrPlugins.Count = 0 then
-    begin
-      lbl.Caption := 'New plugin name';
-      lbl.Hint :=
-        'There was no plugin found in the current load order that was automatically created by this script. Therefore a new plugin will be created with a default name.';
-      lbl.Font.color := clGray;
-      ddlPluginNameSelect.Controls[0].Top := ddlPluginNameSelect.Controls
-        [0].Top - 1;
-      ddlPluginNameSelect.Hint := lbl.Hint;
-      ddlPluginNameSelect.Controls[0].Hint := lbl.Hint;
+		if GlobConfig.ExistingGernashsDescrPlugins.Count = 0 then begin
+      //just because it bothers me when something is 1 pixel off:
+      ddlPluginNameSelect.Controls[0].Top := ddlPluginNameSelect.Controls[0].Top - 1;
     end;
-    if not(GlobConfig.PluginSelectionMode = 1) then
-    begin
-      pnlPluginNameSelect.Visible := false;
-    end
-    pnlPluginNameNew := ConstructPanel(frm, gbMainSettings,
-      rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 21,
-      rgPluginSelectionMode.Width, '', '');
-    pnlPluginNameNew.BevelOuter := bvNone;
-    lbl := ConstructLabel(frm, pnlPluginNameNew, 3, 10, 16,
-      (gbMainSettings.Width - 16) / 3, 'New plugin name',
-      'Enter a plugin name for the new plugin (without file extension).');
-    tbFileName := ConstructEdit(frm, pnlPluginNameNew, 0, lbl.Left + lbl.Width,
-      21, (gbMainSettings.Width - (gbMainSettings.Width - 12) / 3 - 20) * 2 / 3,
-      GlobConfig.NewPluginName, 'name for new ESP to be created');
-    tbFileName.OnKeyUp := OnChangePluginName;
-    lbl := ConstructLabel(frm, pnlPluginNameNew, lbl.Top,
-      tbFileName.Left + tbFileName.Width, 16, 20, '.esp', '');
-    lblPluginNameNotAllowed := ConstructLabel(frm, pnlPluginNameNew, lbl.Top,
-      lbl.Left + lbl.Width + 20, 16, pnlPluginNameNew.Width - lbl.Left -
-      lbl.Width, 'not allowed',
-      'The name you entered is not allowed (e.g. because it starts or ends with a space, contains forbidden characters or it already exists in the load order or the game''s Data folder).');
-    lblPluginNameNotAllowed.Font.color := clRed;
-    lblPluginNameNotAllowed.Visible := false;
-    // the suggestion is always allowed, because it is validated before showing the GUI
-    if not(GlobConfig.PluginSelectionMode = 2) then
-    begin
-      pnlPluginNameNew.Visible := false;
-    end
-    pnlPluginNameDisplay := ConstructPanel(frm, gbMainSettings,
-      rgPluginSelectionMode.Top + rgPluginSelectionMode.Height, 10, 21,
-      rgPluginSelectionMode.Width, '', '');
-    pnlPluginNameDisplay.BevelOuter := bvNone;
-    lbl := ConstructLabel(frm, pnlPluginNameDisplay, 3, 10, 16,
-      (gbMainSettings.Width - 16) / 3, 'Plugin name',
-      'automatically selects the last plugin in your load order' + chr(13) +
-      chr(10) + 'ATTENTION: this could be a master or a vanilla plugin or something you do not want to overwrite!'
-      + chr(13) + chr(10) + 'Don''t use this option if you are not sure.');
-    lbl.Font.color := $0080FF; // darker orange
-    lbl := ConstructLabel(frm, pnlPluginNameDisplay, lbl.Top,
-      lbl.Left + lbl.Width, 16, pnlPluginNameDisplay.Width - lbl.Left -
-      lbl.Width, GlobConfig.LastPluginInLoadOrder, lbl.Hint);
-    lbl.Font.color := $0080FF; // darker orange
-    if not(GlobConfig.PluginSelectionMode = 3) then
-    begin
-      pnlPluginNameDisplay.Visible := false;
-    end
-
+		pnlPluginNameNew := PanelFromSettings(frm, gbMainSettings, 'gbMainSettings', 'pnlPluginNameNew', settings);
+    lbl := LabelFromSettings(frm, pnlPluginNameNew, 'pnlPluginNameNew', 'lblPluginNameNew', settings);
+		tbFileName := EditFromSettings(frm, pnlPluginNameNew, 'pnlPluginNameNew', 'tbFileName', settings);
+		tbFileName.OnKeyUp := OnChangePluginName;
+		lbl := LabelFromSettings(frm, pnlPluginNameNew, 'pnlPluginNameNew', 'lblPluginNameNewExt', settings);
+		lblPluginNameNotAllowed := LabelFromSettings(frm, pnlPluginNameNew, 'pnlPluginNameNew', 'lblPluginNameNotAllowed', settings);
+		pnlPluginNameDisplay := PanelFromSettings(frm, gbMainSettings, 'gbMainSettings', 'pnlPluginNameDisplay', settings);
+    lbl := LabelFromSettings(frm, pnlPluginNameDisplay, 'pnlPluginNameDisplay', 'lblPluginNameDisplay', settings);
+		lbl := LabelFromSettings(frm, pnlPluginNameDisplay, 'pnlPluginNameDisplay', 'lblPluginNameDisplayName', settings);
 			
 		// //  Grey out if no AWKR.esp located
     // // FuntionalDisplays
@@ -198,21 +92,13 @@ begin
 			// 'Make sure you have installed the patch from Armor keywords as this affects the KYWD'
 			
 			// );
-	
 
     // Buttons at the bottom
-    pnlButtons := ConstructPanel(frm, frm, frm.Height - 75, -5, 75,
-      frm.Width + 10, '', '');
-
-    btnCancel := ConstructButton(frm, pnlButtons, 6, pnlButtons.Width - 18 - 87,
-      0, 0, 'Cancel');
-    btnCancel.OnClick := OnClickCancel;
-    btnCancel.ModalResult := mrCancel;
-
-    btnOk := ConstructButton(frm, pnlButtons, 6,
-      btnCancel.Left - btnCancel.Width - 5, 0, 0, 'Next');
-    btnOk.ModalResult := mrOk;
-
+		pnlButtons := PanelFromSettings(frm, frm, 'frmConfig', 'pnlButtons', settings);
+    btnCancel := ButtonFromSettings(frm, pnlButtons, 'pnlButtons', 'btnCancel', settings);
+		btnCancel.OnClick := OnClickCancel;
+    btnOk := ButtonFromSettings(frm, pnlButtons, 'pnlButtons', 'btnOk', settings);
+    
     // lbl := ConstructLabel(frm, pnlButtons, 12, 14, 0, frm.Width - 30,
     // '(When you press "Next" an analysis of the OMOD is conducted to create a new description mirroring your personal load order.)'
     // , '');
@@ -418,9 +304,9 @@ end;
 // results form used to visualize whatever the script did
 // =========================================================================
 procedure CreateResultsForm(bChecksFailed: Boolean; bAborted: Boolean;
-  ResultTextsList: TStringList);
+  ResultTextsList, settings: TStringList; );
 var
-  frm: TForm;
+  frmResult: TForm;
   lbl: TLabel; // label object - re-used/overwritten for every label
   curTopPos: Integer;
   lblCaption: String;
@@ -430,42 +316,41 @@ var
 begin
   LogFunctionStart('CreateResultsForm');
 
-  frm := TForm.Create(nil);
+  frmResult := TForm.Create(nil);
   try
-
-    frm.Caption := 'Gernash''s OMOD description renamer';
-    frm.Width := 800;
-    frm.Height := 650;
-    frm.Position := poScreenCenter;
-
-    lblCaption := 'Results:';
+		
+    frmResult.Caption := 'Gernash''s OMOD description renamer';
+    frmResult.Width := 800;
+    frmResult.Height := 650;
+    frmResult.Position := poScreenCenter;
+		
+		lblCaption := 'Results:';
     if bChecksFailed then
       lblCaption := lblCaption + ' Attention: Some Checks failed.';
     if bAborted then
       lblCaption := lblCaption + ' Processing has been aborted.';
-
-    lbl := ConstructLabel(frm, frm, 10, 10, 0, frm.Width - 30, lblCaption, '');
+		lbl := ConstructLabel(frmResult, frmResult, 10, 10, 0, frmResult.Width - 30, lblCaption, '');
     if bChecksFailed or bAborted then
       lbl.Font.color := clRed;
 
     curTopPos := lbl.Top + lbl.Height + 8;
 
-    mResult := ConstructMemo(frm, frm, curTopPos, 10, frm.Height - curTopPos -
-      80, frm.Width - 35, true, true, ssBoth, ResultTextsList);
+    mResult := ConstructMemo(frmResult, frmResult, curTopPos, 10, frmResult.Height - curTopPos -
+      80, frmResult.Width - 35, true, true, ssBoth, ResultTextsList);
 
-    pnlButtons := ConstructPanel(frm, frm, frm.Height - 75, -5, 75,
-      frm.Width + 10, '', '');
+    pnlButtons := ConstructPanel(frmResult, frmResult, frmResult.Height - 75, -5, 75,
+      frmResult.Width + 10, '', '');
 
-    btnOk := TButton.Create(frm);
+    btnOk := TButton.Create(frmResult);
     btnOk.Parent := pnlButtons;
     btnOk.Caption := 'Copy to Clipboard and Close';
     btnOk.ModalResult := mrOk;
     btnOk.Width := 200;
     btnOk.Top := 6;
-    btnOk.Left := frm.Width div 2 - btnOk.Width div 2;
-    // btnOk.Left := frm.Width - btnOk.Width - 18;
+    btnOk.Left := frmResult.Width div 2 - btnOk.Width div 2;
+    // btnOk.Left := frmResult.Width - btnOk.Width - 18;
 
-    if frm.ShowModal = mrOk then
+    if frmResult.ShowModal = mrOk then
     begin
       // set back time counter
       GlobLogStart := Now;
@@ -475,7 +360,7 @@ begin
       mResult.SelLength := 0;
     end;
   finally
-    frm.Free;
+    frmResult.Free;
   end;
 
   LogFunctionEnd;

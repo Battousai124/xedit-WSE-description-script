@@ -138,6 +138,34 @@ begin
 	LogFunctionEnd;
 end;
 
+
+//=========================================================================
+//  Read TStringList to String
+//	(including escaping)
+//=========================================================================
+function StringListToString(const list : TStringList; const fieldEncloser, delimiter : String; const escapeTotalString : Boolean) : String;
+var 	
+	i : Integer;
+begin
+	LogFunctionStart('StringListToString');
+	
+	Result := '';
+	i := 0;
+	while i < list.Count do begin
+		if i = 0 then begin
+			Result := EscapeStringIfNecessary(list[i], fieldEncloser, delimiter, '');
+		end else begin
+			Result := Result + delimiter + EscapeStringIfNecessary(list[i], fieldEncloser, delimiter, '');
+		end;
+		inc(i);
+	end;
+	
+	if escapeTotalString then 
+		Result := fieldEncloser + StringReplace(Result, fieldEncloser, fieldEncloser + fieldEncloser, [rfIgnoreCase,rfReplaceAll]) + fieldEncloser;
+	
+	LogFunctionEnd;
+end;
+
 //=========================================================================
 //  copy one list to another, keeping the order
 //=========================================================================
@@ -244,10 +272,11 @@ begin
 	
 	Result := stringValue;
 	
-	if (Pos(fieldEncloser,stringValue) > 0) then begin
+	if (not SameText(fieldEncloser,'')) and (Pos(fieldEncloser,stringValue) > 0) then begin
 		Result := fieldEncloser + StringReplace(stringValue, fieldEncloser, fieldEncloser + fieldEncloser, [rfIgnoreCase,rfReplaceAll]) + fieldEncloser;
 	end else begin
-		if (Pos(delimiter1,stringValue) > 0) or (Pos(delimiter2,stringValue) > 0) then begin
+		if ((not SameText(delimiter1, '')) and (Pos(delimiter1,stringValue) > 0)) 
+			or ((not SameText(delimiter2, '')) and (Pos(delimiter2,stringValue) > 0)) then begin
 			Result := fieldEncloser + stringValue + fieldEncloser;
 		end;
 	end;
@@ -362,7 +391,7 @@ var
 	i, inFormat : Integer;
 	curChar, format1: String;
 begin
-	LogFunctionStart('FormatFloatWithExcelFormatString');
+	LogFunctionStart('FormatStringWithExcelFormatString');
 	
 	format1:='';
 	

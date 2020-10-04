@@ -27,7 +27,8 @@ uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Form';
 uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_Config';
 uses 'Gernashs_Lib\Gernashs_OMOD_ReNamer_DescParser';
 uses 'Effs_Lib\EffsXEditTools';
-// uses 'Effs_Lib\EffsFormulaParser';
+uses 'Effs_Lib\EffsFormulaParser';
+uses 'Effs_Lib\EffsGraphicsHelper';
 
 const
   sPropertiesList = wbScriptsPath +
@@ -50,7 +51,7 @@ function Initialize: Integer;
 begin
   SetDefaultConfig;
 
-  LogFunctionStart('Initialize');
+	LogFunctionStart('Initialize');
 
   RecordsHeadersList := TStringList.Create;
   ResultTextsList := TStringList.Create;
@@ -68,7 +69,16 @@ begin
 
   ReadLoadOrder;
   bThisIsTheFirstExecution := true;
-	// ParseFormulasFile(GuiSettingsFilename, GuiSettings, '', '');
+	
+	if GlobConfig.ShowResourceFileTranslationOption then
+		GuiSettings.Values['ShowResourceFileTranslationOption'] := 'true';
+	if EnableDebugLog then
+		GuiSettings.Values['DebugLogEnabled'] := 'true';
+	GuiSettings.Values['PluginSelectionMode'] := IntToStr(GlobConfig.PluginSelectionMode);
+	GuiSettings.Values['ExistingGernashsDescrPlugins'] := StringListToString(GlobConfig.ExistingGernashsDescrPlugins, '"', ',', true);
+	GuiSettings.Values['NewPluginName'] := '"' + GlobConfig.NewPluginName + '"';
+	GuiSettings.Values['LastPluginInLoadOrder'] := '"' + GlobConfig.LastPluginInLoadOrder + '"';
+	ParseFormulasFile(GuiSettingsFilename, GuiSettings, '', '');
 
   LogFunctionEnd;
 end;
@@ -120,7 +130,7 @@ begin
   if not GlobConfig.Cancelled then
   begin
     PrepareResults(bChecksFailed, bAborted);
-    CreateResultsForm(bChecksFailed, bAborted, ResultTextsList);
+    CreateResultsForm(bChecksFailed, bAborted, ResultTextsList, GuiSettings);
   end;
 
   slPropertyMap.Free;

@@ -1,5 +1,8 @@
 unit EffsFormTools;
 
+// This unit only contains static functions to deal form elements, no variables
+// (it requires EffsDebugLog and EffsGraphicsHelper to be loaded)
+
 //=========================================================================
 //  create a button.
 //  Example usage: btn1 := ConstructButton(frm, pnlBottom, 8, 8, 160, 60, 'OK');
@@ -92,11 +95,18 @@ end;
 //  construct a Panel.  
 //  Example usage: pnl := ConstructPanel(frm, pnlBottom, 65, 8, 0, 0, 'panel header');
 //=========================================================================
-function ConstructPanel(frm, parent: TObject; top, left, height, width: Integer; caption, hint: String): TLabel;
+function ConstructPanel(frm, parent: TObject; top, left, height, width: Integer; caption, hint: String): TPanel;
 var
 	pnl: TPanel;
 begin
 	LogFunctionStart('ConstructPanel');
+	
+	// DebugLog(Format('caption: %s',[caption]));
+	// DebugLog(Format('top: %d',[top]));
+	// DebugLog(Format('left: %d',[left]));
+	// DebugLog(Format('height: %d',[height]));
+	// // DebugLog(Format('width: %d',[width]));
+	// // DebugLog(Format('top: %d, left: %d, height: %d, width: %d',[top, left, height, width]));
 	
 	pnl := TPanel.Create(frm);
 	pnl.Parent := parent;
@@ -248,10 +258,10 @@ begin
 	gb.Parent := parent;
 	gb.Top := top;
 	gb.Left := left;
-	gb.Width := width;
-	gb.Height := height;
 	gb.ClientWidth := width - 15;
 	gb.ClientHeight := height - 15;
+	gb.Width := width;
+	gb.Height := height;
 	gb.Caption := caption;
 	if (hint <> '') then begin
 		gb.ShowHint := true;
@@ -443,5 +453,384 @@ begin
 	LogFunctionEnd;
 end;
 
+//=========================================================================
+//  get a string value from guiSettings with Fallback logic
+//=========================================================================
+function GetStringFromGuiSettings(const parentName, controlType, controlName, propertyName : String; const settings : TStringList; ) : String;
+var 
+	tmpStr : String;
+	tmpInt : Integer;
+begin
+	// LogFunctionStart('GetStringFromGuiSettings');
 	
+	tmpInt := settings.IndexOfName(Format('%s_%s_%s_%s',[parentName, controlType, controlName, propertyName]));
+	if tmpInt < 0 then //fallback
+		tmpInt := settings.IndexOfName(Format('%s_%s_%s',[controlType, controlName, propertyName]));
+	if tmpInt < 0 then //fallback
+		tmpInt := settings.IndexOfName(Format('%s_%s_%s',[parentName, controlType, propertyName]));
+	if tmpInt < 0 then //fallback
+		tmpInt := settings.IndexOfName(Format('%s_%s_%s',[parentName, controlName, propertyName]));
+	if tmpInt < 0 then //fallback
+		tmpInt := settings.IndexOfName(Format('%s_%s',[controlName, propertyName]));
+	if tmpInt < 0 then //fallback
+		tmpInt := settings.IndexOfName(Format('%s_%s',[controlType, propertyName]));
+	if tmpInt < 0 then //fallback
+		tmpInt := settings.IndexOfName(propertyName);
+	
+	if tmpInt > -1 then 
+		Result := settings.ValueFromIndex[tmpInt];
+
+	// DebugLog(Result);
+
+	// LogFunctionEnd;
+end;
+
+//=========================================================================
+//  get a string value from guiSettings with Fallback logic
+//=========================================================================
+function GetIntFromGuiSettings(const parentName, controlType, controlName, propertyName : String; const settings : TStringList; ) : Integer;
+var 
+	tmpStr : String;
+	tmpInt : Integer;
+begin
+	// LogFunctionStart('GetIntFromGuiSettings');
+	
+	Result := 0;
+	
+	tmpStr := GetStringFromGuiSettings(parentName, controlType, controlName, propertyName, settings);
+
+	if Not SameText(tmpStr,'') then begin 
+		tmpStr := FormatFloat('#;-#;#',StrToFloat(tmpStr));
+		if Not SameText(tmpStr,'') then 
+			Result := Int(StrToFloat(tmpStr));
+	end;
+
+	// LogFunctionEnd;
+end;
+
+//=========================================================================
+//  get a string value from guiSettings with Fallback logic
+//=========================================================================
+function GetBoolFromGuiSettings(const parentName, controlType, controlName, propertyName : String; const settings : TStringList; ) : Boolean;
+var 
+	tmpStr : String;
+	tmpInt : Integer;
+begin
+	// LogFunctionStart('GetBoolFromGuiSettings');
+	
+	Result := false;
+	
+	tmpStr := GetStringFromGuiSettings(parentName, controlType, controlName, propertyName, settings);
+
+	if SameText(tmpStr,'true') then
+		Result := true;
+
+	// LogFunctionEnd;
+end;
+
+
+//=========================================================================
+//  create a form by providing settings
+//=========================================================================
+function FormFromSettings(const name : String; const settings : TStringList; ) : TForm;
+var 
+	tmpStr : String;
+begin
+	LogFunctionStart('FormFromSettings');
+	
+	Result := TForm.Create(nil);
+	
+	Result.Caption := GetStringFromGuiSettings(name, 'frm', name, 'Caption', settings);
+	Result.Width := GetIntFromGuiSettings(name, 'frm', name, 'Width', settings);
+	Result.Height := GetIntFromGuiSettings(name, 'frm', name, 'Height', settings);
+	Result.Position := poScreenCenter;
+
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  create a label by providing settings
+//=========================================================================
+function LabelFromSettings(frm, parent : TObject; const parentName, name : String; const settings : TStringList; ) : TLabel;
+var 
+	typeName, tmpStr : String;
+begin
+	LogFunctionStart('LabelFromSettings');
+	
+	typeName := 'lbl';
+	Result := ConstructLabel(frm, parent
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Top', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Left', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Height', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Width', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Caption', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Hint', settings)
+		);
+	
+	tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'FontColor', settings);
+	if not SameText(tmpStr,'') then begin
+		Result.Font.color := StringToColor(tmpStr);
+	end;
+	
+	DebugLog(Format('name: %s, color: %s',[name, tmpStr]));
+	
+	tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'Visible', settings);
+	if not SameText(tmpStr,'') then begin
+		Result.Visible := SameText(tmpStr,'true');
+	end;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  create a groupbox by providing settings
+//=========================================================================
+function GroupBoxFromSettings(frm, parent : TObject; const parentName, name : String; const settings : TStringList; ) : TGroupBox;
+var 
+	typeName : String;
+begin
+	LogFunctionStart('GroupBoxFromSettings');
+	
+	typeName := 'gb';
+	Result := ConstructGroupBox(frm, parent
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Top', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Left', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Height', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Width', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Caption', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Hint', settings)
+		);
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  create a checkbox by providing settings
+//=========================================================================
+function CheckBoxFromSettings(frm, parent : TObject; const parentName, name : String; const settings : TStringList; ) : TCheckBox;
+var 
+	typeName : String;
+begin
+	LogFunctionStart('CheckBoxFromSettings');
+
+	typeName := 'cb';
+	Result := ConstructCheckBox2(frm, parent
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Top', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Left', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Width', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Caption', settings)
+		,GetBoolFromGuiSettings(parentName, typeName, name, 'Checked', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Hint', settings)
+		);
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  create a panel by providing settings
+//=========================================================================
+function PanelFromSettings(frm, parent : TObject; const parentName, name : String; const settings : TStringList; ) : TPanel;
+var 
+	typeName, tmpStr : String;
+begin
+	LogFunctionStart('PanelFromSettings');
+	
+	typeName := 'pnl';
+	Result := ConstructPanel(frm, parent
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Top', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Left', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Height', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Width', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Caption', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Hint', settings)
+		);
+	
+	tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'BevelOuter', settings);
+	if not SameText(tmpStr,'') then begin
+		if SameText(tmpStr,'bvNone') then
+			Result.BevelOuter := bvNone;
+		if SameText(tmpStr,'bvRaised') then
+			Result.BevelOuter := bvRaised;
+		if SameText(tmpStr,'bvLowered') then
+			Result.BevelOuter := bvLowered;
+	end;
+	
+	tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'Visible', settings);
+	if not SameText(tmpStr,'') then begin
+		Result.Visible := SameText(tmpStr,'true');
+	end;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  create a button by providing settings
+//=========================================================================
+function ButtonFromSettings(frm, parent : TObject; const parentName, name : String; const settings : TStringList;) : TButton;
+var 
+	typeName, tmpStr : String;
+begin
+	LogFunctionStart('ButtonFromSettings');
+
+	typeName := 'btn';
+	Result := ConstructButton(frm, parent
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Top', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Left', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Height', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Width', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Caption', settings)
+		);
+	
+	tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'ModalResult', settings);
+	if not SameText(tmpStr,'') then begin
+		Result.ModalResult := StringToModalResult(tmpStr);
+	end;
+	
+	//unfortunately found no way to hand over the event as parameter
+	// if not (onClickEvent = nil) then
+		// Result.OnClick := onClickEvent;
+		
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  convert string to modalresult
+//=========================================================================
+function StringToModalResult(const s : String) : TModalResult;
+begin
+	LogFunctionStart('StringToModalResult');
+
+	if not SameText(s,'') then begin
+		if SameText(s,'mrNone') then
+			Result := mrNone;
+		if SameText(s,'mrOK') then
+			Result := mrOK;
+		if SameText(s,'mrCancel') then
+			Result := mrCancel;
+		if SameText(s,'mrAbort') then
+			Result := mrAbort;
+		if SameText(s,'mrRetry') then
+			Result := mrRetry;
+		if SameText(s,'mrIgnore') then
+			Result := mrIgnore;
+		if SameText(s,'mrYes') then
+			Result := mrYes;
+		if SameText(s,'mrNo') then
+			Result := mrNo;
+	end;
+		
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  create a checkbox by providing settings
+//=========================================================================
+function PseudoRadioGroupFromSettings(frm, parent : TObject; const parentName, name : String; const settings : TStringList; tmpList : TStringList;) : TRadioGroup;
+var 
+	typeName, tmpStr : String;
+	//tmpList : TStringList;
+	i : Integer;
+begin
+	LogFunctionStart('PseudoRadioGroupFromSettings');
+	
+	//tmpList := TStringList.Create;
+	//tmpList.Clear;
+
+	// try
+		typeName := 'rbg';
+		
+		tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'Items', settings);
+		if not SameText(tmpStr,'') then begin
+			tmpList.Clear;
+			StringToStringList(tmpStr, ',', tmpList);
+		end;
+
+		Result := ConstructPseudoRadioGroup(frm, parent
+			,GetIntFromGuiSettings(parentName, typeName, name, 'Top', settings)
+			,GetIntFromGuiSettings(parentName, typeName, name, 'Left', settings)
+			,GetIntFromGuiSettings(parentName, typeName, name, 'Height', settings)
+			,GetIntFromGuiSettings(parentName, typeName, name, 'Width', settings)
+			,GetStringFromGuiSettings(parentName, typeName, name, 'LabelText', settings)
+			,GetIntFromGuiSettings(parentName, typeName, name, 'LabelWidth', settings)
+			,GetStringFromGuiSettings(parentName, typeName, name, 'Hint', settings)
+			,tmpList
+			,GetIntFromGuiSettings(parentName, typeName, name, 'ItemWidth', settings)
+			,GetIntFromGuiSettings(parentName, typeName, name, 'IndexChecked', settings)
+			,GetStringFromGuiSettings(parentName, typeName, name, 'DisabledText', settings)
+			);
+		
+		//unfortunately found no way to hand over the event as parameter
+		// if not (onClickEvent = nil) then begin
+			// for i := 1 to tmpList.Count do begin
+				// Result.Controls[i].OnClick := onClickEvent;
+			// end;
+		// end;
+			
+	// finally
+		// tmpList.Free;
+		// tmpList := nil;
+	// end;
+	
+	LogFunctionEnd;
+end;
+
+
+//=========================================================================
+//  create a dropdown by providing settings
+//=========================================================================
+function DropdownFromSettings(frm, parent : TObject; const parentName, name : String; const settings : TStringList; tmpList : TStringList;) : TPanel;
+var 
+	typeName, tmpStr : String;
+	i : Integer;
+begin
+	LogFunctionStart('DropdownFromSettings');
+	
+	typeName := 'ddl';
+	
+	tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'Items', settings);
+	if not SameText(tmpStr,'') then begin
+		tmpList.Clear;
+		StringToStringList(tmpStr, ',', tmpList);
+	end;
+
+	Result := ConstructDropdown(frm, parent
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Top', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Left', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Height', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Width', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'SelectedItemIndex', settings)
+		,tmpList
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Hint', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'DisabledText', settings)
+		);
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  create an edit box by providing settings
+//=========================================================================
+function EditFromSettings(frm, parent : TObject; const parentName, name : String; const settings : TStringList;) : TEdit;
+var 
+	typeName, tmpStr : String;
+	i : Integer;
+begin
+	LogFunctionStart('EditFromSettings');
+	
+	typeName := 'ed';
+
+	Result := ConstructEdit(frm, parent
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Top', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Left', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Height', settings)
+		,GetIntFromGuiSettings(parentName, typeName, name, 'Width', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Text', settings)
+		,GetStringFromGuiSettings(parentName, typeName, name, 'Hint', settings)
+		);
+	
+	LogFunctionEnd;
+end;
+
+
+
 end.
