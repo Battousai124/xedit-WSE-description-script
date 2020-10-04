@@ -36,13 +36,14 @@ const
   automaticPluginDescriptionStartStr =
     'Automatically created via Gernashs_OMOD_ReNamer script';
 	GuiSettingsFilename = wbScriptsPath + 'Gernashs_Lib\Gernashs_OMOD_ReNamer_GuiSettings.txt';
+	OneRecordFormulasFilename = wbScriptsPath + 'Gernashs_Lib\Gernashs_OMOD_ReNamer_OneRecordFormulas.txt';
 
 var
   slPropertyMap : TStringList;
   targetPlugin: IwbFile;
   ResultTextsList, RecordsHeadersList, ModificationsDoneList, ChecksFailedList,
     ChecksSuccessfulList, BeforeChangesList, AfterChangesList,
-		GuiSettings : TStringList;
+		GuiSettings, OneRecordInfos : TStringList;
   bChecksFailed, bAborted, bModificationNecessary, bTargetPluginLoaded: Boolean;
   bSlPropertyMapTranslated, bThisIsTheFirstExecution: Boolean;
   { lastFileProcessed, } targetPluginName: String;
@@ -61,6 +62,7 @@ begin
   BeforeChangesList := TStringList.Create;
   AfterChangesList := TStringList.Create;
 	GuiSettings := TStringList.Create;
+	OneRecordInfos := TStringList.Create;
 
   slPropertyMap := TStringList.Create;
   slPropertyMap.LoadFromFile(sPropertiesList);
@@ -149,11 +151,15 @@ begin
   BeforeChangesList := nil;
   AfterChangesList.Free;
   AfterChangesList := nil;
-  GlobConfig.NotAllowedPluginNames.Free;
+  GuiSettings.Free;
+  GuiSettings := nil;
+	OneRecordInfos.Free;
+  OneRecordInfos := nil;
+	GlobConfig.NotAllowedPluginNames.Free;
   GlobConfig.NotAllowedPluginNames := nil;
   GlobConfig.ExistingGernashsDescrPlugins.Free;
   GlobConfig.ExistingGernashsDescrPlugins := nil;
-
+	
   if Assigned(targetPlugin) then
     SortMasters(targetPlugin);
 
@@ -451,7 +457,7 @@ var
   desc, oldDesc, recordPluginName: string;
   newRec, tmpEntry: IInterface;
   bRecordAlreadyPresent: Boolean;
-  recordNameForOutput, tmpStr: String;
+  recordName, tmpStr: String;
 begin
   LogFunctionStart('ProcessOneOMODRecord');
 
@@ -459,19 +465,21 @@ begin
 
   // patch the winning override record
   rec := WinningOverride(rec);
-
-  recordNameForOutput := RecordMasterToString(rec);
+  recordName := RecordToString(rec);
   recordPluginName := GetFileName(rec);
-
-  if not Assigned(rec) then
+	
+	if not Assigned(rec) then
   begin
     LogCheckFailed
       (Format('Something went wrong when getting the override for this record. Record skipped. - record: %s',
-      [recordNameForOutput]));
+      [recordName]));
     LogFunctionEnd;
     Exit;
   end;
-
+	
+	//calculate the formulas File for this record
+	ParseFormulasFile(OneRecordFormulasFilename, OneRecordInfos, '', recordName);
+	
   // call actual logic for generating the description
   desc := GetOmodDescription(rec);
 
@@ -479,7 +487,7 @@ begin
   begin
     LogCheckFailed
       (Format('The logic would have created an empty description. Record skipped. - record: %s',
-      [recordNameForOutput]));
+      [recordName]));
     LogFunctionEnd;
     Exit;
   end;
@@ -492,13 +500,13 @@ begin
     begin
       LogCheckSuccessful
         (Format('Description already up to date. - record: %s - DESC: "%s"',
-        [recordNameForOutput, desc]));
+        [recordName, desc]));
       bModificationNecessary := false;
     end
     else
     begin
       BeforeChangesList.Add(Format('before: %s - DESC: "%s"',
-        [recordNameForOutput, oldDesc]));
+        [recordName, oldDesc]));
     end;
   end;
 
@@ -516,7 +524,7 @@ begin
         begin
           LogCheckFailed
             (Format('The plugin selected is the master plugin for this record. Record skipped. - record: %s - plugin: %s',
-            [recordNameForOutput, targetPluginName]));
+            [recordName, targetPluginName]));
           LogFunctionEnd;
           // --> this will not result in an empty plugin being created, as it can only happen, if an existing plugin is selected
           Exit;
@@ -525,7 +533,7 @@ begin
 
       RecordsHeadersList.Add
         (Format('record: %s - created by plugin: %s - winning override in: %s',
-        [recordNameForOutput, GetFileName(MasterOrSelf(rec)),
+        [recordName, GetFileName(MasterOrSelf(rec)),
         GetFileName(WinningOverride(rec))]));
       try
         if SameText(recordPluginName, targetPluginName) then
@@ -541,14 +549,14 @@ begin
           newRec := wbCopyElementToFile(rec, targetPlugin, false, true);
           LogModification
             (Format('Record was copied as an override to the selected plugin. - record: %s - plugin: %s',
-            [recordNameForOutput, targetPluginName]));
+            [recordName, targetPluginName]));
         end;
 
         if not Assigned(newRec) then
         begin
           LogCheckFailed
             (Format('Something went wrong when creating the override record. Record skipped. - record: %s',
-            [recordNameForOutput]));
+            [recordName]));
           LogFunctionEnd;
           Exit;
         end
@@ -558,9 +566,9 @@ begin
           SetElementEditValues(newRec, 'DESC', desc);
           LogModification
             (Format('Description was replaced: - record: %s - old DESC: "%s" - new DESC: "%s"',
-            [recordNameForOutput, oldDesc, desc]));
+            [recordName, oldDesc, desc]));
           AfterChangesList.Add(Format('after: %s - DESC: "%s"',
-            [recordNameForOutput, desc]));
+            [recordName, desc]));
         end;
       except
         on Ex: Exception do
@@ -674,7 +682,7 @@ begin
   end
   else
   begin
-    // DebugLog(Format('Record has the right signature. - record: %s',[recordNameForOutput]));
+    // DebugLog(Format('Record has the right signature. - record: %s',[recordName]));
   end;
 
   // LogFunctionEnd;

@@ -1,0 +1,18 @@
+// -----------------------
+//constants:
+// -----------------------
+propsPath = "DATA - Data\Properties\[*]"
+// -----------------------
+//functions:
+// -----------------------
+fCheckPType = Function(ReadRecords(rec, path & "\Property") = pType)
+fVal1 = Function(ReadRecords(rec, path & "\Value 1 - Float"))
+fFilterProp_GetVal1 = Function(ReadRecords(SelectedRecords() ,propsPath, , , fCheckPType, fVal1))
+fVal1StandardFormat = Function(With(val = Value(val1Str, 0), if(val <> 0, pName & If(val > 1, Text(round(val , 1), "0.#x"), Text(round(val * 100), "+0.#%;-0.#%;")))))
+// -----------------------
+//results
+// -----------------------
+speed = With(pType = "Speed", pName="Fire Rate:", val1Str = fFilterProp_GetVal1, fVal1StandardFormat)
+
+
+

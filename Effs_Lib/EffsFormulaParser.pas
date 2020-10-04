@@ -280,6 +280,7 @@ begin
 		i:=0;
 		while i < outerTempVariables.Count do begin
 			tempVariables.Add(outerTempVariables[i]);
+			// DebugLog(Format('tempVariable i: %d, %s',[i, outerTempVariables[i]]));
 			inc(i);
 		end;
 	
@@ -363,15 +364,18 @@ begin
 					i := 0;
 					while i < formulaParts.Count - 2 do begin
 						resultStr := formulaParts[i];
-						tmpInt := Pos('=',resultStr);
-						if tmpInt < 0 then
-							raise Exception.Create(Format('could not find name for temporary variable in WITH function. expected to find "=" in formula part: %s',[resultStr]));
-						resultTypeStr := Trim(Copy(resultStr,1,tmpInt-1)); //variable name
-						if formulas.IndexOfName(resultTypeStr) > -1 then
-							raise Exception.Create(Format('Function tries to create a temporary variable that would overwrite a real variable. variableName: %s',[resultTypeStr]));
-						resultStr := Copy(resultStr,tmpInt+1,Length(resultStr)-tmpInt); //formula
-						tmpStr := ParseFormula(Format('%s_%s',[variableName, resultTypeStr]), resultStr, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-						tempVariables.Values[resultTypeStr] := tmpStr;
+						if SameText(formulaPartTypes[i],'2') then begin
+							tmpInt := Pos('=',resultStr);
+							if tmpInt < 0 then
+								raise Exception.Create(Format('could not find name for temporary variable in WITH function. expected to find "=" in formula part: %s',[resultStr]));
+							resultTypeStr := Trim(Copy(resultStr,1,tmpInt-1)); //variable name
+							if formulas.IndexOfName(resultTypeStr) > -1 then
+								raise Exception.Create(Format('Function tries to create a temporary variable that would overwrite a real variable. variableName: %s',[resultTypeStr]));
+							resultStr := Copy(resultStr,tmpInt+1,Length(resultStr)-tmpInt); //formula
+							tmpStr := ParseFormula(Format('%s_%s',[variableName, resultTypeStr]), resultStr, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+							tempVariables.Values[resultTypeStr] := tmpStr;
+							// DebugLog(Format('temporary variable added: %s, value: %s',[resultTypeStr, tmpStr]));
+						end;
 						inc(i);
 					end;
 					//then get rid of the unnecessary parts (right to left)
@@ -2028,7 +2032,7 @@ begin
 		
 		// 32:////////////   VALUE   /////////////
 				if SameText(functionName,'value') then begin 
-					if (separatorsCount > 0) or (partsCount < 1) then 
+					if (separatorsCount > 1) or (partsCount < 1) then 
 						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
 					
 					type1 := formulaPartTypes[0];
@@ -2494,14 +2498,14 @@ begin
 		
 		// 52:////////////   READRECORDS   /////////////
 				if SameText(functionName,'ReadRecords') then begin 
-					resultStr := ParseReadRecords(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := ParseReadRecords(variableName, formula, formulas, results, resultTypes, operators, functions, outerTempVariables, recursionLevel, formulaParts, formulaPartTypes, parameters, parameterTypes);
 					resultType := '1';
 					// break;
 				end;
 		
 		// ???:////////////   FINDRECORDS   /////////////
 				if SameText(functionName,'FindRecords') then begin 
-					resultStr := ParseFindRecords(variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := ParseFindRecords(variableName, formula, formulas, results, resultTypes, operators, functions, outerTempVariables, recursionLevel, formulaParts, formulaPartTypes, parameters, parameterTypes);
 					resultType := '1';
 					// break;
 				end;
@@ -2894,7 +2898,7 @@ begin
 			strValue2 := formulaParts[i+1];
 			if SameText(operator,'/') then begin
 				if not (SameText(type1,'3') and SameText(type2,'3')) then //3-numeric
-					raise Exception.Create(Format('This operator can only be used for calculating numeric values. operator: %s, 1st value: %s, 2nd value: %s, formula: %s',[operator, strValue1, strValue2, formula]));
+					raise Exception.Create(Format('This operator can only be used for calculating numeric values. operator: %s, 1st value: %s, 2nd value: %s, 1st type: %s, 2nd type: %s, formula: %s',[operator, strValue1, strValue2, type1, type2, formula]));
 				floatValue1 := StrToFloat(strValue1);
 				floatValue2 := StrToFloat(strValue2);
 				resultFloat := floatValue1 / floatValue2;
@@ -2903,7 +2907,7 @@ begin
 			end else begin
 				if SameText(operator,'*') then begin
 					if not (SameText(type1,'3') and SameText(type2,'3')) then //3-numeric
-						raise Exception.Create(Format('This operator can only be used for calculating numeric values. operator: %s, 1st value: %s, 2nd value: %s, formula: %s',[operator, strValue1, strValue2, formula]));
+						raise Exception.Create(Format('This operator can only be used for calculating numeric values. operator: %s, 1st value: %s, 2nd value: %s, 1st type: %s, 2nd type: %s, formula: %s',[operator, strValue1, strValue2, type1, type2, formula]));
 					floatValue1 := StrToFloat(strValue1);
 					floatValue2 := StrToFloat(strValue2);
 					resultFloat := floatValue1 * floatValue2;
@@ -2947,7 +2951,7 @@ begin
 			strValue2 := formulaParts[i+1];
 			if SameText(operator,'-') then begin
 				if not (SameText(type1,'3') and SameText(type2,'3')) then //3-numeric
-					raise Exception.Create(Format('This operator can only be used for calculating numeric values. operator: %s, 1st value: %s, 2nd value: %s, formula: %s',[operator, strValue1, strValue2, formula]));
+					raise Exception.Create(Format('This operator can only be used for calculating numeric values. operator: %s, 1st value: %s, 2nd value: %s, 1st type: %s, 2nd type: %s, formula: %s',[operator, strValue1, strValue2, type1, type2, formula]));
 				floatValue1 := StrToFloat(strValue1);
 				floatValue2 := StrToFloat(strValue2);
 				resultFloat := floatValue1 - floatValue2;
@@ -3155,6 +3159,8 @@ begin
 	try
 		CopyList(formulas, predefinedFormulas);
 	
+		formulas.Clear;
+			
 		allLines.LoadFromFile(filename);
 		variableName := '';
 		formula:='';
@@ -3192,11 +3198,14 @@ begin
 				
 				//add the previous variable to the formulas
 				if not (SameText(variableName,'')) then begin
-					formulas.Values[variableName] := formula;
+					if formulas.IndexOfName(variableName) > -1 then 
+						raise Exception.Create(Format('Variable has been defined twice. variableName: %s',[variableName]));
+					
+					formulas.Values[variableName] := Trim(formula);
 					DebugLog(Format('added formulaEntry - variableName: %s, formula: %s',[variableName,formula]));
 				end;
 				
-				variableName := Copy(line,1,posEqual-1);
+				variableName := Trim(Copy(line,1,posEqual-1));
 				formula := Copy(line,posEqual+1,Length(line)-posEqual);
 		end;
 		
@@ -3205,7 +3214,7 @@ begin
 			if formulas.IndexOfName(variableName) > -1 then 
 				raise Exception.Create(Format('Variable has been defined twice. variableName: %s',[variableName]));
 				
-			formulas.Values[variableName] := formula;
+			formulas.Values[variableName] := Trim(formula);
 			DebugLog(Format('added formulaEntry - variableName: %s, formula: %s',[variableName,formula]));
 		end;
 		
