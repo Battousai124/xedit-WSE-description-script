@@ -184,7 +184,7 @@ end;
 //  Transpose a string that represents a table (switch columns and rows)
 // 	(we assume that everything is correctly escaped -> no extra escaping in here)
 //=========================================================================
-function TransposeTableString(const tableStr, columnDelimiter, rowDelimiter : String;) : String;
+function TransposeTableString(const tableStr, rowDelimiter, columnDelimiter : String;) : String;
 var 	
 	i, rowsCount, colsCount, curCol, tmpInt : Integer;
 	tmpStr, curLine, resultStr : String;

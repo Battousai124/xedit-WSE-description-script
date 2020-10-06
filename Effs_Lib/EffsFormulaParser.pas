@@ -79,12 +79,17 @@ begin
 	functions.Add('searchCount('); 
 	functions.Add('linebreak('); 
 	functions.Add('calculate(');
+	functions.Add('ReadFromCSV('); 
+	functions.Add('FilterCSV('); 
+	functions.Add('SortCSV('); 
+	functions.Add('ChangeCSV('); 
+	functions.Add('AddColToCSV('); 
+//functions.Add('CountIf('); for counting appearances in elements of a CSV using a formula - with rowIndex and colIndex, although it does not make much sense to call it with both variables set
 //functions.Add('Distinct('); //listOrCSV, ignoreEmptyValues, delimiter1, delimiter2
 	//functions.Add('stringFormat(');
 	functions.Add('With('); //additional logical functions
 	functions.Add('Function('); 
 	functions.Add('EndCalculation('); 
-//functions.Add('ReadCSV('); ReadCSV(string,aggregationType,formula) formula works with a total variable that is a string, with row and col which are 1-based integers, and with itm which is a string
 //functions.Add('ForEach('); foreach(string,variableName,formula,aggregationType,delimiter,fieldEncloser) if fieldEncloser is not defined, use ", 
 //functions.Add('For('); ???
 //functions.Add('While('); ???
@@ -101,7 +106,7 @@ begin
 	functions.Add('SelectedRecords('); 
 	functions.Add('FindRecords('); 
 //functions.Add('FindPlugins('); ???
-//functions.Add('FindFiles('); ???
+//functions.Add('ReadDirectory('); ???
 //functions.Add('ChangeRecords('); --returns a string that can contain every change that was necessary
 
 			//functions.Add('SplitStringAndForEach('); SplitStringAndForEach(string,delimiter,elementVariableName,ReturnFormatFunction) ?????
@@ -136,6 +141,7 @@ begin
 		operators:= nil;
 		functions.Free;
 		functions:= nil;
+		FormulaParserInitialized := false;
 	end;
 	
 	LogFunctionEnd;
@@ -317,6 +323,31 @@ begin
 			if SameText(functionName,'SelectedRecords') then begin
 				maxParameterToParse := 1;
 				maxParameterToResolve := 1;
+			end;
+			
+			if SameText(functionName,'ReadFromCSV') then begin
+				maxParameterToParse := 5;
+				maxParameterToResolve := 5;
+			end;
+			
+			if SameText(functionName,'FilterCSV') then begin
+				maxParameterToParse := 5;
+				maxParameterToResolve := 5;
+			end;
+			
+			if SameText(functionName,'SortCSV') then begin
+				maxParameterToParse := 4;
+				maxParameterToResolve := 4;
+			end;
+			
+			if SameText(functionName,'ChangeCsv') then begin
+				maxParameterToParse := 5;
+				maxParameterToResolve := 5;
+			end;
+			
+			if SameText(functionName,'AddColToCsv') then begin
+				maxParameterToParse := 4;
+				maxParameterToResolve := 4;
 			end;
 			
 			// DebugLog(Format('functionName: %s, formula: %s',[functionName, formula]));
@@ -930,10 +961,13 @@ begin
 		end;
 		
 		if (curPartType > 0) then begin
-			if (maxParameterToParse > -1) then begin 
-				if curParameter >= maxParameterToParse then
-					parsePartDetails := false;
-			end;
+		
+			// DebugLog(Format('maxParameterToParse: %d, curParameter: %d, curPartType: %d, curPart: %s',[maxParameterToParse, curParameter, curPartType, curPart]));
+		
+			// if (maxParameterToParse > -1) then begin 
+				// if curParameter > maxParameterToParse then
+					// parsePartDetails := false;
+			// end;
 			
 			if parsePartDetails then begin 
 				if isFirstPartOrAfterSeparator then begin
@@ -949,8 +983,13 @@ begin
 				DebugLog(Format('new Formlua part added: type: %d, part: %s',[curPartType,curPart]));
 				isFirstPartOrAfterSeparator := (curPartType = 7);
 				curPart := '';
-				if curPartType = 7 then
+				if curPartType = 7 then begin
 					inc(curParameter);
+					if (maxParameterToParse > -1) then begin 
+						if curParameter > maxParameterToParse then
+							parsePartDetails := false;
+					end;
+				end;
 			end else begin 
 				//everything is a formula between separators
 				if curPartType = 7 then begin
@@ -1166,7 +1205,7 @@ end;
 function CalculateFunction(const variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions, outerTempVariables : TStringList; const recursionLevel : Integer; const functionName : String; formulaParts, formulaPartTypes : TStringList;) : String;
 var
 	i, separatorsCount, curSeparator, partsCount, maxParameters, tmpInt, pickResult, intValue1, intValue2, ifLoop, counter : Integer;
-	boolStr, resultStr, strValue1, strValue2, resultType, type1, type2, tmpStr, curItm : String;
+	boolStr, resultStr, strValue1, strValue2, strValue3, resultType, type1, type2, tmpStr, curItm : String;
 	onePartIsAString, bothPartsAreNumeric, resultBool : Boolean;
 	floatValue1, floatValue2, resultFloat : Double;
 	parameters, parameterTypes, tempVariables, tmpList : TStringList;
@@ -2337,8 +2376,8 @@ begin
 						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
 					
 					//set default values
-					parameters.Values['1'] := ',';
-					parameters.Values['2'] := chr(13) + chr(10);
+					parameters.Values['1'] := chr(13) + chr(10);
+					parameters.Values['2'] := ',';
 					
 					//read parameters
 					ReadParameters(3, formulaParts, formulaPartTypes, parameters, parameterTypes);
@@ -2351,6 +2390,186 @@ begin
 
 					resultType := '1';
 					resultStr := TransposeTableString(resultStr, strValue1, strValue2);
+					// break;
+				end;
+
+		// ??:////////////   READFROMCSV   /////////////
+				if SameText(functionName,'ReadFromCSV') then begin 
+					if (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameters.Values['1'] := chr(13) + chr(10);
+					parameters.Values['2'] := ',';
+					parameters.Values['3'] := '1';
+					parameters.Values['4'] := '1';
+					
+					//read parameters
+					ReadParameters(6, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					if SameText(parameterTypes[0], '') then 
+						raise Exception.Create(Format('The first argument was not provided. functionName: %s, formula: %s',[functionName, formula]));
+					strValue1 := parameters.Values['1'];
+					strValue2 := parameters.Values['2'];
+					type1 := parameterTypes.Values['3'];
+					type2 := parameterTypes.Values['4'];
+					if (not SameText(type1,'')) and (not SameText(type1,'3')) then 
+						raise Exception.Create(Format('Parameter rowIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					if (not SameText(type2,'')) and (not SameText(type2,'3')) then 
+						raise Exception.Create(Format('Parameter colIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					intValue1 := StrToInt(parameters.Values['3']);
+					intValue2 := StrToInt(parameters.Values['4']);
+					tmpStr := parameters.Values['5'];
+					
+					if not SameText(tmpStr, '') then 
+						CopyList(outerTempVariables, tempVariables);
+					
+					resultStr := ReadFromCsv(resultStr, strValue1, strValue2, intValue1, intValue2, tmpStr
+						, variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel);
+					resultType := Copy(resultStr, 1, 1);
+					resultStr := Copy(resultStr, 3, Length(resultStr));
+					// break;
+				end;
+
+		// ??:////////////   FILTERCSV   /////////////
+				if SameText(functionName,'FilterCsv') then begin 
+					if (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameters.Values['1'] := chr(13) + chr(10);
+					parameters.Values['2'] := ',';
+					parameters.Values['3'] := '1';
+					
+					//read parameters
+					ReadParameters(5, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					if SameText(parameterTypes[0], '') then 
+						raise Exception.Create(Format('The first argument was not provided. functionName: %s, formula: %s',[functionName, formula]));
+					strValue1 := parameters.Values['1'];
+					strValue2 := parameters.Values['2'];
+					type1 := parameterTypes.Values['3'];
+					if (not SameText(type1,'')) and (not SameText(type1,'3')) then 
+						raise Exception.Create(Format('Parameter rowIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					intValue1 := StrToInt(parameters.Values['3']);
+					strValue3 := parameters.Values['4'];
+					type2 := parameterTypes.Values['4'];
+					resultBool := (not SameText(type2,''));
+					tmpStr := parameters.Values['5'];
+					
+					if (not SameText(tmpStr, '')) or resultBool then begin
+						CopyList(outerTempVariables, tempVariables);
+					
+						resultStr := FilterCsv(resultStr, strValue1, strValue2, intValue1, strValue3, resultBool, tmpStr
+							, variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel);
+					end;
+					
+					resultType := '1';
+					// break;
+				end;
+
+		// ??:////////////   SORTCSV   /////////////
+				if SameText(functionName,'SortCSV') then begin 
+					if (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameters.Values['1'] := chr(13) + chr(10);
+					parameters.Values['2'] := ',';
+					parameters.Values['3'] := '1';
+					
+					//read parameters
+					ReadParameters(5, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					if SameText(parameterTypes[0], '') then 
+						raise Exception.Create(Format('The first argument was not provided. functionName: %s, formula: %s',[functionName, formula]));
+					strValue1 := parameters.Values['1'];
+					strValue2 := parameters.Values['2'];
+					type1 := parameterTypes.Values['3'];
+					if (not SameText(type1,'')) and (not SameText(type1,'3')) then 
+						raise Exception.Create(Format('Parameter rowIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					intValue1 := StrToInt(parameters.Values['3']);
+					tmpStr := parameters.Values['4'];
+					
+					if not SameText(tmpStr, '') then begin
+						CopyList(outerTempVariables, tempVariables);
+					end;
+					
+					resultStr := SortCsv(resultStr, strValue1, strValue2, intValue1, tmpStr
+						, variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel);
+					
+					resultType := '1';
+					// break;
+				end;
+				
+		// ??:////////////   CHANGECSV   /////////////
+				if SameText(functionName,'ChangeCsv') then begin 
+					if (partsCount < 7) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameters.Values['1'] := chr(13) + chr(10);
+					parameters.Values['2'] := ',';
+					parameters.Values['3'] := '0';
+					parameters.Values['4'] := '0';
+					
+					//read parameters
+					ReadParameters(6, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					if SameText(parameterTypes[0], '') then 
+						raise Exception.Create(Format('The first argument was not provided. functionName: %s, formula: %s',[functionName, formula]));
+					strValue1 := parameters.Values['1'];
+					strValue2 := parameters.Values['2'];
+					type1 := parameterTypes.Values['3'];
+					type2 := parameterTypes.Values['4'];
+					if (not SameText(type1,'')) and (not SameText(type1,'3')) then 
+						raise Exception.Create(Format('Parameter rowIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					if (not SameText(type2,'')) and (not SameText(type2,'3')) then 
+						raise Exception.Create(Format('Parameter colIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					intValue1 := StrToInt(parameters.Values['3']);
+					intValue2 := StrToInt(parameters.Values['4']);
+					tmpStr := parameters.Values['5'];
+					if SameText(parameterTypes.Values['5'], '') then 
+						raise Exception.Create(Format('The last argument was not provided. functionName: %s, formula: %s',[functionName, formula]));
+
+					if not SameText(tmpStr, '') then 
+						CopyList(outerTempVariables, tempVariables);
+					
+					resultType := '1';
+					resultStr := ChangeCsv(resultStr, strValue1, strValue2, intValue1, intValue2, tmpStr
+						, variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel);
+					// break;
+				end;
+				
+		// ??:////////////   ADDCOLTOCSV   /////////////
+				if SameText(functionName,'AddColToCsv') then begin 
+					if (partsCount < 1) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameters.Values['1'] := chr(13) + chr(10);
+					parameters.Values['2'] := ',';
+					parameters.Values['3'] := '-1';
+					
+					//read parameters
+					ReadParameters(5, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					if SameText(parameterTypes[0], '') then 
+						raise Exception.Create(Format('The first argument was not provided. functionName: %s, formula: %s',[functionName, formula]));
+					strValue1 := parameters.Values['1'];
+					strValue2 := parameters.Values['2'];
+					type1 := parameterTypes.Values['3'];
+					if (not SameText(type1,'')) and (not SameText(type1,'3')) then 
+						raise Exception.Create(Format('Parameter rowIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					intValue1 := StrToInt(parameters.Values['3']);
+					tmpStr := parameters.Values['4'];
+					
+					if not SameText(tmpStr, '') then 
+						CopyList(outerTempVariables, tempVariables);
+					
+					resultType := '1';
+					resultStr := AddColToCsv(resultStr, strValue1, strValue2, intValue1, tmpStr
+						, variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel);
 					// break;
 				end;
 		
@@ -3143,6 +3362,637 @@ begin
 end;
 
 //=========================================================================
+//  change a CSV with a formula
+//=========================================================================
+function ChangeCsv(const tableStr, rowDelimiter, columnDelimiter : String; const rowIndex, colIndex : Integer; const changeFormula, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList; tempVariables : TStringList; const recursionLevel : Integer;) : String;
+var
+	tmpStr, curRow, curCol, resultStr : String;
+	i, rowCount, colCount, curColIndex, tmpInt : Integer;
+	tmpList, outerList, innerList : TStringList;
+begin
+	LogFunctionStart('ChangeCsv');
+	
+	tmpList := TStringList.Create;
+	outerList := TStringList.Create;
+	innerList := TStringList.Create;
+	
+	try
+		StringToStringList(tableStr, rowDelimiter, outerList);
+		// DebugLog(Format('all rows: %s',[outerList.Text]));
+		
+		rowCount := outerList.Count;
+		
+		//get every field from every column in every row into a lookup-List
+		i := 0;
+		while i < rowCount do begin
+			curRow := outerList[i];
+			// if (rowIndex = 0) or (rowIndex = (i + 1)) then 
+				// tmpList.Add(Format('r%d=%s',[i, curRow]));
+			StringToStringList(curRow, columnDelimiter, innerList);
+			
+			tmpInt := innerList.Count;
+			curColIndex := 0;
+			
+			while curColIndex < tmpInt do begin
+				tmpStr := Format('%d|%d=%s',[i, curColIndex, innerList[curColIndex]]);
+				tmpList.Add(tmpStr);
+				inc(curColIndex);
+			end;
+			colCount := max(colCount, tmpInt);
+			
+			inc(i);
+		end;
+		
+		if (rowCount > 0) and (colCount > 0) then begin
+			//store special "col" variables for later use
+			curColIndex := 0;
+			while curColIndex < colCount do begin
+				curCol := '';
+				if ((colIndex = 0) or (colIndex = (curColIndex + 1))) then begin
+					i := 0;
+					while i < rowCount do begin
+						tmpStr := tmpList.Values[Format('%d|%d',[i, curColIndex])];
+						if i = 0 then begin
+							curCol := tmpStr;
+						end else begin
+							curCol := curCol + rowDelimiter + tmpStr;
+						end;
+						inc(i);
+					end;
+					
+					tmpList.Add(Format('c%d=%s',[curColIndex, curCol]));
+				end;
+				inc(curColIndex);
+			end;
+		end;
+		
+		if not SameText(changeFormula,'') then begin
+			//set temporary variables
+			tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
+			tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
+		end;
+		
+		//now loop over all rows and columns, execute the formula for the ones selected and re-assemble the CSV
+		resultStr := '';
+		i := 0;
+		while i < rowCount do begin
+			if i > 0 then
+				resultStr := resultStr + rowDelimiter;
+			
+			curColIndex := 0;
+			while curColIndex < colCount do begin
+				tmpStr := Format('%d|%d',[i, curColIndex]);
+				tmpStr := tmpList.Values[tmpStr];
+				
+				if ((rowIndex = 0) or (rowIndex = (i + 1))) and ((colIndex = 0) or (colIndex = (curColIndex + 1))) then begin
+					if SameText(changeFormula,'') then begin
+						tmpStr := '';
+					end else begin
+						//unescape string if it is escaped
+						if SameText(Copy(tmpStr, 1, 1), '"') then
+							tmpStr := StringReplace(Copy(tmpStr, 2, Length(tmpStr) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+						
+						//set temporary variables
+						tempVariables.Values['val'] := '1|' + tmpStr;
+						tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
+						tempVariables.Values['i_col'] := '3|' + IntToStr(curColIndex + 1);
+						tempVariables.Values['row'] := '1|' + outerList[i];
+						tempVariables.Values['col'] := '1|' + tmpList.Values[Format('c%d',[curColIndex])];
+						
+						//execute the formula
+						tmpStr := ParseFormula(Format('%s_r%dc%d',[variableName,i,curColIndex]), changeFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+						tmpStr := Copy(tmpStr,3,Length(tmpStr));
+				
+						//escape it again if necessary
+						tmpStr := EscapeStringIfNecessary(tmpStr, '"', rowDelimiter, columnDelimiter);
+					end;
+				end;
+				
+				if curColIndex > 0 then begin
+					resultStr := resultStr + columnDelimiter + tmpStr;
+				end else begin
+					resultStr := resultStr + tmpStr;
+				end;
+				inc(curColIndex);
+			end;
+			inc(i);
+		end;
+		
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		outerList.Free;
+		outerList := nil;
+		innerList.Free;
+		innerList := nil;
+	end;
+	
+	Result := resultStr;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  add a (computed) column to a CSV
+//=========================================================================
+function AddColToCsv(const tableStr, rowDelimiter, columnDelimiter : String; colIndex : Integer; const creationFormula, variableName, formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList; tempVariables : TStringList; const recursionLevel : Integer;) : String;
+var
+	tmpStr, curRow, curCol, resultStr : String;
+	i, rowCount, colCount, curColIndex, tmpInt : Integer;
+	tmpList, outerList, innerList : TStringList;
+begin
+	LogFunctionStart('AddColToCsv');
+	
+	tmpList := TStringList.Create;
+	outerList := TStringList.Create;
+	innerList := TStringList.Create;
+	
+	try
+		StringToStringList(tableStr, rowDelimiter, outerList);
+		// DebugLog(Format('all rows: %s',[outerList.Text]));
+		
+		rowCount := outerList.Count;
+		
+		//get every field from every column in every row into a lookup-List
+		i := 0;
+		while i < rowCount do begin
+			curRow := outerList[i];
+			StringToStringList(curRow, columnDelimiter, innerList);
+			
+			tmpInt := innerList.Count;
+			curColIndex := 0;
+			
+			while curColIndex < tmpInt do begin
+				tmpList.Add(Format('%d|%d=%s',[i, curColIndex, innerList[curColIndex]]));
+				inc(curColIndex);
+			end;
+			colCount := max(colCount, tmpInt);
+			
+			inc(i);
+		end;
+		
+		if colIndex < 1 then
+			colIndex := colCount + 1;
+		tmpInt := max(colCount, colIndex);
+		
+		//now loop over all rows, execute the formula and store the result
+		if not SameText(creationFormula,'') then begin
+			//set temporary variables
+			tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
+			tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
+			
+			i := 0;
+			while i < rowCount do begin
+				curColIndex := min(colIndex, colCount) - 1;
+				while (curColIndex < tmpInt) and ((curColIndex = (colIndex - 1)) or ((curColIndex + 1) >= colCount )) do begin
+					//set temporary variables
+					tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
+					tempVariables.Values['i_col'] := '3|' + IntToStr(curColIndex + 1);
+					tempVariables.Values['row'] := '1|' + outerList[i];
+					
+					//execute the formula
+					tmpStr := ParseFormula(Format('%s_r%dc%d',[variableName,i,curColIndex]), creationFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+					tmpStr := Copy(tmpStr,3,Length(tmpStr));
+					
+DebugLog(Format('colCount: %d, tmpInt: %d, curColIndex: %d, colIndex: %d',[colCount, tmpInt, curColIndex, colIndex]));
+			
+					//escape if necessary
+					tmpStr := EscapeStringIfNecessary(tmpStr, '"', rowDelimiter, columnDelimiter);
+					tmpList.Add(Format('res%d|%d=%s',[i, curColIndex, tmpStr]));
+					inc(curColIndex);
+				end;
+				inc(i);
+			end;
+		end;
+		
+		//re-assemble the CSV
+		resultStr := '';
+		i := 0;
+		while i < rowCount do begin
+			if i > 0 then
+				resultStr := resultStr + rowDelimiter;
+			
+			curColIndex := 0;
+			while curColIndex < tmpInt do begin
+				//if this is the column where it should be inserted: first insert the new column
+				if ((curColIndex + 1) = colIndex) or ((curColIndex + 1) > colCount) then begin
+					tmpStr := tmpList.Values[Format('res%d|%d',[i, curColIndex])];
+					
+					if curColIndex > 0 then begin
+						resultStr := resultStr + columnDelimiter + tmpStr;
+					end else begin 
+						resultStr := resultStr + tmpStr;
+					end;
+				end;
+				
+				//insert the original column
+				if (curColIndex + 1) <= colCount then begin
+					tmpStr := tmpList.Values[Format('%d|%d',[i, curColIndex])];
+					
+					if (curColIndex > 0) or ((curColIndex + 1) = colIndex) then begin
+						resultStr := resultStr + columnDelimiter + tmpStr;
+					end else begin 
+						resultStr := resultStr + tmpStr;
+					end;
+				end;
+				
+				inc(curColIndex);
+			end;
+			inc(i);
+		end;
+		
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		outerList.Free;
+		outerList := nil;
+		innerList.Free;
+		innerList := nil;
+	end;
+	
+	Result := resultStr;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  Read a cell from a CSV text
+//=========================================================================
+function ReadFromCsv(const tableStr, rowDelimiter, columnDelimiter : String; const rowIndex, colIndex : Integer; const selectionFormula, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList;  tempVariables : TStringList; const recursionLevel : Integer;) : String;
+var
+	tmpStr, curRow, curCol, curVal, resultStr : String;
+	i, rowCount, colCount, curColIndex, tmpInt : Integer;
+	tmpList, outerList, innerList : TStringList;
+begin
+	LogFunctionStart('ReadFromCsv');
+	
+	tmpList := TStringList.Create;
+	outerList := TStringList.Create;
+	innerList := TStringList.Create;
+	
+	try
+		StringToStringList(tableStr, rowDelimiter, outerList);
+		// DebugLog(Format('all rows: %s',[outerList.Text]));
+		
+		resultStr := '1|';
+		rowCount := outerList.Count;
+		if rowIndex <= rowCount then begin 
+			if not SameText(selectionFormula, '') then begin
+				//set temporary variables
+				tempVariables.Values['i_row'] := '3|' + IntToStr(rowIndex);
+				tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
+			end;
+					
+			//get every field from every column in every row into a lookup-List
+			i := 0;
+			while i < rowCount do begin
+				curRow := outerList[i];
+				
+				//set temporary variables
+				if rowIndex = (i + 1) then 
+					tempVariables.Values['row'] := '1|' + curRow;
+					
+				StringToStringList(curRow, columnDelimiter, innerList);
+				
+				tmpInt := innerList.Count;
+				curColIndex := 0;
+				while curColIndex < tmpInt do begin
+					tmpStr := innerList[curColIndex];
+					tmpList.Add(Format('%d|%d=%s',[i, curColIndex, tmpStr]));
+					
+					if ((colIndex = (curColIndex + 1)) and (rowIndex = (i + 1))) then begin
+						curVal := tmpStr;
+						resultStr := '1|' + curVal;
+					end;
+					inc(curColIndex);
+				end;
+				colCount := max(colCount, tmpInt);
+				
+				inc(i);
+			end;
+			
+			if not SameText(selectionFormula, '') then begin
+				tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
+				tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
+			end;
+			
+			if colIndex <= colCount then begin 
+				if not SameText(selectionFormula, '') then begin
+					//store special "col" variables for later use
+					curColIndex := colIndex - 1;
+					curCol := '';
+					i := 0;
+					while i < rowCount do begin
+						tmpStr := tmpList.Values[Format('%d|%d',[i, curColIndex])];
+						if i = 0 then begin
+							curCol := tmpStr;
+						end else begin
+							curCol := curCol + rowDelimiter + tmpStr;
+						end;
+						inc(i);
+					end;
+					
+					//unescape string if it is escaped
+					if SameText(Copy(curVal, 1, 1), '"') then
+						curVal := StringReplace(Copy(curVal, 2, Length(curVal) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+					
+					//set temporary variables
+					tempVariables.Values['col'] := '1|' + curCol;
+					tempVariables.Values['val'] := '1|' + curVal;
+					
+					//execute the formula
+					resultStr := ParseFormula(Format('%s_sel',[variableName]), selectionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+					tmpStr := Copy(resultStr, 1, 1); //type
+					resultStr := Copy(resultStr, 3, Length(resultStr));
+					
+					//escape it again if necessary
+					resultStr := EscapeStringIfNecessary(resultStr, '"', rowDelimiter, columnDelimiter);
+					resultStr := tmpStr + resultStr;
+				end;
+			end;
+		end;
+		
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		outerList.Free;
+		outerList := nil;
+		innerList.Free;
+		innerList := nil;
+	end;
+	
+	Result := resultStr;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  filter rows from a CSV by setting a filter on a column
+//=========================================================================
+function FilterCsv(const tableStr, rowDelimiter, columnDelimiter : String; const colIndex : Integer; const filterString : String; const filterStringSet : Boolean; const filterFormula, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList; tempVariables : TStringList; const recursionLevel : Integer;) : String;
+var
+	tmpStr, curRow, curCol, curVal, resultStr : String;
+	i, rowCount, colCount, curColIndex, counter, tmpInt : Integer;
+	tmpList, outerList, innerList : TStringList;
+	conditionMet : Boolean;
+	floatValue1 : Double;
+begin
+	LogFunctionStart('FilterCsv');
+	
+	if (not filterStringSet) and SameText(filterFormula, '') then begin
+		Result := tableStr;
+		LogFunctionEnd;
+		Exit;
+	end;
+	
+	tmpList := TStringList.Create;
+	outerList := TStringList.Create;
+	innerList := TStringList.Create;
+	
+	try
+		StringToStringList(tableStr, rowDelimiter, outerList);
+		// DebugLog(Format('all rows: %s',[outerList.Text]));
+		
+		rowCount := outerList.Count;
+		
+		//get every the current column for every row into a lookup-List
+		i := 0;
+		while i < rowCount do begin
+			curRow := outerList[i];
+			StringToStringList(curRow, columnDelimiter, innerList);
+			
+			tmpInt := innerList.Count;
+			
+			if colIndex <= tmpInt then begin
+				curVal := innerList[colIndex - 1];
+			end else begin
+				curVal := '';
+			end;
+			colCount := max(colCount, tmpInt);
+			tmpList.Add(Format('%d=%s',[i, curVal]));
+			
+			if i = 0 then begin
+				curCol := curVal;
+			end else begin
+				curCol := curCol + rowDelimiter + curVal;
+			end;
+			inc(i);
+		end;
+		
+		counter := 0;
+		resultStr := '';
+		if colIndex <= colCount then begin
+			if not SameText(filterFormula,'') then begin
+				//set temporary variables
+				tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
+				tempVariables.Values['col'] := '1|' + curCol;
+				tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
+				tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
+			end;
+		
+			//now loop over all rows, execute the formula for the selected column and re-assemble the CSV
+			i := 0;
+			while i < rowCount do begin
+				curVal := tmpList.Values[IntToStr(i)];
+				
+				//unescape string if it is escaped
+				if SameText(Copy(curVal, 1, 1), '"') then
+					curVal := StringReplace(Copy(curVal, 2, Length(curVal) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+				
+				if filterStringSet then begin
+					//simply compare the value to filterString
+					conditionMet := SameText(curVal, filterString);
+				end else begin
+					//set temporary variables
+					tempVariables.Values['val'] := '1|' + curVal;
+					tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
+					tempVariables.Values['row'] := '1|' + outerList[i];
+					
+					//execute the formula
+					tmpStr := ParseFormula(Format('%s_r%d',[variableName,i]), filterFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+					tmpStr := Copy(tmpStr,3,Length(tmpStr));
+					conditionMet := SameText(tmpStr,'true');
+				end;
+				
+				if conditionMet then begin 
+					if counter = 0 then begin
+						resultStr := outerList[i];
+					end else begin
+						resultStr := resultStr + rowDelimiter + outerList[i];
+					end;
+					inc(counter);
+				end;
+				inc(i);
+			end;
+		end;
+	
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		outerList.Free;
+		outerList := nil;
+		innerList.Free;
+		innerList := nil;
+	end;
+	
+	Result := resultStr;
+	
+	LogFunctionEnd;
+end;
+
+
+	function MySortProc(List: TStringList; Index1, Index2: Integer): Integer;
+var
+  Value1, Value2: Integer;
+begin
+  Value1 := Integer(List.Objects[Index1]);
+  Value2 := Integer(List.Objects[Index2]);
+  if Value1 < Value2 then
+    Result := -1
+  else if Value2 < Value1 then
+    Result := 1
+  else
+    Result := 0;
+end;
+
+//=========================================================================
+//  sort rows of a CSV by a column
+//=========================================================================
+function SortCsv(const tableStr, rowDelimiter, columnDelimiter : String; const colIndex : Integer; const sortFormula, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList; tempVariables : TStringList; const recursionLevel : Integer;) : String;
+var
+	tmpStr, curRow, curCol, curVal, resultStr : String;
+	i, rowCount, colCount, tmpInt : Integer;
+	tmpList, outerList, innerList : TStringList;
+	formulaResultIsNumeric : Boolean;
+	curFloatValue : Double;
+begin
+	LogFunctionStart('SortCsv');
+	
+	tmpList := TStringList.Create;
+	outerList := TStringList.Create;
+	innerList := TStringList.Create;
+	
+	try
+		StringToStringList(tableStr, rowDelimiter, outerList);
+		
+		rowCount := outerList.Count;
+		
+		//get the current column for every row into a lookup-List
+		i := 0;
+		while i < rowCount do begin
+			curRow := outerList[i];
+			StringToStringList(curRow, columnDelimiter, innerList);
+			
+			tmpInt := innerList.Count;
+			
+			if colIndex <= tmpInt then begin
+				curVal := innerList[colIndex - 1];
+			end else begin
+				curVal := '';
+			end;
+			colCount := max(colCount, tmpInt);
+			tmpList.Add(Format('%d=%s',[i, curVal]));
+			
+			if i = 0 then begin
+				curCol := curVal;
+			end else begin
+				curCol := curCol + rowDelimiter + curVal;
+			end;
+			inc(i);
+		end;
+		
+		//re-use innerList for sorting
+		innerList.Clear;
+		
+		resultStr := '';
+		if colIndex <= colCount then begin
+			if not SameText(sortFormula,'') then begin
+				formulaResultIsNumeric := true;
+				//set temporary variables
+				tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
+				tempVariables.Values['col'] := '1|' + curCol;
+				tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
+				tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
+			end else begin
+				formulaResultIsNumeric := false;
+			end;
+			
+			//now loop over all rows, execute the formula for the selected column and re-assemble the CSV
+			i := 0;
+			while i < rowCount do begin
+				curVal := tmpList.Values[IntToStr(i)];
+				
+				//unescape string if it is escaped
+				if SameText(Copy(curVal, 1, 1), '"') then
+					curVal := StringReplace(Copy(curVal, 2, Length(curVal) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+					
+				if SameText(sortFormula, '') then begin
+					//sort simply by the value 
+					innerList.AddObject(curVal, TObject(i));
+				end else begin
+					//set temporary variables
+					tempVariables.Values['val'] := '1|' + curVal;
+					tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
+					tempVariables.Values['row'] := '1|' + outerList[i];
+					
+					//execute the formula
+					tmpStr := ParseFormula(Format('%s_r%d',[variableName,i]), sortFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+					if formulaResultIsNumeric then 
+						formulaResultIsNumeric := SameText(Copy(tmpStr,1,1),'3');
+					tmpStr := Copy(tmpStr,3,Length(tmpStr));
+					
+					innerList.AddObject(tmpStr, TObject(i));
+				end;
+				inc(i);
+			end;
+			
+			//change the formatting of the value if the formatting is numeric
+			if formulaResultIsNumeric then begin
+				i := 0;
+				while i < rowCount do begin
+					tmpStr := innerList[i];
+					curFloatValue := StrToFloat(tmpStr);
+					if curFloatValue < 0 then begin
+						curFloatValue := 9999999999 + curFloatValue;
+						tmpStr := FormatFloat('a0000000000.##########;a-0000000000.##########;""', curFloatValue);
+					end else begin
+						tmpStr := FormatFloat('c0000000000.##########;;"b"', curFloatValue);
+					end;
+					innerList[i] := tmpStr;
+					inc(i);
+				end;
+			end;
+			
+			//now sort the list and then re-assemble the csv in the new order
+			innerList.Sort;
+			i := 0;
+			while i < rowCount do begin
+				tmpInt := Integer(innerList.Objects[i]);
+				
+				if i = 0 then begin
+					resultStr := outerList[tmpInt];
+				end else begin
+					resultStr := resultStr + rowDelimiter + outerList[tmpInt];
+				end;
+				
+				inc(i);
+			end;
+		end;
+		
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		outerList.Free;
+		outerList := nil;
+		innerList.Free;
+		innerList := nil;
+	end;
+	
+	Result := resultStr;
+	
+	LogFunctionEnd;
+end;
+//=========================================================================
 //  loads a file with formulas and returns these formulas
 //=========================================================================
 procedure LoadFormulasFromFile(const filename : String; formulas : TStringList;);
@@ -3165,7 +4015,6 @@ begin
 		variableName := '';
 		formula:='';
 		lineEndsWithinAStringValue := false;
-		counter :=1;
 		
 		for i := 0 to allLines.Count-1 do begin
 				line := allLines[i];
@@ -3176,7 +4025,7 @@ begin
 				posApostrophe := Pos('"',line);
 				lengthToNextApostrophe := posApostrophe;
 				prevlineEndsWithinAStringValue:=lineEndsWithinAStringValue;
-				
+				counter :=1;
 				while lengthToNextApostrophe > 0 do begin
 					if counter > 1000 then begin
 						raise Exception.Create(Format('endless loop while trying to decide if we are in a string. posApostrophe: %d, rest of line: %s',[posApostrophe,Copy(line,posApostrophe+1,Length(line)-posApostrophe)]));
