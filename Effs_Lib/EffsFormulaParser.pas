@@ -77,6 +77,7 @@ begin
 	functions.Add('trimLeft('); //additional string functions
 	functions.Add('trimRight('); 
 	functions.Add('searchCount('); 
+//functions.Add('in('); searchText,CompareText1,CompareText2,CompareText3,...
 	functions.Add('linebreak('); 
 	functions.Add('calculate(');
 	functions.Add('ReadFromCSV('); 
@@ -84,7 +85,8 @@ begin
 	functions.Add('SortCSV('); 
 	functions.Add('ChangeCSV('); 
 	functions.Add('AddColToCSV('); 
-//functions.Add('CountIf('); for counting appearances in elements of a CSV using a formula - with rowIndex and colIndex, although it does not make much sense to call it with both variables set
+	functions.Add('CombineCSV('); 
+//functions.Add('CountIf('); for counting appearances in elements of a CSV using a string or a formula - with rowIndex and colIndex, although it does not make much sense to call it with both variables set
 //functions.Add('Distinct('); //listOrCSV, ignoreEmptyValues, delimiter1, delimiter2
 	//functions.Add('stringFormat(');
 	functions.Add('With('); //additional logical functions
@@ -296,7 +298,7 @@ begin
 			formula := Copy(formula,tmpInt+1,Length(formula)-tmpInt-1);
 			
 			if SameText(functionName,'if') or SameText(functionName,'choose') then begin
-				maxParameterToParse := 0;
+				maxParameterToParse := 1;
 				maxParameterToResolve := 1;
 			end;
 			
@@ -306,9 +308,6 @@ begin
 			
 			if SameText(functionName,'with') or SameText(functionName,'switch') then
 				maxParameterToParse := 0;
-			
-			if SameText(functionName,'formulaText') then
-				maxParameterToResolve := 0;
 			
 			if SameText(functionName,'ReadRecords') then begin
 				maxParameterToParse := 4;
@@ -349,6 +348,13 @@ begin
 				maxParameterToParse := 4;
 				maxParameterToResolve := 4;
 			end;
+			
+			if SameText(functionName,'CombineCSV') then begin
+				maxParameterToParse := 7;
+				maxParameterToResolve := 7;
+			end;
+			
+			
 			
 			// DebugLog(Format('functionName: %s, formula: %s',[functionName, formula]));
 		end;
@@ -2079,8 +2085,8 @@ begin
 					
 					// DebugLog(Format('strValue1: %s',[strValue1]));
 					
-					type2 := '1'; //string
 					strValue2 := ''; //default default value
+					type2 := '1'; //string
 					
 					if partsCount > 2 then begin
 						type2 := formulaPartTypes[2];
@@ -2120,8 +2126,8 @@ begin
 					
 					//read parameters
 					ReadParameters(3, formulaParts, formulaPartTypes, parameters, parameterTypes);
-					strValue1 := parameters.Values['0'];//findText
-					strValue2 := parameters.Values['1'];//withinText
+					strValue1 := LowerCase(parameters.Values['0']);//findText
+					strValue2 := LowerCase(parameters.Values['1']);//withinText
 					tmpStr := parameters.Values['2'];//startPos 
 					type1 := parameterTypes.Values['2'];//startPos type
 					if not (SameText(type1,'3')) then 
@@ -2569,6 +2575,54 @@ begin
 					
 					resultType := '1';
 					resultStr := AddColToCsv(resultStr, strValue1, strValue2, intValue1, tmpStr
+						, variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel);
+					// break;
+				end;
+				
+		// ??:////////////   CombineCSV   /////////////
+				if SameText(functionName,'CombineCSV') then begin 
+					if (partsCount < 3) then 
+						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					
+					//set default values
+					parameters.Values['2'] := chr(13) + chr(10);
+					parameters.Values['3'] := ',';
+					parameters.Values['5'] := '1';
+					parameters.Values['6'] := '1';
+					
+					//read parameters
+					ReadParameters(9, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					if SameText(parameterTypes[0], '') then 
+						raise Exception.Create(Format('The first argument was not provided. functionName: %s, formula: %s',[functionName, formula]));
+					strValue1 := parameters.Values['1'];
+					strValue2 := parameters.Values['2'];
+					strValue3 := parameters.Values['3'];
+					tmpStr := parameters.Values['4'];
+					tmpInt := 1;
+					if SameText(tmpStr, 'inner') or SameText(tmpStr, 'matched') then
+						tmpInt := 2;
+					if SameText(tmpStr, 'outer') then
+						tmpInt := 3;
+					if SameText(tmpStr, 'exists') then
+						tmpInt := 4;
+					if SameText(tmpStr, 'leftAnti') or SameText(tmpStr, 'notExists') then
+						tmpInt := 5;
+					type1 := parameterTypes.Values['5'];
+					if (not SameText(type1,'')) and (not SameText(type1,'3')) then 
+						raise Exception.Create(Format('Parameter table1_colIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					intValue1 := StrToInt(parameters.Values['5']);
+					type2 := parameterTypes.Values['6'];
+					if (not SameText(type2,'')) and (not SameText(type2,'3')) then 
+						raise Exception.Create(Format('Parameter table2_colIndex is not numeric. functionName: %s, formula: %s',[functionName, formula]));
+					intValue2 := StrToInt(parameters.Values['6']);
+					type1 := parameters.Values['7'];
+					type2 := parameters.Values['8'];
+					
+					CopyList(outerTempVariables, tempVariables);
+					
+					resultType := '1';
+					resultStr := CombineCSV(resultStr, strValue1, strValue2, strValue3, tmpInt, intValue1, intValue2, type1, type2
 						, variableName, formula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel);
 					// break;
 				end;
@@ -3498,7 +3552,7 @@ end;
 function AddColToCsv(const tableStr, rowDelimiter, columnDelimiter : String; colIndex : Integer; const creationFormula, variableName, formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList; tempVariables : TStringList; const recursionLevel : Integer;) : String;
 var
 	tmpStr, curRow, curCol, resultStr : String;
-	i, rowCount, colCount, curColIndex, tmpInt : Integer;
+	i, j, rowCount, colCount, curColIndex, tmpInt : Integer;
 	tmpList, outerList, innerList : TStringList;
 begin
 	LogFunctionStart('AddColToCsv');
@@ -3523,7 +3577,11 @@ begin
 			curColIndex := 0;
 			
 			while curColIndex < tmpInt do begin
-				tmpList.Add(Format('%d|%d=%s',[i, curColIndex, innerList[curColIndex]]));
+				tmpStr := innerList[curColIndex];
+				//unescape string if it is escaped
+				if SameText(Copy(tmpStr, 1, 1), '"') then
+					tmpStr := StringReplace(Copy(tmpStr, 2, Length(tmpStr) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+				tmpList.Add(Format('%d|%d=%s',[i, curColIndex, tmpStr]));
 				inc(curColIndex);
 			end;
 			colCount := max(colCount, tmpInt);
@@ -3543,6 +3601,13 @@ begin
 			
 			i := 0;
 			while i < rowCount do begin
+				//set temporary variables for columns
+				j := 0;
+				while j < colCount do begin
+					tempVariables.Values['col'+IntToStr(j+1)] := '1|' + tmpList.Values[Format('%d|%d',[i, j])];
+					inc(j);
+				end;
+			
 				curColIndex := min(colIndex, colCount) - 1;
 				while (curColIndex < tmpInt) and ((curColIndex = (colIndex - 1)) or ((curColIndex + 1) >= colCount )) do begin
 					//set temporary variables
@@ -3554,8 +3619,6 @@ begin
 					tmpStr := ParseFormula(Format('%s_r%dc%d',[variableName,i,curColIndex]), creationFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
 					tmpStr := Copy(tmpStr,3,Length(tmpStr));
 					
-DebugLog(Format('colCount: %d, tmpInt: %d, curColIndex: %d, colIndex: %d',[colCount, tmpInt, curColIndex, colIndex]));
-			
 					//escape if necessary
 					tmpStr := EscapeStringIfNecessary(tmpStr, '"', rowDelimiter, columnDelimiter);
 					tmpList.Add(Format('res%d|%d=%s',[i, curColIndex, tmpStr]));
@@ -3992,6 +4055,236 @@ begin
 	
 	LogFunctionEnd;
 end;
+
+//=========================================================================
+//  join two csv tables to one
+//=========================================================================
+function CombineCSV(const tableStr1, tableStr2, rowDelimiter, columnDelimiter : String; const joinType, colIndex1, colIndex2 : Integer; const keyFormula1, keyFormula2, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList;  tempVariables : TStringList; const recursionLevel : Integer;) : String;
+var
+	tmpStr, curRow, curVal, curKey1, curKey2, resultStr : String;
+	i, j, k, l, rowCount1, rowCount2, colCount1, colCount2, tmpInt, counter : Integer;
+	tmpList, tableRows1, tableRows2, columns : TStringList;
+	matched : Boolean;
+begin
+	LogFunctionStart('CombineCSV');
+	
+	tmpList := TStringList.Create;
+	tableRows1 := TStringList.Create;
+	tableRows2 := TStringList.Create;
+	columns := TStringList.Create;
+	
+	try
+		//joinType: 1:left, 2:inner, 3:outer, 4:exists, 5:notExists
+		StringToStringList(tableStr1, rowDelimiter, tableRows1);
+		StringToStringList(tableStr2, rowDelimiter, tableRows2);
+		
+		resultStr := '';
+		
+		rowCount1 := tableRows1.Count;
+		rowCount2 := tableRows2.Count;
+		
+		//read out the keys to match from the first table
+		i := 0;
+		while i < rowCount1 do begin
+			StringToStringList(tableRows1[i], columnDelimiter, columns);
+			tmpInt := columns.Count;
+			colCount1 := max(tmpInt, colCount1);
+			
+			if SameText(keyFormula1, '') then begin
+				curVal := '';
+				if colIndex1 <= tmpInt then begin
+					curVal := columns[colIndex1 - 1];
+					//unescape string if it is escaped
+					if SameText(Copy(curVal, 1, 1), '"') then
+						curVal := StringReplace(Copy(curVal, 2, Length(curVal) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+				end;
+			end else begin
+				//set temporary variables
+				tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
+				tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount1);
+				tempVariables.Values['c_col'] := '3|' + IntToStr(tmpInt);
+				j := 0;
+				while j < tmpInt do begin
+					tmpStr := columns[j];
+					//unescape string if it is escaped
+					if SameText(Copy(tmpStr, 1, 1), '"') then
+						tmpStr := StringReplace(Copy(tmpStr, 2, Length(tmpStr) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+					tempVariables.Values['col'+IntToStr(j+1)] := '1|' + tmpStr;
+					inc(j);
+				end;
+				
+				//calculate formula
+				curVal := ParseFormula(Format('%s_t1r%d',[variableName, i]), keyFormula1, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+				curVal := Copy(curVal, 3, Length(curVal));
+			end;
+			
+			tmpList.Add(Format('1|%d=%s',[i, curVal]));
+			
+			inc(i);
+		end;
+		
+		//read out the keys to match from the second table
+		i := 0;
+		while i < rowCount2 do begin
+			StringToStringList(tableRows2[i], columnDelimiter, columns);
+			tmpInt := columns.Count;
+			colCount2 := max(colCount2, tmpInt); //remember the maximum column count for later
+			
+			if SameText(keyFormula2, '') then begin
+				curVal := '';
+				if colIndex2 <= tmpInt then begin
+					curVal := columns[colIndex2 - 1];
+					//unescape string if it is escaped
+					if SameText(Copy(curVal, 1, 1), '"') then
+						curVal := StringReplace(Copy(curVal, 2, Length(curVal) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+				end;
+			end else begin
+				//set temporary variables
+				tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
+				tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount2);
+				tempVariables.Values['c_col'] := '3|' + IntToStr(tmpInt);
+				j := 0;
+				while j < tmpInt do begin
+					tmpStr := columns[j];
+					//unescape string if it is escaped
+					if SameText(Copy(tmpStr, 1, 1), '"') then
+						tmpStr := StringReplace(Copy(tmpStr, 2, Length(tmpStr) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
+					tempVariables.Values['col'+IntToStr(j+1)] := '1|' + tmpStr;
+					inc(j);
+				end;
+				
+				//calculate formula
+				curVal := ParseFormula(Format('%s_t2r%d',[variableName, i]), keyFormula2, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+				curVal := Copy(curVal, 3, Length(curVal));
+			end;
+			
+			tmpList.Add(Format('2|%d=%s',[i, curVal]));
+			
+			inc(i);
+		end;
+		
+		
+		resultStr := '';
+		counter := 0;
+		//compare the keys, and compile the result (and calculate the selectionFormula if provided)
+		
+		//if it is an exists or notExists filter: 
+		if (joinType = 4) or (joinType = 5) then begin
+			i := 0;
+			while i < rowCount1 do begin
+				curKey1 := tmpList.Values['1|' + IntToStr(i)];
+				matched := false;
+				j := 0;
+				while j < rowCount2 do begin
+					curKey2 := tmpList.Values['2|' + IntToStr(j)];
+					if SameText(curKey1, curKey2) then begin
+						matched := true;
+						break; //it is enough if one row of the second table matches to the row of this table
+					end;
+					inc(j);
+				end;
+				
+				if matched then begin
+					if joinType = 4 then begin //exists
+						if counter = 0 then begin
+							resultStr := tableRows1[i];
+						end else begin
+							resultStr := resultStr + rowDelimiter + tableRows1[i];
+						end;
+						inc(counter);
+					end;
+				end else begin
+					if joinType = 5 then begin //notExists
+						if counter = 0 then begin
+							resultStr := tableRows1[i];
+						end else begin
+							resultStr := resultStr + rowDelimiter + tableRows1[i];
+						end;
+						inc(counter);
+					end;
+				end;
+				
+				inc(i);
+			end;
+		end;
+		
+		if joinType < 4 then begin //joinType: 1:left, 2:inner, 3:outer, 4:exists, 5:notExists
+			//prepare an empty set of columns signifying an empty row of table2
+			tmpStr := RepeatString(columnDelimiter, colCount2 - 1);
+		
+			i := 0;
+			while i < rowCount1 do begin
+				curKey1 := tmpList.Values['1|' + IntToStr(i)];
+				matched := false;
+				
+				j := 0;
+				while j < rowCount2 do begin
+					curKey2 := tmpList.Values['2|' + IntToStr(j)];
+					
+					If SameText(curKey1, curKey2) then begin
+						matched := true;
+						if counter = 0 then begin
+							resultStr := tableRows1[i] + columnDelimiter + tableRows2[j];
+						end else begin
+							resultStr := resultStr + rowDelimiter + tableRows1[i] + columnDelimiter + tableRows2[j];
+						end;
+						if joinType = 3 then //mark that this row in table2 is processed
+							tmpList.Values['p2|' + IntToStr(j)] := 'x'; 
+						inc(counter);
+					end;
+					inc(j);
+				end;
+				//--> the inner join is already done with this
+				
+				//for left and full outer join: add the row if it is not matched
+				if ((joinType = 1) or (joinType = 3)) and (not matched) then begin
+					if counter = 0 then begin
+						resultStr := tableRows1[i] + columnDelimiter + tmpStr;
+					end else begin
+						resultStr := resultStr + rowDelimiter + tableRows1[i] + columnDelimiter + tmpStr;
+					end;
+					inc(counter);
+				end;
+				
+				inc(i);
+			end;
+			
+			//for full outer join: also add the rows of the second table if they did not match
+			if joinType = 3 then begin 
+				//prepare an empty set of columns signifying an empty row of table1
+				tmpStr := RepeatString(columnDelimiter, colCount1 - 1);
+			
+				i := 0;
+				while i < rowCount2 do begin
+					if SameText(tmpList.Values['p2|' + IntToStr(i)], '') then begin
+						if counter = 0 then begin
+							resultStr := tmpStr + columnDelimiter + tableRows2[i];
+						end else begin
+							resultStr := resultStr + rowDelimiter + tmpStr + columnDelimiter + tableRows2[i];
+						end;
+						inc(counter);
+					end;
+					inc(i);
+				end;
+			end;
+		end;
+		
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		tableRows1.Free;
+		tableRows1 := nil;
+		tableRows2.Free;
+		tableRows2 := nil;
+		columns.Free;
+		columns := nil;
+	end;
+	
+	Result := resultStr;
+	
+	LogFunctionEnd;
+end;
+
 //=========================================================================
 //  loads a file with formulas and returns these formulas
 //=========================================================================
