@@ -1,0 +1,4 @@
+MinProperty,MaxProperty,SetFormat,AddFormat,Mul+AddFormat
+MinRange,MaxRange,"""\""0.#;""\""-0.#;""\""0","""\+""0.#;""\""-0.#;","""\+""0.#%;""\""-0.#%;"
+AimModelRecoilMinDegPerShot,AimModelRecoilMaxDegPerShot,"""\""0.#""°"";""\""-0.#""°"";""\""0""°""","""\+""0.#""°"";""\""-0.#""°"";","""\+""0.#%;""\""-0.#%;"
+AimModelMinConeDegrees,AimModelMaxConeDegrees,"""\""0.#""°"";""\""-0.#""°"";""\""0""°""","""\+""0.#""°"";""\""-0.#""°"";","""\+""0.#%;""\""-0.#%;"

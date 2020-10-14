@@ -294,36 +294,8 @@ ZM_Recon_Scope_x2[Fallout4.esm]:ZOOM=x2 Recon Scope
 ZM_Recon_Scope_x4[Fallout4.esm]:ZOOM=x4 Recon Scope
 ZM_Recon_Scope_x10[Fallout4.esm]:ZOOM=x10 Recon Scope
 {{{---------------------Show Additional Properties----------------------}}}
-Health=Increases Item Health by:
 {{{---------------------------Better_Naming-----------------------------}}}
-Rating=Increase Armor Rating by:
-ZoomDataFOVMult=Zoom:
-AttackDamage=Weapon Damage:
-CriticalDamageMult=Crit. Damage:
-SecondaryDamage=Bash Damage:
-Speed=Fire Rate:
-FullPowerSeconds=Time to charge:
-NumProjectiles=No of Projectiles:
-MinPowerPerShot=Min Damage:
-AmmoCapacity=Ammo Capacity:
-AttackDelaySec=Trigger Sensitivity:
-ReloadSpeed=Reload Speed:
-MinRange=Range (Min\Max):
-MaxRange=\
-OutOfRangeDamageMult=Out-of-Range Damage reduced by:
-AimModelRecoilHipMult=Recoil (Hip):
-AimModelRecoilMinDegPerShot=Recoil (Min\Max):
-AimModelRecoilShotsForRunaway=Rounds to Max Recoil:
-AimModelRecoilMaxDegPerShot=\
-AimModelMinConeDegrees=Spread (Min\Max):
-AimModelMaxConeDegrees=\
-AimModelBaseStability=Sight Sway (Hip):
-AimModelConeIronSightsMultiplier=Sighted Sway:
-AimModelRecoilArcDeg=Recoil Arc:
-AimModelRecoilArcRotateDeg=Arc Rotate:
 ArmorPenetration[Fallout4.esm]:AVIF=Armor Penetration:
-SightedTransitionSeconds=Sight Time:
-AttackActionPointCost=AP Cost:
 {{{-----------------------------------------------------------------------}}}
 {-If you want a new property to show up you have to have it in the list   	}
 {e.g. 'Health=Increase Health by: '                                       	}

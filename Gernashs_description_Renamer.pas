@@ -477,11 +477,22 @@ begin
     Exit;
   end;
 	
-	//calculate the formulas File for this record
-	ParseFormulasFile(OneRecordFormulasFilename, OneRecordInfos, '', recordName);
+	//clear the previous result 
+	OneRecordInfos.Clear;
 	
-  // call actual logic for generating the description
-  desc := GetOmodDescription(rec);
+	//calculate the formulas File for this record
+	desc := ParseFormulasFile(OneRecordFormulasFilename, OneRecordInfos, '', recordName);
+	
+	//patch it together with the part that is still generated with hardcoded PASCAL code
+	if SameText(desc,'') then begin
+		// call hardcoded logic for generating the description
+		desc := GetOmodDescription(rec);
+	end else begin 
+		// call hardcoded logic for generating the description
+		tmpStr := GetOmodDescription(rec);
+		if not SameText(tmpStr,'') then
+			desc := desc + ' | ' + tmpStr;
+  end;
 
   if desc = '' then
   begin
