@@ -80,6 +80,7 @@ begin
 //functions.Add('in('); searchText,CompareText1,CompareText2,CompareText3,...
 	functions.Add('linebreak('); 
 	functions.Add('calculate(');
+	functions.Add('ReadFromFile('); 
 	functions.Add('ReadFromCSV('); 
 	functions.Add('FilterCSV('); 
 	functions.Add('SortCSV('); 
@@ -98,7 +99,6 @@ begin
 //functions.Add('ExecutionCount(') NoOfExecution() returns numeric count of executions of the formula engine - during the first execution it will return 1
 	functions.Add('GetOutput('); //additional functions for easy scripting
 	functions.Add('SetOutput('); 
-//functions.Add('ReadFromFile('); FileToString(filename,returnValueIfNotFound) if filename is empty, put up a file selection box, returns the context of the file as string, and the returnValueIfNotFound if it couldnt find the file. if returnValueIfNotFound is not set, it will throw an error if it didn't find the file
 //functions.Add('SaveToFile(');  SaveToFile(varToSave,FileName,overwriteCondition,returnValue) if varToSave is empty, save all results so far, if filename is empty, show save popup, if returnValue is not set: return fileName
 //functions.Add('MsgBox('); 
 //functions.Add('EditBox('); ???
@@ -302,12 +302,18 @@ begin
 				maxParameterToResolve := 1;
 			end;
 			
-			if SameText(functionName,'formulaText') then
-				// resolveParts := false;
-				maxParameterToResolve := 0;
-			
-			if SameText(functionName,'with') or SameText(functionName,'switch') then
+			if SameText(functionName,'formulaText') then begin
 				maxParameterToParse := 0;
+				maxParameterToResolve := 0;
+			end;
+			
+			if SameText(functionName,'with') then
+				maxParameterToParse := 0;
+				
+			if SameText(functionName,'switch') then begin
+				maxParameterToParse := 2;
+				maxParameterToResolve := 2;
+			end;
 			
 			if SameText(functionName,'ReadRecords') then begin
 				maxParameterToParse := 4;
@@ -359,7 +365,7 @@ begin
 			// DebugLog(Format('functionName: %s, formula: %s',[functionName, formula]));
 		end;
 	
-		GetFormulaParts(formula, operators, functions, tempVariables, formulaParts, formulaPartTypes, formulas, maxParameterToParse);
+		GetFormulaParts(formula, operators, functions, tempVariables, formulaParts, formulaPartTypes, formulas, results, resultTypes, maxParameterToParse);
 		
 		if formulaParts.Count > 0 then begin 
 			//a variable defined as custom function may not contain other parts
@@ -841,7 +847,7 @@ end;
 //=========================================================================
 //  get the parts of a formula
 //=========================================================================
-procedure GetFormulaParts(const formula : String; const operators, functions, tempVariables : TStringList; formulaParts, formulaPartTypes : TStringList; const formulas : TStringList; const maxParameterToParse : Integer;);
+procedure GetFormulaParts(const formula : String; const operators, functions, tempVariables : TStringList; formulaParts, formulaPartTypes : TStringList; const formulas, results, resultTypes : TStringList; const maxParameterToParse : Integer;);
 var
 	curPos, endPos, i, counter, tmpInt, lastSeparatorEnd, previousSeparatorEnd, curParameter : Integer;
 	curPart, curChar, operator, tmpStr : String;
@@ -950,13 +956,24 @@ begin
 				end else begin
 					tmpInt := tempVariables.IndexOfName(curPart);
 					if tmpInt > -1 then begin
-						curPartType:=5; //5-pointer
+						// curPartType:=5; //5-pointer
+						tmpStr := curPart;
+						curPart := tempVariables.Values[curPart];
+						curPartType:=StrToInt(Copy(curPart,1,1));
+						curPart := Copy(curPart, 3, Length(curPart)-2);
+						DebugLog(Format('temporary variable read: %s, value: %s',[tmpStr, curPart]));
 					end else begin 
 						tmpInt := formulas.IndexOfName(curPart);
 						if tmpInt < 0 then begin
 							raise Exception.Create(Format('Could not find variable with name %s, in formula: %s, position: %d',[curPart, formula, curPos]));
 						end;
-						curPartType:=5; //5-pointer
+						tmpInt := results.IndexOfName(curPart);
+						if tmpInt > -1 then begin
+							curPartType := StrToInt(resultTypes.Values[curPart]);
+							curPart := results.Values[curPart];
+						end else begin 
+							curPartType:=5; //5-pointer
+						end;
 					end;
 				end;
 			end else begin
@@ -2323,16 +2340,21 @@ begin
 		
 		// 40:////////////   FORMULATEXT   /////////////
 				if SameText(functionName,'formulaText') then begin 
-					if not ((separatorsCount = 0) and (partsCount = 1)) then 
-						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
+					//if not ((separatorsCount = 0) and (partsCount = 1)) then 
+					//	raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
 					
-					type1 := formulaPartTypes[0];
-					strValue1 := formulaParts[0];
+					//type1 := formulaPartTypes[0];
+					//strValue1 := formulaParts[0];
 					
-					if not SameText(type1,'5') then
-						raise Exception.Create(Format('The argument is no variable name. functionName: %s, argument: %s',[functionName, strValue1]));
+					//if not SameText(type1,'5') then
+					//	raise Exception.Create(Format('The argument is no variable name. functionName: %s, argument: %s',[functionName, strValue1]));
 					
-					resultStr := formulas.Values[strValue1];
+					// tmpInt := formulas.IndexOfName(formula);
+					// if tmpInt < 0 then 
+						// raise Exception.Create(Format('The argument is no variable name. functionName: %s, argument: %s',[functionName, formula]));
+					
+					//resultStr := formulas.Values[strValue1];
+					resultStr := formulas.Values[formula];
 					resultType := '1';
 					// break;
 				end;
@@ -2396,6 +2418,25 @@ begin
 
 					resultType := '1';
 					resultStr := TransposeTableString(resultStr, strValue1, strValue2);
+					// break;
+				end;
+
+		// ??:////////////   READFROMFILE   /////////////
+				if SameText(functionName,'ReadFromFile') then begin 
+					//set default values
+					resultBool := false;
+					
+					//read parameters
+					ReadParameters(3, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					strValue1 := parameters.Values['1'];
+					tmpStr := parameters.Values['2'];
+					if SameText(tmpStr,'true') then 
+						resultBool := true;
+					strValue2 := parameters.Values['3'];
+					
+					resultType := '1';
+					resultStr := FileToString(resultStr, strValue1, resultBool, strValue2);
 					// break;
 				end;
 
@@ -2809,7 +2850,7 @@ begin
 	//there can only be one result per section left (i.e. between separators)
 	partsCount := formulaParts.Count;
 	if (partsCount > 1) then begin
-		raise Exception.Create(Format('The formula could not be completely calculated. formula: %s, parts left: %s',[formula,formulaParts.Text]));
+		raise Exception.Create(Format('The formula could not be completely calculated. functionName: %s, formula: %s, parts left: %s',[functionName,formula,formulaParts.Text]));
 	end;
 	
 	Result:= resultStr;
@@ -2882,7 +2923,7 @@ var
 	i, partsCount, separatorsCount, numberOfOptions, defaultOptionIndex, curOption, curSeparator : Integer;
 	tmpStr, optionResultStr, optionResultType, compareStr, compareType : String;
 begin
-	LogFunctionStart('CalculateSwitch');
+	LogFunctionStart('CalculateSwitchCompareValues');
 		
 	partsCount := formulaParts.Count;
 	
@@ -2905,6 +2946,9 @@ begin
 	//how many options are there?
 	if defaultOptionIndex > 0 then begin
 		numberOfOptions := (separatorsCount - 1) / 2;
+		//reset the default Option to be a formula -> too late, because it could be in several parts already
+		//if not SameText(formulaPartTypes[defaultOptionIndex],'2') then 
+		//	formulaPartTypes[defaultOptionIndex] := '2';
 	end else begin
 		numberOfOptions := separatorsCount / 2;
 	end;
@@ -3277,6 +3321,7 @@ begin
 	i := 1;
 	while i < partsCount-1 do begin 
 		resultStr:='';
+		resultType:='';
 		
 		if SameText(formulaPartTypes[i],'4') then begin
 			operator := formulaParts[i];
@@ -3290,7 +3335,7 @@ begin
 			end;
 		end;
 		
-		if not SameText(resultStr,'') then begin
+		if not SameText(resultType,'') then begin
 			//now replace the 3 parts with one new
 			formulaParts.Delete(i+1);
 			formulaPartTypes.Delete(i+1);
@@ -3299,13 +3344,12 @@ begin
 			formulaParts[i-1]:=resultStr;
 			formulaPartTypes[i-1]:=resultType;
 			partsCount := formulaParts.Count;
-			if resultType = '3' then 
-				DebugLog(Format('Calculation performed. operator: %s, Value1: %s, Value2: %s, result: %s',[
-					operator,
-					FormatFloat('0.##########;-0.##########;"0"',floatValue1),
-					FormatFloat('0.##########;-0.##########;"0"',floatValue2),
-					resultStr
-					]));
+			DebugLog(Format('Calculation performed. operator: %s, Value1: %s, Value2: %s, result: %s',[
+				operator,
+				strValue1,
+				strValue2,
+				resultStr
+				]));
 		end else begin
 			inc(i);
 		end;

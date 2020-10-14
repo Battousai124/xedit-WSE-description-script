@@ -426,7 +426,7 @@ end;
 //=========================================================================
 //  format PASCAL float from Excel format string
 //=========================================================================
-function FormatFloatWithExcelFormatString(const formatString : String; const floatValue : Double;) : String;
+function FormatFloatWithExcelFormatString(const formatString : String; floatValue : Double;) : String;
 var
 	i, inFormat : Integer;
 	curChar, format1, format2, format3: String;
@@ -471,7 +471,101 @@ begin
 		2 : format3 := format1;
 	end;
 	
+	//add automatic multiplication by 100 if it is a percentage-value
+	if floatValue > 0 then begin
+		//check the first format for a % placeholder
+		if (Pos('0%',format1) > 0) or (Pos('.%',format1) > 0) or (Pos('#%',format1) > 0) then 
+			floatValue := floatValue * 100;
+	end else begin
+		//check the second format for a % placeholder
+		if (Pos('0%',format2) > 0) or (Pos('.%',format2) > 0) or (Pos('#%',format2) > 0) then 
+			floatValue := floatValue * 100;
+	end;	
+	
+DebugLog(Format('format1: %s, format2: %s, format3: %s',[format1, format2, format3]));
+	
 	Result := FormatFloat(Format('%s;%s;%s',[format1,format2,format3]),floatValue);
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  read string from File
+//=========================================================================
+function FileToString(fileName: String; const ignoreLinesStartingWith : String; const ignoreEmptyLines : Boolean; const returnValueIfNotFound : String;) : String;
+var
+	i : Integer;
+	linebreak, tmpStr : String;
+	tmpList : TStringList;
+	filteredOut : Boolean;
+	dlg: TOpenDialog;
+begin
+	LogFunctionStart('FileToString');
+	
+	Result := '';
+	
+	if SameText(fileName, '') then begin
+		//get file from popup
+		dlg := TOpenDialog.Create(nil);
+		try
+			dlg.InitialDir := wbScriptsPath;
+			if dlg.Execute then begin
+				fileName := dlg.FileName;
+			end else begin
+				LogFunctionEnd;
+				Exit;
+			end;
+		finally
+			dlg.Free;
+		end;
+	end else begin
+		fileName := wbScriptsPath + fileName;
+	end;
+	
+	
+	DebugLog(Format('fileName: %s',[fileName]));
+	tmpList := TStringList.Create;
+	
+	try
+		linebreak := chr(13) + chr(10);
+		
+		try
+			tmpList.LoadFromFile(fileName);
+			
+			i := 0;
+			while i < tmpList.Count do begin
+				filteredOut := false;
+				tmpStr := tmpList[i];
+				
+				if not SameText(ignoreLinesStartingWith,'') then begin
+					if SameText(ignoreLinesStartingWith, Copy(tmpStr,1,Length(ignoreLinesStartingWith))) then
+						filteredOut := true;
+				end;
+				
+				if ignoreEmptyLines then begin
+					if SameText(tmpStr, '') then
+						filteredOut := true;
+				end;
+				
+				//DebugLog(Format('tmpStr: %s',[tmpStr]));
+				
+				if not filteredOut then begin
+					if i = 0 then begin
+						Result := tmpStr;
+					end else begin
+						Result := Result + linebreak + tmpStr;
+					end;
+				end;
+				
+				inc(i);
+			end;
+		except 
+			Result := returnValueIfNotFound;
+		end;
+	finally
+		tmpList.Free;
+		tmpList := nil;
+	end;
 	
 	LogFunctionEnd;
 end;
