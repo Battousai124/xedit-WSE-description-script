@@ -382,6 +382,52 @@ begin
 	// LogFunctionEnd;
 end;
 
+//=========================================================================
+//  get rid of duplicates (and empty strings) in a list and returns the now distinct list
+//=========================================================================
+function DistinctList(const listStr, delimiter : String; const ignoreEmptyEntries : Boolean;) : String;
+var 
+	i, tmpInt, counter : Integer;
+	tmpStr : String;
+	tmpList, results : TStringList;
+begin
+	//LogFunctionStart('DistinctList');
+	
+	tmpList := TStringList.Create;
+	results := TStringList.Create;
+	results.Sorted := true; //so that .Find() works
+	
+	try
+		StringToStringList(listStr, delimiter, tmpList);
+		
+		Result := '';
+		i := 0;
+		counter := 0;
+		while i < tmpList.Count do begin
+			tmpStr := tmpList[i];
+			
+			if (not ignoreEmptyEntries) or (not SameText(tmpStr,'')) then begin 
+				if not results.Find(tmpStr, tmpInt) then begin
+					results.Add(tmpStr);
+					if counter = 0 then begin
+						Result := tmpStr;
+					end else begin
+						Result := Result + delimiter + tmpStr;
+					end;
+					inc(counter);
+				end;
+			end;
+			inc(i);
+		end;
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		results.Free;
+		results := nil;
+	end;
+
+	//LogFunctionEnd;
+end;
 
 //=========================================================================
 //  format string from Excel format string
@@ -570,5 +616,50 @@ begin
 	LogFunctionEnd;
 end;
 
+//=========================================================================
+//  write string to File
+//=========================================================================
+procedure StringToFile(const stringValue : String; fileName: String; const overwrite : Boolean;);
+var
+	tmpList : TStringList;
+	dlg: TOpenDialog;
+begin
+	LogFunctionStart('StringToFile');
+	
+	if SameText(fileName, '') then begin
+		dlg := TSaveDialog.Create(nil);
+		try
+			dlg.Options := dlg.Options + [ofOverwritePrompt];
+			dlg.InitialDir := wbScriptsPath;
+			if dlg.Execute then begin
+				fileName := dlg.FileName;
+			end else begin
+				LogFunctionEnd;
+				Exit;
+			end;
+		finally
+			dlg.Free;
+		end;
+	end else begin
+		fileName := wbScriptsPath + fileName;
+		if not overwrite then begin 
+			If FileExists(fileName) Then
+				raise Exception.Create(Format('File exists and parameter overwriteIfExists is set to "false" - fileName: %s',[fileName]));
+		end;
+	end;
+	
+	DebugLog(Format('fileName: %s',[fileName]));
+	tmpList := TStringList.Create;
+	
+	try
+		tmpList.Add(stringValue);
+		tmpList.SaveToFile(FileName);
+	finally
+		tmpList.Free;
+		tmpList := nil;
+	end;
+	
+	LogFunctionEnd;
+end;
 
 end.

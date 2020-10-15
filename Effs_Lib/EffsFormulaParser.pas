@@ -44,7 +44,7 @@ begin
 	functions.Add('switch(');
 	functions.Add('choose(');
 	functions.Add('abs('); //Excel numeric functions
-	functions.Add('round('); //(trunc not necessary -> use round)
+	functions.Add('round('); 
 	functions.Add('sign(');
 	functions.Add('mod(');
 	functions.Add('power(');
@@ -65,7 +65,7 @@ begin
 	functions.Add('len(');
 	functions.Add('text(');
 	functions.Add('value(');
-	functions.Add('search('); //not find - find is case-sensitive
+	functions.Add('search('); 
 	functions.Add('substitute('); 
 	functions.Add('replace('); 
 	functions.Add('rept(');
@@ -80,16 +80,18 @@ begin
 //functions.Add('in('); searchText,CompareText1,CompareText2,CompareText3,...
 	functions.Add('linebreak('); 
 	functions.Add('calculate(');
+	functions.Add('Distinct('); 
 	functions.Add('ReadFromFile('); 
+	functions.Add('WriteToFile(');  
 	functions.Add('ReadFromCSV('); 
+//functions.Add('ReadFromCSVByHeader('); rowIndex, colIndex, rowHeader, colHeader - if header is set, index is ignored
 	functions.Add('FilterCSV('); 
 	functions.Add('SortCSV('); 
 	functions.Add('ChangeCSV('); 
 	functions.Add('AddColToCSV('); 
 	functions.Add('CombineCSV('); 
+//functions.Add('SearchValueInCSV('); returns true if the value is contained in the CSV, selectionFormula can return something else - e.g. rowIndex or colIndex
 //functions.Add('CountIf('); for counting appearances in elements of a CSV using a string or a formula - with rowIndex and colIndex, although it does not make much sense to call it with both variables set
-//functions.Add('Distinct('); //listOrCSV, ignoreEmptyValues, delimiter1, delimiter2
-	//functions.Add('stringFormat(');
 	functions.Add('With('); //additional logical functions
 	functions.Add('Function('); 
 	functions.Add('EndCalculation('); 
@@ -99,7 +101,6 @@ begin
 //functions.Add('ExecutionCount(') NoOfExecution() returns numeric count of executions of the formula engine - during the first execution it will return 1
 	functions.Add('GetOutput('); //additional functions for easy scripting
 	functions.Add('SetOutput('); 
-//functions.Add('SaveToFile(');  SaveToFile(varToSave,FileName,overwriteCondition,returnValue) if varToSave is empty, save all results so far, if filename is empty, show save popup, if returnValue is not set: return fileName
 //functions.Add('MsgBox('); 
 //functions.Add('EditBox('); ???
 //functions.Add('CalculateFormulasFile('); 
@@ -111,9 +112,7 @@ begin
 //functions.Add('ReadDirectory('); ???
 //functions.Add('ChangeRecords('); --returns a string that can contain every change that was necessary
 
-			//functions.Add('SplitStringAndForEach('); SplitStringAndForEach(string,delimiter,elementVariableName,ReturnFormatFunction) ?????
-			//functions.Add('WithRecords(') WithRecords(recordsString,recordVariableName,aggregationType???,formula)
-			//functions.Add('setVar('); 
+	//functions.Add('setVar('); 
 
 	//functions.Add('index('); //Excel matrix formulas - for lists?
 	
@@ -121,7 +120,6 @@ begin
 	//functions.Add('count(');
 	//functions.Add('countA(');
 	//functions.Add('countBlank(');
-	//functions.Add('countIf(');
 	//functions.Add('sumIf(');
 		
 	
@@ -2421,13 +2419,32 @@ begin
 					// break;
 				end;
 
+		// ??:////////////   DISTINCT   /////////////
+				if SameText(functionName,'Distinct') then begin 
+					//set default values
+					resultBool := true;
+					parameters.Values['1'] := ',';
+					
+					//read parameters
+					ReadParameters(3, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					resultStr := parameters.Values['0'];
+					strValue1 := parameters.Values['1'];
+					tmpStr := parameters.Values['2'];
+					if SameText(tmpStr,'false') then 
+						resultBool := false;
+					
+					resultType := '1';
+					resultStr := DistinctList(resultStr, strValue1, resultBool);
+					// break;
+				end;
+
 		// ??:////////////   READFROMFILE   /////////////
 				if SameText(functionName,'ReadFromFile') then begin 
 					//set default values
 					resultBool := false;
 					
 					//read parameters
-					ReadParameters(3, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					ReadParameters(4, formulaParts, formulaPartTypes, parameters, parameterTypes);
 					resultStr := parameters.Values['0'];
 					strValue1 := parameters.Values['1'];
 					tmpStr := parameters.Values['2'];
@@ -2437,6 +2454,25 @@ begin
 					
 					resultType := '1';
 					resultStr := FileToString(resultStr, strValue1, resultBool, strValue2);
+					// break;
+				end;
+
+		// ??:////////////   WRITETOFILE   /////////////
+				if SameText(functionName,'WriteToFile') then begin 
+					//set default values
+					resultBool := true;
+					parameterTypes.Values['3'] := '1';
+					
+					//read parameters
+					ReadParameters(4, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					strValue1 := parameters.Values['0'];
+					strValue2 := parameters.Values['1'];
+					tmpStr := parameters.Values['2'];
+					if SameText(tmpStr,'false') then 
+						resultBool := false;
+					resultStr := parameters.Values['3'];
+					resultType := parameterTypes.Values['3'];
+					StringToFile(strValue1, strValue2, resultBool);
 					// break;
 				end;
 
@@ -2708,7 +2744,7 @@ begin
 		
 		// 47:////////////   ENDCALCULATION   /////////////
 				if SameText(functionName,'endCalculation') then begin 
-					if (partsCount > 1) then 
+					if (partsCount > 3) then 
 						raise Exception.Create(Format('Function is supplied with the wrong number of arguments. functionName: %s, formula: %s',[functionName, formula]));
 					
 					FormulaParserStopExecution := true;
@@ -2717,9 +2753,13 @@ begin
 					parameterTypes.Values['0'] := '1';
 					
 					//read parameters
-					ReadParameters(1, formulaParts, formulaPartTypes, parameters, parameterTypes);
+					ReadParameters(2, formulaParts, formulaPartTypes, parameters, parameterTypes);
 					resultStr := parameters.Values['0'];
 					resultType := parameterTypes.Values['0'];
+					tmpStr := parameters.Values['1'];
+					if SameText(tmpStr,'true') then 
+						raise Exception.Create(resultStr);
+					
 					// break;
 				end;
 		
