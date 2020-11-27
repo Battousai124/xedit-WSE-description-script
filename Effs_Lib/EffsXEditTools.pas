@@ -524,7 +524,7 @@ var
 	curElement : IInterface;
 	curNewPaths : TStringList;
 begin
-	LogFunctionStart('ResolveSmartPath');
+	// LogFunctionStart('ResolveSmartPath');
 	
 	curNewPaths := TStringList.Create;
 	resolvedPaths.Clear;
@@ -741,7 +741,7 @@ begin
 	end;
 	
 	// DebugLog(Format('resolved Paths: %s',[resolvedPaths.Text]));
-	LogFunctionEnd;
+	// LogFunctionEnd;
 end;
 
 //=========================================================================
@@ -755,7 +755,7 @@ var
 	tmpStr, smartSelectionTag, curRecordStr, resultStr : String;
 	curRecord : IInterface;
 begin
-	LogFunctionStart('ResolveSmartRecordString');
+	// LogFunctionStart('ResolveSmartRecordString');
 	
 	resolvedRecords.Clear;
 	Result := false;
@@ -846,7 +846,7 @@ begin
 		// end; //end for
 	end;
 	
-	LogFunctionEnd;
+	// LogFunctionEnd;
 end;
 
 //=========================================================================
@@ -1133,8 +1133,8 @@ begin
 	curResolvedRecords := TStringList.Create;
 	
 	try
-		StringToStringList(recordsStr, ';', records);
-		StringToStringList(pathsStr, ';', paths);
+		StringToStringList(recordsStr, ';', '"', records, false);
+		StringToStringList(pathsStr, ';', '"', paths, false);
 		
 		resultList.Clear;
 		
@@ -1175,7 +1175,7 @@ begin
 							resultList.Add(Format('%d,%d=%s',[i + r + 1, j + p + 1, curValueStr]));
 							//resultVariables.Values[Format('%d,%d,r',[i + r + 1, j + p + 1])] := curRecordStr;
 							resultVariables.Values[Format('%d,%d,p',[i + r + 1, j + p + 1])] := curPathStr;
-							curValueStr := EscapeStringIfNecessary(curValueStr, '"', recordsDelimiter, elementsDelimiter);
+							curValueStr := EscapeStringIfNecessary(curValueStr, recordsDelimiter, elementsDelimiter, '"', '""');
 							if p = 0 then begin
 								tmpStr := curValueStr;
 							end else begin
@@ -1188,7 +1188,7 @@ begin
 						resultList.Add(Format('%d,%d=%s',[i + r + 1, j + 1, emptyReturnValue]));
 						//resultVariables.Values[Format('%d,%d,r',[i + r + 1, j + 1])] := curRecordStr;
 						resultVariables.Values[Format('%d,%d,p',[i + r + 1, j + 1])] := curPathStr;
-						tmpStr := EscapeStringIfNecessary(emptyReturnValue, '"', recordsDelimiter, elementsDelimiter);
+						tmpStr := EscapeStringIfNecessary(emptyReturnValue, recordsDelimiter, elementsDelimiter, '"', '""');
 						// DebugLog('curRecord not assigned');
 					end;
 					
@@ -1243,13 +1243,13 @@ begin
 		if SameText(pluginFilterStr,'') then begin 
 			pluginsCount := FileCount;
 		end else begin
-			StringToStringList(pluginFilterStr, ';', plugins);
+			StringToStringList(pluginFilterStr, ';', '"', plugins, false);
 			pluginsCount := plugins.Count;
 		end;
 		if SameText(signatureFilterStr,'') then begin
 			signaturesCount := 0; //just initialized, will be overwritten in the loop
 		end else begin
-			StringToStringList(signatureFilterStr, ';', signatures);
+			StringToStringList(signatureFilterStr, ';', '"', signatures, false);
 			signaturesCount := signatures.Count;
 		end;
 		
@@ -1397,11 +1397,11 @@ begin
 	try
 		resultList.Clear;
 	
-		StringToStringList(recordsStr, ';', records);
+		StringToStringList(recordsStr, ';', '"', records, false);
 		if not SameText(pluginFilterStr,'') then  
-			StringToStringList(pluginFilterStr, ';', plugins);
+			StringToStringList(pluginFilterStr, ';', '"', plugins, false);
 		if not SameText(signatureFilterStr,'') then 
-			StringToStringList(signatureFilterStr, ';', signatures);
+			StringToStringList(signatureFilterStr, ';', '"', signatures, false);
 		
 		counter := 0;
 		recordsCount := records.Count;
@@ -1681,6 +1681,187 @@ begin
 	
 	DebugLog(Format('name: "%s", interpreted name: "%s"',[name, newValue]));
 	Result := newValue;
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  Get Translation Table from Keyword to Workshop Menu Path
+//	result is a TStringList delimited by "="
+//	the Workshop Menu Path uses \ to indicate a path
+//=========================================================================
+procedure GetKeywordToWorkshopmenuTranslation(result : TStringList;);
+const 
+	mainMenulist = 'WorkshopMenuMain[Fallout4.esm]:FLST';
+var 
+	i : Integer;
+	tmpStr, curRecordStr, curSignature, curName : String;
+	curRecord : IInterface;
+	tmpList, tmpList2 : TStringList;
+begin
+	LogFunctionStart('GetKeywordToWorkshopmenuTranslation');
+	
+	result.Clear;
+	tmpList := TStringList.Create;
+	tmpList2 := TStringList.Create;
+	
+	try
+		ReadRecords(mainMenulist + '\[WinningOverride]', 'FormIDs\[*]', 'n/a', ';', ',', tmpList, tmpList2);
+		
+// DebugLog('full contents: ' + tmpList.Text);
+		
+		i := 0;
+		while i < tmpList.Count do begin 
+			curRecordStr := tmpList.ValueFromIndex[i];
+			curRecord := StringToRecord(curRecordStr);
+			if Assigned(curRecord) then begin 
+				curSignature := Signature(curRecord);
+				
+				if SameText(curSignature,'KYWD') then begin 
+					//this is a target that needs to be translated
+					curName := GetElementEditValues(WinningOverride(curRecord), 'FULL');
+					result.Values[curRecordStr] := curName;
+				end;
+				
+				if SameText(curSignature,'FLST') then begin 
+					//this is a sub Menu
+					ResolveWorkshopMenuRecursive(curRecordStr, '', result, 0);
+				end;
+			end;
+			inc(i);
+		end;
+	
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		tmpList2.Free;
+		tmpList2 := nil;
+	end;
+		
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  Resolve sub-menus in a workshop menu
+//	(Recursive Function)
+// 	(do not call for main Menu FLST record - use GetKeywordToWorkshopmenuTranslation instead)
+//=========================================================================
+procedure ResolveWorkshopMenuRecursive(const workshopMenuRecordStr : String; const previousPath : String; result : TStringList; const recursionLevel : Integer;);
+var 
+	i : Integer;
+	tmpStr, curMenuPath, curRecordStr, curSignature, curName : String;
+	curRecord : IInterface;
+	tmpList, tmpList2 : TStringList;
+begin
+	LogFunctionStart('ResolveWorkshopMenuRecursive');
+	
+	tmpList := TStringList.Create;
+	tmpList2 := TStringList.Create;
+	
+	try
+		ReadRecords(workshopMenuRecordStr + '\[WinningOverride]', 'FormIDs\[*]', '', '', '', tmpList, tmpList2);
+				
+		i := 0;
+		while i < tmpList.Count do begin 
+			curRecordStr := tmpList.ValueFromIndex[i];
+			curRecord := StringToRecord(curRecordStr);
+			curSignature := Signature(curRecord);
+			curName := GetElementEditValues(WinningOverride(curRecord), 'FULL');
+			
+			if i = 0 then begin 
+				//the first entry is supposed be a keyword of this Menu-Path, which also defines the Menu name
+				if not Assigned(curRecord) then break;
+				if not SameText(curSignature, 'KYWD') then break;
+				if SameText(previousPath, '') then begin 
+					curMenuPath := curName;
+				end else begin
+					curMenuPath := previousPath + '\' + curName;
+				end;
+				result.Values[workshopMenuRecordStr] := curMenuPath; //actually not necessary, but nice for structuring and overview
+			end else begin 
+				if Assigned(curRecord) then begin 
+					if SameText(curSignature,'KYWD') then begin 
+						//this is a target that needs to be translated
+						result.Values[curRecordStr] := curMenuPath + '\' + curName;
+					end;
+					
+					if SameText(curSignature,'FLST') then begin 
+						//this is a sub Menu
+						ResolveWorkshopMenuRecursive(curRecordStr, curMenuPath, result, recursionLevel + 1);
+					end;
+				end;
+			end;
+			inc(i);
+		end;
+	
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		tmpList2.Free;
+		tmpList2 := nil;
+	end;
+		
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  Resolve a formlist recursively until the entries are no FLST entries anymore
+//	(Recursive Function)
+// 	also returns a second list with the corresponding Names (with the same logic the game uses to decide a name in the Workshop)
+//	(the order of the list is as it was)
+//=========================================================================
+procedure ResolveFormlistWithNameRecursive(const formListRecordStr, outerName : String; resultList, resultNameList : TStringList; const recursionLevel : Integer;);
+var 
+	i, j : Integer;
+	tmpStr, curName, previousName, curRecordStr, curEntryRecordStr, curSignature : String;
+	curRecord : IInterface;
+	tmpList, tmpList2, tmpList3 : TStringList;
+begin
+	LogFunctionStart('ResolveFormlistWithNameRecursive');
+	
+	tmpList := TStringList.Create;
+	tmpList2 := TStringList.Create;
+	tmpList3 := TStringList.Create;
+	
+	try
+		resultList.Clear;
+		resultNameList.Clear;
+		
+		curRecord := StringToRecord(formListRecordStr);
+		curName := GetElementEditValues(WinningOverride(curRecord), 'DESC');
+		if SameText(curName, '') then 
+			curName := outerName;
+		ReadRecords(formListRecordStr + '\[WinningOverride]', 'FormIDs\[*]', '', '', '', tmpList, tmpList2);
+		
+		i := 0;
+		while i < tmpList.Count do begin
+			curRecordStr := tmpList.ValueFromIndex[j];
+			curRecord := StringToRecord(curRecordStr);
+			if Assigned(curRecord) then begin 
+				curSignature := Signature(curRecord);
+				if SameText(curSignature, 'FLST') then begin 
+					ResolveFormlistWithNameRecursive(curRecordStr, curName, tmpList2, tmpList3, recursionLevel + 1);
+					j := 0;
+					while j < tmpList2 do begin 
+						resultList.Add(tmpList2[j]);
+						resultNameList.Add(tmpList3[j]);
+						inc(j);
+					end;
+				end else begin
+					resultList.Add(curRecordStr);
+					resultNameList.Add(curName);
+				end;
+			end;
+			inc(i);
+		end;
+	finally
+		tmpList.Free;
+		tmpList := nil;
+		tmpList2.Free;
+		tmpList2 := nil;
+		tmpList3.Free;
+		tmpList3 := nil;
+	end;
+		
 	LogFunctionEnd;
 end;
 

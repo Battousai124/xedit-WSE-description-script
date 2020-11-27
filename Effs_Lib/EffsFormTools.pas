@@ -742,7 +742,7 @@ begin
 		tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'Items', settings);
 		if not SameText(tmpStr,'') then begin
 			tmpList.Clear;
-			StringToStringList(tmpStr, ',', tmpList);
+			StringToStringList(tmpStr, ',', '"', tmpList, false);
 		end;
 
 		Result := ConstructPseudoRadioGroup(frm, parent
@@ -790,7 +790,7 @@ begin
 	tmpStr := GetStringFromGuiSettings(parentName, typeName, name, 'Items', settings);
 	if not SameText(tmpStr,'') then begin
 		tmpList.Clear;
-		StringToStringList(tmpStr, ',', tmpList);
+		StringToStringList(tmpStr, ',', '"', tmpList, false);
 	end;
 
 	Result := ConstructDropdown(frm, parent

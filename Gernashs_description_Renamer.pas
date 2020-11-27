@@ -77,7 +77,7 @@ begin
 	if EnableDebugLog then
 		GuiSettings.Values['DebugLogEnabled'] := 'true';
 	GuiSettings.Values['PluginSelectionMode'] := IntToStr(GlobConfig.PluginSelectionMode);
-	GuiSettings.Values['ExistingGernashsDescrPlugins'] := StringListToString(GlobConfig.ExistingGernashsDescrPlugins, '"', ',', true);
+	GuiSettings.Values['ExistingGernashsDescrPlugins'] := StringListToString(GlobConfig.ExistingGernashsDescrPlugins, ',', '"', '""', true);
 	GuiSettings.Values['NewPluginName'] := '"' + GlobConfig.NewPluginName + '"';
 	GuiSettings.Values['LastPluginInLoadOrder'] := '"' + GlobConfig.LastPluginInLoadOrder + '"';
 	ParseFormulasFile(GuiSettingsFilename, GuiSettings, '', '');

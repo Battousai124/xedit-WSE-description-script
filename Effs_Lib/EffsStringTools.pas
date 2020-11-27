@@ -83,59 +83,70 @@ end;
 //  Read string to TStringList
 // 	(we assume that everything is correctly escaped -> no extra escaping in here)
 //=========================================================================
-procedure StringToStringList(const strValue, delimiter : String; results : TStringList;);
+procedure StringToStringList(const strValue, delimiter, fieldEncloser : String; results : TStringList; const ignoreEmptyEntries : Boolean;);
 var 	
 	lengthStr, curPos, endPos, lengthDelim, nextStringPos, nextDelimiterPos, nextInterestingPos  : Integer;
 	tmpStr : String;
 begin
-	LogFunctionStart('StringToStringList');
+	// LogFunctionStart('StringToStringList');
 	//unfortunately we have to fill them manually, since PASCAL is not escaping properly with DelimitedText
 		
 	results.Clear;
+	nextStringPos := -1;
 	
-	lengthStr := Length(strValue);
-	lengthDelim := Length(delimiter); //for delimiters longer than 1 char
-	tmpStr := '';
-	curPos := 1;
-	while curPos <= lengthStr do begin
-		//(reading ahead with Pos() is way faster than iterating throug every character - mainly interesting for large CSV-Tables with many)
-		nextStringPos := Pos('"',Copy(strValue,curPos,lengthStr));
-		nextDelimiterPos := Pos(delimiter,Copy(strValue,curPos,lengthStr));
-		nextInterestingPos := max(nextStringPos,0);
-		if (nextInterestingPos < 1) or (nextInterestingPos > nextDelimiterPos) then
-			nextInterestingPos := max(nextDelimiterPos,0);
-		
-		case nextInterestingPos of 
-			0: begin
-					//the rest is simply the last field
-					tmpStr := tmpStr + Copy(strValue,curPos, lengthStr);
-					results.Add(tmpStr);
-					curPos := lengthStr;
-					// DebugLog(Format('case 0 - tmpStr: %s',[tmpStr]));
-				end;
-			nextStringPos: begin
-					endPos := GetEndOfEscapedString(strValue, curPos + nextInterestingPos);
-					tmpStr := tmpStr + Copy(strValue,curPos,endPos-curPos + 1);
-					if endPos = lengthStr then 
-						results.Add(tmpStr);
-					curPos := endPos;
-					// DebugLog(Format('case string - tmpStr: %s',[tmpStr]));
-				end;
-			nextDelimiterPos: begin
-					tmpStr := tmpStr + Copy(strValue, curPos, nextInterestingPos - 1); //a,b,c,d
-					results.Add(tmpStr);
-					// DebugLog(Format('case delim - tmpStr: %s',[tmpStr]));
-					tmpStr := '';
-					curPos := curPos + nextInterestingPos + lengthDelim - 2; 
-				end;
+	if SameText(delimiter, '') then begin
+		if (not SameText(strValue, '')) or (not ignoreEmptyEntries) then 
+			results.Add(strValue);
+	end else begin 
+		lengthStr := Length(strValue);
+		lengthDelim := Length(delimiter); //for delimiters longer than 1 char
+		tmpStr := '';
+		curPos := 1;
+		while curPos <= lengthStr do begin
+			//(reading ahead with Pos() is way faster than iterating throug every character - mainly interesting for large CSV-Tables with many)
+			if not SameText(fieldEncloser, '') then 
+				nextStringPos := Pos(fieldEncloser,Copy(strValue,curPos,lengthStr));
+			nextDelimiterPos := Pos(delimiter,Copy(strValue,curPos,lengthStr));
+			nextInterestingPos := max(nextStringPos,0);
+			if (nextInterestingPos < 1) or (nextInterestingPos > nextDelimiterPos) then
+				nextInterestingPos := max(nextDelimiterPos,0);
+			
+			case nextInterestingPos of 
+				0: begin
+						//the rest is simply the last field
+						tmpStr := tmpStr + Copy(strValue,curPos, lengthStr);
+						if (not SameText(tmpStr, '')) or (not ignoreEmptyEntries) then 
+							results.Add(tmpStr);
+						curPos := lengthStr;
+						// DebugLog(Format('case 0 - tmpStr: %s',[tmpStr]));
+					end;
+				nextStringPos: begin
+						endPos := GetEndOfEscapedString(strValue, curPos + nextInterestingPos);
+						tmpStr := tmpStr + Copy(strValue,curPos,endPos-curPos + 1);
+						if endPos = lengthStr then begin
+							if (not SameText(tmpStr, '')) or (not ignoreEmptyEntries) then 
+								results.Add(tmpStr);
+						end;
+						curPos := endPos;
+						// DebugLog(Format('case string - tmpStr: %s',[tmpStr]));
+					end;
+				nextDelimiterPos: begin
+						tmpStr := tmpStr + Copy(strValue, curPos, nextInterestingPos - 1); //a,b,c,d
+						if (not SameText(tmpStr, '')) or (not ignoreEmptyEntries) then 
+							results.Add(tmpStr);
+						// DebugLog(Format('case delim - tmpStr: %s',[tmpStr]));
+						tmpStr := '';
+						curPos := curPos + nextInterestingPos + lengthDelim - 2; 
+					end;
+			end;
+			
+			inc(curPos);
 		end;
-		
-		inc(curPos);
 	end;
 	
 	// DebugLog(Format('results.Count: %d, results: %s',[results.Count, results.Text]));
 	
-	LogFunctionEnd;
+	// LogFunctionEnd;
 end;
 
 
@@ -143,19 +154,19 @@ end;
 //  Read TStringList to String
 //	(including escaping)
 //=========================================================================
-function StringListToString(const list : TStringList; const fieldEncloser, delimiter : String; const escapeTotalString : Boolean) : String;
+function StringListToString(const list : TStringList; const delimiter, fieldEncloser, escapedFieldEncloser : String; const escapeTotalString : Boolean) : String;
 var 	
 	i : Integer;
 begin
-	LogFunctionStart('StringListToString');
+	// LogFunctionStart('StringListToString');
 	
 	Result := '';
 	i := 0;
 	while i < list.Count do begin
 		if i = 0 then begin
-			Result := EscapeStringIfNecessary(list[i], fieldEncloser, delimiter, '');
+			Result := EscapeStringIfNecessary(list[i], delimiter, '', fieldEncloser, escapedFieldEncloser);
 		end else begin
-			Result := Result + delimiter + EscapeStringIfNecessary(list[i], fieldEncloser, delimiter, '');
+			Result := Result + delimiter + EscapeStringIfNecessary(list[i], delimiter, '', fieldEncloser, escapedFieldEncloser);
 		end;
 		inc(i);
 	end;
@@ -163,7 +174,7 @@ begin
 	if escapeTotalString then 
 		Result := fieldEncloser + StringReplace(Result, fieldEncloser, fieldEncloser + fieldEncloser, [rfIgnoreCase,rfReplaceAll]) + fieldEncloser;
 	
-	LogFunctionEnd;
+	// LogFunctionEnd;
 end;
 
 //=========================================================================
@@ -184,7 +195,7 @@ end;
 //  Transpose a string that represents a table (switch columns and rows)
 // 	(we assume that everything is correctly escaped -> no extra escaping in here)
 //=========================================================================
-function TransposeTableString(const tableStr, rowDelimiter, columnDelimiter : String;) : String;
+function TransposeTableString(const tableStr, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser : String;) : String;
 var 	
 	i, rowsCount, colsCount, curCol, tmpInt : Integer;
 	tmpStr, curLine, resultStr : String;
@@ -199,7 +210,7 @@ begin
 	innerList := TStringList.Create;
 	
 	try
-		StringToStringList(tableStr, rowDelimiter, outerList);
+		StringToStringList(tableStr, rowDelimiter, fieldEncloser, outerList, false);
 		// DebugLog(Format('all rows: %s',[outerList.Text]));
 		
 		rowsCount := outerList.Count;
@@ -208,7 +219,7 @@ begin
 		i := 0;
 		while i < rowsCount do begin
 			curLine := outerList[i];
-			StringToStringList(curLine, columnDelimiter, innerList);
+			StringToStringList(curLine, columnDelimiter, fieldEncloser, innerList, false);
 			
 			tmpInt := innerList.Count;
 			curCol := 0;
@@ -263,7 +274,7 @@ end;
 //  escape string if necessary
 // (considers 2 delimiters in order to support escaping a string for a CSV table like string ouptut)
 //=========================================================================
-function EscapeStringIfNecessary(const stringValue, fieldEncloser, delimiter1, delimiter2 : String; ) : String;
+function EscapeStringIfNecessary(const stringValue, delimiter1, delimiter2, fieldEncloser, escapedFieldEncloser : String; ) : String;
 var 	
 	tmpStr : String;
 	tmpBool : Boolean;
@@ -273,7 +284,7 @@ begin
 	Result := stringValue;
 	
 	if (not SameText(fieldEncloser,'')) and (Pos(fieldEncloser,stringValue) > 0) then begin
-		Result := fieldEncloser + StringReplace(stringValue, fieldEncloser, fieldEncloser + fieldEncloser, [rfIgnoreCase,rfReplaceAll]) + fieldEncloser;
+		Result := fieldEncloser + StringReplace(stringValue, fieldEncloser, escapedFieldEncloser, [rfIgnoreCase,rfReplaceAll]) + fieldEncloser;
 	end else begin
 		if ((not SameText(delimiter1, '')) and (Pos(delimiter1,stringValue) > 0)) 
 			or ((not SameText(delimiter2, '')) and (Pos(delimiter2,stringValue) > 0)) then begin
@@ -385,40 +396,70 @@ end;
 //=========================================================================
 //  get rid of duplicates (and empty strings) in a list and returns the now distinct list
 //=========================================================================
-function DistinctList(const listStr, delimiter : String; const ignoreEmptyEntries : Boolean;) : String;
+function DistinctListStr(const listStr, delimiter, fieldEncloser, escapedFieldEncloser : String; const ignoreEmptyEntries : Boolean;) : String;
 var 
-	i, tmpInt, counter : Integer;
+	i : Integer;
+	tmpStr : String;
+	tmpList : TStringList;
+begin
+	//LogFunctionStart('DistinctListStr');
+	
+	tmpList := TStringList.Create;
+	
+	try
+		StringToStringList(listStr, delimiter, fieldEncloser, tmpList, false);
+		DistinctList(tmpList, ignoreEmptyEntries);
+		
+		Result := '';
+		i := 0;
+		while i < tmpList.Count do begin
+			tmpStr := tmpList[i];
+			if i = 0 then begin
+				Result := tmpStr;
+			end else begin
+				Result := Result + delimiter + tmpStr;
+			end;
+			inc(i);
+		end;
+	finally
+		tmpList.Free;
+		tmpList := nil;
+	end;
+
+	//LogFunctionEnd;
+end;
+
+//=========================================================================
+//  get rid of duplicates (and empty strings) in a list and returns the now distinct list
+//=========================================================================
+procedure DistinctList(list : TStringList; const ignoreEmptyEntries : Boolean;);
+var 
+	i, tmpInt : Integer;
 	tmpStr : String;
 	tmpList, results : TStringList;
 begin
 	//LogFunctionStart('DistinctList');
 	
 	tmpList := TStringList.Create;
+	tmpList.Sorted := true; //so that .Find() works
 	results := TStringList.Create;
-	results.Sorted := true; //so that .Find() works
 	
 	try
-		StringToStringList(listStr, delimiter, tmpList);
-		
-		Result := '';
 		i := 0;
-		counter := 0;
-		while i < tmpList.Count do begin
-			tmpStr := tmpList[i];
+		while i < list.Count do begin
+			tmpStr := list[i];
 			
 			if (not ignoreEmptyEntries) or (not SameText(tmpStr,'')) then begin 
-				if not results.Find(tmpStr, tmpInt) then begin
+				if not tmpList.Find(tmpStr, tmpInt) then begin
+					tmpList.Add(tmpStr);
 					results.Add(tmpStr);
-					if counter = 0 then begin
-						Result := tmpStr;
-					end else begin
-						Result := Result + delimiter + tmpStr;
-					end;
-					inc(counter);
 				end;
 			end;
 			inc(i);
 		end;
+		
+		list.Clear;
+		CopyList(results, list);
 	finally
 		tmpList.Free;
 		tmpList := nil;
@@ -658,6 +699,71 @@ begin
 		tmpList.Free;
 		tmpList := nil;
 	end;
+	
+	LogFunctionEnd;
+end;
+
+//=========================================================================
+//  check if a string can be converted to a numeric value
+//=========================================================================
+function isNumeric(const strValue : String;) : Boolean;
+const 
+	plusSign = '+';
+	minusSign = '-';
+	decimalSeparator = '.';
+var
+	i, countComma, countNumber, tmpInt, countNotAllowed : Integer;
+	curChar : String;
+begin
+	LogFunctionStart('isNumeric');
+	
+	Result := false;
+	if SameText(Trim(strValue),'') then begin
+		LogFunctionEnd;
+		Exit;
+	end;
+	
+	countComma := 0;
+	countNumber := 0;
+	countNotAllowed := 0;
+	for i := 1 to Length(strValue) do begin
+		curChar := Copy(strValue,i,1);
+		
+		if (i = 1) then begin 
+			if (SameText(curChar, plusSign) or SameText(curChar, minusSign)) then
+			continue;
+		end;
+		
+		if SameText(curChar, decimalSeparator) then begin
+			inc(countComma);
+			continue;
+		end;
+			
+		if (curChar >= '0') and (curChar <= '9') then begin
+			inc(countNumber);
+			continue;
+		end;
+		
+		inc(countNotAllowed);
+		break;
+	end;
+	
+	// DebugLog(Format('countNotAllowed: %d, countNumber: %d, countComma: %d',[countNotAllowed,countNumber,countComma]));
+	
+	case countNotAllowed of
+		0: begin
+				case countNumber of 
+					0: Result := false;
+					else begin 
+						case countComma of
+							0,1: Result := true;
+							else Result := false;
+						end;
+					end;
+				end;
+		end;
+		else Result := false;
+	end;	
 	
 	LogFunctionEnd;
 end;

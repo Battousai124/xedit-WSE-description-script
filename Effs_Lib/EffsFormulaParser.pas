@@ -4,6 +4,7 @@ unit EffsFormulaParser;
 implementation
 
 uses 'Effs_Lib\EffsStringTools';
+uses 'Effs_Lib\EffsTableTools';
 
 var 
 	FormulaParserStopExecution : Boolean;
@@ -643,7 +644,7 @@ begin
 						curVal := Copy(tmpStr,3,Length(tmpStr));
 					end;
 					
-					curVal := EscapeStringIfNecessary(curVal, '"', recordsDelimiter, elementsDelimiter);
+					curVal := EscapeStringIfNecessary(curVal, recordsDelimiter, elementsDelimiter, '"', '""');
 					
 					if counter = 0 then begin
 						Result := curVal;
@@ -2415,7 +2416,7 @@ begin
 						raise Exception.Create(Format('The first argument was not provided. functionName: %s',[functionName]));
 
 					resultType := '1';
-					resultStr := TransposeTableString(resultStr, strValue1, strValue2);
+					resultStr := TransposeTableString(resultStr, strValue1, strValue2, '"' ,'""');
 					// break;
 				end;
 
@@ -2434,7 +2435,7 @@ begin
 						resultBool := false;
 					
 					resultType := '1';
-					resultStr := DistinctList(resultStr, strValue1, resultBool);
+					resultStr := DistinctListStr(resultStr, strValue1, '"', '""', resultBool);
 					// break;
 				end;
 
@@ -2824,7 +2825,7 @@ begin
 						if not SameText(strValue1,';') then 
 							resultStr := StringReplace(resultStr, ';', strValue1, [rfIgnoreCase,rfReplaceAll]);
 					end else begin
-						StringToStringList(resultStr, ';', tmpList);
+						StringToStringList(resultStr, ';', '"', tmpList, false);
 						resultStr := '';
 						
 						//add temporary variable for record and call formula
@@ -3145,64 +3146,6 @@ begin
 end;
 
 //=========================================================================
-//  check if a string can be converted to a numeric value
-//=========================================================================
-function isNumeric(const strValue : String;) : Boolean;
-var
-	i, countComma, countNumber, tmpInt, countNotAllowed : Integer;
-	curChar : String;
-begin
-	LogFunctionStart('isNumeric');
-	
-	Result := false;
-	if SameText(Trim(strValue),'') then begin
-		LogFunctionEnd;
-		Exit;
-	end;
-	
-	countComma := 0;
-	countNumber := 0;
-	countNotAllowed := 0;
-	for i := 1 to Length(strValue) do begin
-		curChar := Copy(strValue,i,1);
-		
-		if (i = 1) and (SameText(curChar,'+') or SameText(curChar,'-')) then
-			continue;
-		
-		if SameText(curChar,'.') then begin
-			inc(countComma);
-			continue;
-		end;
-			
-		if (curChar >= '0') and (curChar <= '9') then begin
-			inc(countNumber);
-			continue;
-		end;
-		
-		inc(countNotAllowed);
-	end;
-	
-	// DebugLog(Format('countNotAllowed: %d, countNumber: %d, countComma: %d',[countNotAllowed,countNumber,countComma]));
-	
-	case countNotAllowed of
-		0: begin
-				case countNumber of 
-					0: Result := false;
-					else begin 
-						case countComma of
-							0,1: Result := true;
-							else Result := false;
-						end;
-					end;
-				end;
-		end;
-		else Result := false;
-	end;	
-	
-	LogFunctionEnd;
-end;
-
-//=========================================================================
 //  calculate the formula parts that only contain base calculations
 //=========================================================================
 function CalculateFormulaParts(const formula : String; const operators : TStringList; formulaParts, formulaPartTypes : TStringList;) : String;
@@ -3503,129 +3446,89 @@ end;
 //  change a CSV with a formula
 //=========================================================================
 function ChangeCsv(const tableStr, rowDelimiter, columnDelimiter : String; const rowIndex, colIndex : Integer; const changeFormula, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList; tempVariables : TStringList; const recursionLevel : Integer;) : String;
+const
+	fieldEncloser = '"';
+	escapedFieldEncloser = '""';
 var
-	tmpStr, curRow, curCol, resultStr : String;
-	i, rowCount, colCount, curColIndex, tmpInt : Integer;
-	tmpList, outerList, innerList : TStringList;
+	newVal, curRow, curCol : String;
+	i, j, rowCount, colCount : Integer;
+	tmpList, table : TStringList;
 begin
 	LogFunctionStart('ChangeCsv');
 	
 	tmpList := TStringList.Create;
-	outerList := TStringList.Create;
-	innerList := TStringList.Create;
+	table := TStringList.Create;
 	
 	try
-		StringToStringList(tableStr, rowDelimiter, outerList);
-		// DebugLog(Format('all rows: %s',[outerList.Text]));
+		CsvStringToTable(tableStr, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false, table);
+		rowCount := GetTableRowCount(table, false);
+		colCount := GetTableColCount(table);
 		
-		rowCount := outerList.Count;
-		
-		//get every field from every column in every row into a lookup-List
-		i := 0;
-		while i < rowCount do begin
-			curRow := outerList[i];
-			// if (rowIndex = 0) or (rowIndex = (i + 1)) then 
-				// tmpList.Add(Format('r%d=%s',[i, curRow]));
-			StringToStringList(curRow, columnDelimiter, innerList);
-			
-			tmpInt := innerList.Count;
-			curColIndex := 0;
-			
-			while curColIndex < tmpInt do begin
-				tmpStr := Format('%d|%d=%s',[i, curColIndex, innerList[curColIndex]]);
-				tmpList.Add(tmpStr);
-				inc(curColIndex);
+		if SameText(changeFormula,'') then begin
+			if rowIndex = 0 then begin
+				i := -1;
+			end else begin 
+				i := rowIndex;
 			end;
-			colCount := max(colCount, tmpInt);
+			if colIndex = 0 then begin
+				j := -1;
+			end else begin
+				j := colIndex;
+			end;
 			
-			inc(i);
-		end;
-		
-		if (rowCount > 0) and (colCount > 0) then begin
-			//store special "col" variables for later use
-			curColIndex := 0;
-			while curColIndex < colCount do begin
-				curCol := '';
-				if ((colIndex = 0) or (colIndex = (curColIndex + 1))) then begin
-					i := 0;
-					while i < rowCount do begin
-						tmpStr := tmpList.Values[Format('%d|%d',[i, curColIndex])];
-						if i = 0 then begin
-							curCol := tmpStr;
-						end else begin
-							curCol := curCol + rowDelimiter + tmpStr;
-						end;
-						inc(i);
-					end;
-					
-					tmpList.Add(Format('c%d=%s',[curColIndex, curCol]));
+			SetTableCellValueString(table, i, j, '');
+		end else begin
+			//read out the columns once, so that it is not repeated if several rows are affected
+			j := 1;
+			while j <= colCount do begin
+				if (j = colIndex) or (colIndex = 0) then begin 
+					curCol := GetTableColumnAsString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, j, false);
+					tmpList.Add(Format('c%d=%s',[j, curCol]));
 				end;
-				inc(curColIndex);
+				inc(j);
 			end;
-		end;
 		
-		if not SameText(changeFormula,'') then begin
 			//set temporary variables
 			tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
 			tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
-		end;
-		
-		//now loop over all rows and columns, execute the formula for the ones selected and re-assemble the CSV
-		resultStr := '';
-		i := 0;
-		while i < rowCount do begin
-			if i > 0 then
-				resultStr := resultStr + rowDelimiter;
 			
-			curColIndex := 0;
-			while curColIndex < colCount do begin
-				tmpStr := Format('%d|%d',[i, curColIndex]);
-				tmpStr := tmpList.Values[tmpStr];
-				
-				if ((rowIndex = 0) or (rowIndex = (i + 1))) and ((colIndex = 0) or (colIndex = (curColIndex + 1))) then begin
-					if SameText(changeFormula,'') then begin
-						tmpStr := '';
-					end else begin
-						//unescape string if it is escaped
-						if SameText(Copy(tmpStr, 1, 1), '"') then
-							tmpStr := StringReplace(Copy(tmpStr, 2, Length(tmpStr) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
-						
-						//set temporary variables
-						tempVariables.Values['val'] := '1|' + tmpStr;
-						tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
-						tempVariables.Values['i_col'] := '3|' + IntToStr(curColIndex + 1);
-						tempVariables.Values['row'] := '1|' + outerList[i];
-						tempVariables.Values['col'] := '1|' + tmpList.Values[Format('c%d',[curColIndex])];
-						
-						//execute the formula
-						tmpStr := ParseFormula(Format('%s_r%dc%d',[variableName,i,curColIndex]), changeFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-						tmpStr := Copy(tmpStr,3,Length(tmpStr));
-				
-						//escape it again if necessary
-						tmpStr := EscapeStringIfNecessary(tmpStr, '"', rowDelimiter, columnDelimiter);
+			i := 1;
+			while i <= rowCount do begin
+				if (i = rowIndex) or (rowIndex = 0) then begin
+					//set temporary variables
+					curRow := GetTableRowAsString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, i);
+					tempVariables.Values['row'] := '1|' + curRow;
+					
+					j := 1;
+					while j <= colCount do begin
+						if (j = colIndex) or (colIndex = 0) then begin 
+							//set temporary variables
+							tempVariables.Values['i_row'] := '3|' + IntToStr(i);
+							tempVariables.Values['i_col'] := '3|' + IntToStr(j);
+							tempVariables.Values['val'] := '1|' + GetTableCellValueAsString(table, i, j);
+							tempVariables.Values['col'] := '1|' + tmpList.Values[Format('c%d',[j])];
+
+							//calculate the formula
+							newVal := ParseFormula(Format('%s_r%dc%d',[variableName,i,j]), changeFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+							newVal := Copy(newVal,3,Length(newVal));
+							
+							SetTableCellValueString(table, i, j, newVal);
+						end;
+						inc(j);
 					end;
 				end;
-				
-				if curColIndex > 0 then begin
-					resultStr := resultStr + columnDelimiter + tmpStr;
-				end else begin
-					resultStr := resultStr + tmpStr;
-				end;
-				inc(curColIndex);
+				inc(i);
 			end;
-			inc(i);
 		end;
 		
+		Result := TableToCsvString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false);
+		
 	finally
+		table.Free;
+		table := nil;
 		tmpList.Free;
 		tmpList := nil;
-		outerList.Free;
-		outerList := nil;
-		innerList.Free;
-		innerList := nil;
 	end;
-	
-	Result := resultStr;
 	
 	LogFunctionEnd;
 end;
@@ -3646,7 +3549,7 @@ begin
 	innerList := TStringList.Create;
 	
 	try
-		StringToStringList(tableStr, rowDelimiter, outerList);
+		StringToStringList(tableStr, rowDelimiter, '"', outerList, false);
 		// DebugLog(Format('all rows: %s',[outerList.Text]));
 		
 		rowCount := outerList.Count;
@@ -3655,7 +3558,7 @@ begin
 		i := 0;
 		while i < rowCount do begin
 			curRow := outerList[i];
-			StringToStringList(curRow, columnDelimiter, innerList);
+			StringToStringList(curRow, columnDelimiter, '"', innerList, false);
 			
 			tmpInt := innerList.Count;
 			curColIndex := 0;
@@ -3704,7 +3607,7 @@ begin
 					tmpStr := Copy(tmpStr,3,Length(tmpStr));
 					
 					//escape if necessary
-					tmpStr := EscapeStringIfNecessary(tmpStr, '"', rowDelimiter, columnDelimiter);
+					tmpStr := EscapeStringIfNecessary(tmpStr, rowDelimiter, columnDelimiter, '"', '""');
 					tmpList.Add(Format('res%d|%d=%s',[i, curColIndex, tmpStr]));
 					inc(curColIndex);
 				end;
@@ -3766,106 +3669,52 @@ end;
 //  Read a cell from a CSV text
 //=========================================================================
 function ReadFromCsv(const tableStr, rowDelimiter, columnDelimiter : String; const rowIndex, colIndex : Integer; const selectionFormula, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList;  tempVariables : TStringList; const recursionLevel : Integer;) : String;
+const
+	fieldEncloser = '"';
+	escapedFieldEncloser = '""';
 var
 	tmpStr, curRow, curCol, curVal, resultStr : String;
-	i, rowCount, colCount, curColIndex, tmpInt : Integer;
-	tmpList, outerList, innerList : TStringList;
+	rowCount, colCount : Integer;
+	table : TStringList;
 begin
 	LogFunctionStart('ReadFromCsv');
 	
-	tmpList := TStringList.Create;
-	outerList := TStringList.Create;
-	innerList := TStringList.Create;
+	table := TStringList.Create;
 	
 	try
-		StringToStringList(tableStr, rowDelimiter, outerList);
-		// DebugLog(Format('all rows: %s',[outerList.Text]));
+		CsvStringToTable(tableStr, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false, table);
+		curVal := GetTableCellValueAsString(table, rowIndex, colIndex);
 		
-		resultStr := '1|';
-		rowCount := outerList.Count;
-		if rowIndex <= rowCount then begin 
-			if not SameText(selectionFormula, '') then begin
-				//set temporary variables
-				tempVariables.Values['i_row'] := '3|' + IntToStr(rowIndex);
-				tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
-			end;
-					
-			//get every field from every column in every row into a lookup-List
-			i := 0;
-			while i < rowCount do begin
-				curRow := outerList[i];
-				
-				//set temporary variables
-				if rowIndex = (i + 1) then 
-					tempVariables.Values['row'] := '1|' + curRow;
-					
-				StringToStringList(curRow, columnDelimiter, innerList);
-				
-				tmpInt := innerList.Count;
-				curColIndex := 0;
-				while curColIndex < tmpInt do begin
-					tmpStr := innerList[curColIndex];
-					tmpList.Add(Format('%d|%d=%s',[i, curColIndex, tmpStr]));
-					
-					if ((colIndex = (curColIndex + 1)) and (rowIndex = (i + 1))) then begin
-						curVal := tmpStr;
-						resultStr := '1|' + curVal;
-					end;
-					inc(curColIndex);
-				end;
-				colCount := max(colCount, tmpInt);
-				
-				inc(i);
-			end;
+		if SameText(selectionFormula, '') then begin
+			resultStr := '1|' + curVal;
+		end else begin
+			curCol := GetTableColumnAsString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, colIndex, false);
+			curRow := GetTableRowAsString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, rowIndex);
+			rowCount := GetTableRowCount(table, false);
+			colCount := GetTableColCount(table);
 			
-			if not SameText(selectionFormula, '') then begin
-				tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
-				tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
-			end;
+			//set temporary variables
+			tempVariables.Values['val'] := '1|' + curVal;
+			tempVariables.Values['i_row'] := '3|' + IntToStr(rowIndex);
+			tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
+			tempVariables.Values['col'] := '1|' + curCol;
+			tempVariables.Values['row'] := '1|' + curRow;
+			tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
+			tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
 			
-			if colIndex <= colCount then begin 
-				if not SameText(selectionFormula, '') then begin
-					//store special "col" variables for later use
-					curColIndex := colIndex - 1;
-					curCol := '';
-					i := 0;
-					while i < rowCount do begin
-						tmpStr := tmpList.Values[Format('%d|%d',[i, curColIndex])];
-						if i = 0 then begin
-							curCol := tmpStr;
-						end else begin
-							curCol := curCol + rowDelimiter + tmpStr;
-						end;
-						inc(i);
-					end;
-					
-					//unescape string if it is escaped
-					if SameText(Copy(curVal, 1, 1), '"') then
-						curVal := StringReplace(Copy(curVal, 2, Length(curVal) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
-					
-					//set temporary variables
-					tempVariables.Values['col'] := '1|' + curCol;
-					tempVariables.Values['val'] := '1|' + curVal;
-					
-					//execute the formula
-					resultStr := ParseFormula(Format('%s_sel',[variableName]), selectionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-					tmpStr := Copy(resultStr, 1, 1); //type
-					resultStr := Copy(resultStr, 3, Length(resultStr));
-					
-					//escape it again if necessary
-					resultStr := EscapeStringIfNecessary(resultStr, '"', rowDelimiter, columnDelimiter);
-					resultStr := tmpStr + resultStr;
-				end;
-			end;
+			//execute the formula
+			resultStr := ParseFormula(Format('%s_sel',[variableName]), selectionFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+			tmpStr := Copy(resultStr, 1, 1); //type
+			resultStr := Copy(resultStr, 3, Length(resultStr));
+			
+			//escape it again if necessary
+			resultStr := EscapeStringIfNecessary(resultStr, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser);
+			resultStr := tmpStr + resultStr;
 		end;
-		
+	
 	finally
-		tmpList.Free;
-		tmpList := nil;
-		outerList.Free;
-		outerList := nil;
-		innerList.Free;
-		innerList := nil;
+		table.Free;
+		table := nil;
 	end;
 	
 	Result := resultStr;
@@ -3877,12 +3726,13 @@ end;
 //  filter rows from a CSV by setting a filter on a column
 //=========================================================================
 function FilterCsv(const tableStr, rowDelimiter, columnDelimiter : String; const colIndex : Integer; const filterString : String; const filterStringSet : Boolean; const filterFormula, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList; tempVariables : TStringList; const recursionLevel : Integer;) : String;
+const
+	fieldEncloser = '"';
+	escapedFieldEncloser = '""';
 var
 	tmpStr, curRow, curCol, curVal, resultStr : String;
-	i, rowCount, colCount, curColIndex, counter, tmpInt : Integer;
-	tmpList, outerList, innerList : TStringList;
-	conditionMet : Boolean;
-	floatValue1 : Double;
+	i, rowCount, colCount : Integer;
+	table, tmpList : TStringList;
 begin
 	LogFunctionStart('FilterCsv');
 	
@@ -3892,94 +3742,60 @@ begin
 		Exit;
 	end;
 	
+	table := TStringList.Create;
 	tmpList := TStringList.Create;
-	outerList := TStringList.Create;
-	innerList := TStringList.Create;
 	
 	try
-		StringToStringList(tableStr, rowDelimiter, outerList);
-		// DebugLog(Format('all rows: %s',[outerList.Text]));
+		CsvStringToTable(tableStr, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false, table);
 		
-		rowCount := outerList.Count;
-		
-		//get every the current column for every row into a lookup-List
-		i := 0;
-		while i < rowCount do begin
-			curRow := outerList[i];
-			StringToStringList(curRow, columnDelimiter, innerList);
-			
-			tmpInt := innerList.Count;
-			
-			if colIndex <= tmpInt then begin
-				curVal := innerList[colIndex - 1];
-			end else begin
-				curVal := '';
-			end;
-			colCount := max(colCount, tmpInt);
-			tmpList.Add(Format('%d=%s',[i, curVal]));
-			
-			if i = 0 then begin
-				curCol := curVal;
-			end else begin
-				curCol := curCol + rowDelimiter + curVal;
-			end;
-			inc(i);
-		end;
-		
-		counter := 0;
-		resultStr := '';
-		if colIndex <= colCount then begin
+		if filterStringSet then begin
+			SetFilterToTableColumn(table, colIndex, '=', filterString, false);
+			resultStr := TableToCsvString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false);
+		end else begin
 			if not SameText(filterFormula,'') then begin
-				//set temporary variables
-				tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
-				tempVariables.Values['col'] := '1|' + curCol;
-				tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
-				tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
-			end;
-		
-			//now loop over all rows, execute the formula for the selected column and re-assemble the CSV
-			i := 0;
-			while i < rowCount do begin
-				curVal := tmpList.Values[IntToStr(i)];
-				
-				//unescape string if it is escaped
-				if SameText(Copy(curVal, 1, 1), '"') then
-					curVal := StringReplace(Copy(curVal, 2, Length(curVal) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
-				
-				if filterStringSet then begin
-					//simply compare the value to filterString
-					conditionMet := SameText(curVal, filterString);
-				end else begin
-					//set temporary variables
-					tempVariables.Values['val'] := '1|' + curVal;
-					tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
-					tempVariables.Values['row'] := '1|' + outerList[i];
+				rowCount := GetTableRowCount(table, false);
+				colCount := GetTableColCount(table);
+				if colIndex <= colCount then begin
+					curCol := GetTableColumnAsString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, colIndex, false);
 					
-					//execute the formula
-					tmpStr := ParseFormula(Format('%s_r%d',[variableName,i]), filterFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-					tmpStr := Copy(tmpStr,3,Length(tmpStr));
-					conditionMet := SameText(tmpStr,'true');
-				end;
-				
-				if conditionMet then begin 
-					if counter = 0 then begin
-						resultStr := outerList[i];
-					end else begin
-						resultStr := resultStr + rowDelimiter + outerList[i];
+					//get the current column for every row into a lookup-List
+					i := 1;
+					while i <= rowCount do begin
+						curVal := GetTableCellValueAsString(table, i, colIndex);
+						curRow := GetTableRowAsString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, i);
+						
+						//set temporary variables
+						tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
+						tempVariables.Values['col'] := '1|' + curCol;
+						tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
+						tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
+						tempVariables.Values['val'] := '1|' + curVal;
+						tempVariables.Values['i_row'] := '3|' + IntToStr(i);
+						tempVariables.Values['row'] := '1|' + curRow;
+						
+						//execute the formula
+						tmpStr := ParseFormula(Format('%s_r%d',[variableName,i]), filterFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+						tmpStr := Copy(tmpStr,3,Length(tmpStr));
+						if not SameText(tmpStr,'true') then begin 
+							tmpList.Add(IntToStr(i));
+						end;
+						
+						inc(i);
 					end;
-					inc(counter);
+					
+					if tmpList.Count > 0 then begin
+						SetManualFilterToTable(table, 1, 'x', tmpList, false);
+						resultStr := TableToCsvString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false);
+					end;
 				end;
-				inc(i);
 			end;
 		end;
 	
 	finally
+		table.Free;
+		table := nil;
 		tmpList.Free;
 		tmpList := nil;
-		outerList.Free;
-		outerList := nil;
-		innerList.Free;
-		innerList := nil;
 	end;
 	
 	Result := resultStr;
@@ -3987,109 +3803,62 @@ begin
 	LogFunctionEnd;
 end;
 
-
-	function MySortProc(List: TStringList; Index1, Index2: Integer): Integer;
-var
-  Value1, Value2: Integer;
-begin
-  Value1 := Integer(List.Objects[Index1]);
-  Value2 := Integer(List.Objects[Index2]);
-  if Value1 < Value2 then
-    Result := -1
-  else if Value2 < Value1 then
-    Result := 1
-  else
-    Result := 0;
-end;
-
 //=========================================================================
 //  sort rows of a CSV by a column
 //=========================================================================
 function SortCsv(const tableStr, rowDelimiter, columnDelimiter : String; const colIndex : Integer; const sortFormula, variableName : String; formula : String; const formulas : TStringList; results, resultTypes : TStringList; const operators, functions : TStringList; tempVariables : TStringList; const recursionLevel : Integer;) : String;
+const 
+	fieldEncloser = '"';
+	escapedFieldEncloser = '""';
 var
-	tmpStr, curRow, curCol, curVal, resultStr : String;
+	tmpStr, curVal, resultStr : String;
 	i, rowCount, colCount, tmpInt : Integer;
-	tmpList, outerList, innerList : TStringList;
+	table, sortList, orderedIndexList : TStringList;
 	formulaResultIsNumeric : Boolean;
 	curFloatValue : Double;
 begin
 	LogFunctionStart('SortCsv');
 	
-	tmpList := TStringList.Create;
-	outerList := TStringList.Create;
-	innerList := TStringList.Create;
+	table := TStringList.Create;
+	sortList := TStringList.Create;
+	orderedIndexList := TStringList.Create;
 	
 	try
-		StringToStringList(tableStr, rowDelimiter, outerList);
+		CsvStringToTable(tableStr, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false, table);
 		
-		rowCount := outerList.Count;
-		
-		//get the current column for every row into a lookup-List
-		i := 0;
-		while i < rowCount do begin
-			curRow := outerList[i];
-			StringToStringList(curRow, columnDelimiter, innerList);
+		if SameText(sortFormula,'') then begin
+			SortTableByColumn(table, colIndex);
+			resultStr := TableToCsvString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false);
+		end else begin
+			rowCount := GetTableRowCount(table, false);
+			colCount := GetTableColCount(table);
+
+			//set temporary variables
+			tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
+			tempVariables.Values['col'] := '1|' + GetTableColumnAsString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, colIndex, false);
+			tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
+			tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
 			
-			tmpInt := innerList.Count;
-			
-			if colIndex <= tmpInt then begin
-				curVal := innerList[colIndex - 1];
-			end else begin
-				curVal := '';
-			end;
-			colCount := max(colCount, tmpInt);
-			tmpList.Add(Format('%d=%s',[i, curVal]));
-			
-			if i = 0 then begin
-				curCol := curVal;
-			end else begin
-				curCol := curCol + rowDelimiter + curVal;
-			end;
-			inc(i);
-		end;
-		
-		//re-use innerList for sorting
-		innerList.Clear;
-		
-		resultStr := '';
-		if colIndex <= colCount then begin
-			if not SameText(sortFormula,'') then begin
-				formulaResultIsNumeric := true;
-				//set temporary variables
-				tempVariables.Values['i_col'] := '3|' + IntToStr(colIndex);
-				tempVariables.Values['col'] := '1|' + curCol;
-				tempVariables.Values['c_row'] := '3|' + IntToStr(rowCount);
-				tempVariables.Values['c_col'] := '3|' + IntToStr(colCount);
-			end else begin
-				formulaResultIsNumeric := false;
-			end;
+			formulaResultIsNumeric := true;
 			
 			//now loop over all rows, execute the formula for the selected column and re-assemble the CSV
-			i := 0;
-			while i < rowCount do begin
-				curVal := tmpList.Values[IntToStr(i)];
+			i := 1;
+			while i <= rowCount do begin
+				curVal := GetTableCellValueAsString(table, i, colIndex);
 				
-				//unescape string if it is escaped
-				if SameText(Copy(curVal, 1, 1), '"') then
-					curVal := StringReplace(Copy(curVal, 2, Length(curVal) - 2),'""','"', [rfIgnoreCase,rfReplaceAll]);
-					
-				if SameText(sortFormula, '') then begin
-					//sort simply by the value 
-					innerList.AddObject(curVal, TObject(i));
-				end else begin
-					//set temporary variables
-					tempVariables.Values['val'] := '1|' + curVal;
-					tempVariables.Values['i_row'] := '3|' + IntToStr(i + 1);
-					tempVariables.Values['row'] := '1|' + outerList[i];
-					
-					//execute the formula
-					tmpStr := ParseFormula(Format('%s_r%d',[variableName,i]), sortFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
-					if formulaResultIsNumeric then 
-						formulaResultIsNumeric := SameText(Copy(tmpStr,1,1),'3');
-					tmpStr := Copy(tmpStr,3,Length(tmpStr));
-					
-					innerList.AddObject(tmpStr, TObject(i));
-				end;
+				//set temporary variables
+				tempVariables.Values['val'] := '1|' + curVal;
+				tempVariables.Values['i_row'] := '3|' + IntToStr(i);
+				tempVariables.Values['row'] := '1|' + GetTableRowAsString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, i);
+				
+				//execute the formula
+				tmpStr := ParseFormula(Format('%s_r%d',[variableName,i]), sortFormula, formulas, results, resultTypes, operators, functions, tempVariables, recursionLevel+1, false);
+				if formulaResultIsNumeric then 
+					formulaResultIsNumeric := SameText(Copy(tmpStr,1,1),'3');
+				tmpStr := Copy(tmpStr,3,Length(tmpStr));
+				
+				sortList.AddObject(tmpStr, TObject(i));
+			
 				inc(i);
 			end;
 			
@@ -4097,7 +3866,7 @@ begin
 			if formulaResultIsNumeric then begin
 				i := 0;
 				while i < rowCount do begin
-					tmpStr := innerList[i];
+					tmpStr := sortList[i];
 					curFloatValue := StrToFloat(tmpStr);
 					if curFloatValue < 0 then begin
 						curFloatValue := 9999999999 + curFloatValue;
@@ -4105,34 +3874,33 @@ begin
 					end else begin
 						tmpStr := FormatFloat('c0000000000.##########;;"b"', curFloatValue);
 					end;
-					innerList[i] := tmpStr;
+					sortList[i] := tmpStr;
 					inc(i);
 				end;
 			end;
 			
-			//now sort the list and then re-assemble the csv in the new order
-			innerList.Sort;
+			//sort the list by the newly calculated value
+			sortList.Sort;
+			
+			//compile sorted indices into a list
 			i := 0;
-			while i < rowCount do begin
-				tmpInt := Integer(innerList.Objects[i]);
-				
-				if i = 0 then begin
-					resultStr := outerList[tmpInt];
-				end else begin
-					resultStr := resultStr + rowDelimiter + outerList[tmpInt];
-				end;
-				
+			while i < sortList.Count do begin
+				tmpInt := sortList.Objects[i];
+				orderedIndexList.Add(IntToStr(tmpInt));
 				inc(i);
 			end;
+			
+			ChangeTableIndexOrder(table, 1, orderedIndexList, false);
+			resultStr := TableToCsvString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false);
 		end;
 		
 	finally
-		tmpList.Free;
-		tmpList := nil;
-		outerList.Free;
-		outerList := nil;
-		innerList.Free;
-		innerList := nil;
+		table.Free;
+		table := nil;
+		sortList.Free;
+		sortList := nil;
+		orderedIndexList.Free;
+		orderedIndexList := nil;
 	end;
 	
 	Result := resultStr;
@@ -4159,8 +3927,8 @@ begin
 	
 	try
 		//joinType: 1:left, 2:inner, 3:outer, 4:exists, 5:notExists
-		StringToStringList(tableStr1, rowDelimiter, tableRows1);
-		StringToStringList(tableStr2, rowDelimiter, tableRows2);
+		StringToStringList(tableStr1, rowDelimiter, '"', tableRows1, false);
+		StringToStringList(tableStr2,rowDelimiter,  '"', tableRows2, false);
 		
 		resultStr := '';
 		
@@ -4170,7 +3938,7 @@ begin
 		//read out the keys to match from the first table
 		i := 0;
 		while i < rowCount1 do begin
-			StringToStringList(tableRows1[i], columnDelimiter, columns);
+			StringToStringList(tableRows1[i], columnDelimiter, '"', columns, false);
 			tmpInt := columns.Count;
 			colCount1 := max(tmpInt, colCount1);
 			
@@ -4210,7 +3978,7 @@ begin
 		//read out the keys to match from the second table
 		i := 0;
 		while i < rowCount2 do begin
-			StringToStringList(tableRows2[i], columnDelimiter, columns);
+			StringToStringList(tableRows2[i], columnDelimiter, '"', columns, false);
 			tmpInt := columns.Count;
 			colCount2 := max(colCount2, tmpInt); //remember the maximum column count for later
 			
