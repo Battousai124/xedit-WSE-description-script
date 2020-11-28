@@ -3524,8 +3524,7 @@ begin
 		Result := TableToCsvString(table, rowDelimiter, columnDelimiter, fieldEncloser, escapedFieldEncloser, false);
 		
 	finally
-		table.Free;
-		table := nil;
+		DestroyTable(table);
 		tmpList.Free;
 		tmpList := nil;
 	end;
@@ -3713,8 +3712,7 @@ begin
 		end;
 	
 	finally
-		table.Free;
-		table := nil;
+		DestroyTable(table);
 	end;
 	
 	Result := resultStr;
@@ -3792,8 +3790,7 @@ begin
 		end;
 	
 	finally
-		table.Free;
-		table := nil;
+		DestroyTable(table);
 		tmpList.Free;
 		tmpList := nil;
 	end;
@@ -3895,8 +3892,7 @@ begin
 		end;
 		
 	finally
-		table.Free;
-		table := nil;
+		DestroyTable(table);
 		sortList.Free;
 		sortList := nil;
 		orderedIndexList.Free;

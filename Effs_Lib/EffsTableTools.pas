@@ -9,6 +9,43 @@ implementation
 uses 'Effs_Lib\EffsStringTools';
 
 //=========================================================================
+//  MOST IMPORTANT METHOD
+//  needs to be called instead of just .Free on the TStringlist to free the memory
+//  also destroys the inner TStringLists holding the actual data
+//=========================================================================
+procedure DestroyTable(table : TStringList;);
+var 
+	i, j : Integer;
+begin
+	//LogFunctionStart('DestroyTable');
+	
+	//destroying all TStringLists that may exist in the main table
+	i := 0;
+	while i < table.Count do begin 
+		if not (table.Objects[i] = nil) then begin
+		
+			j := 0;
+			while j < TStringList(table.Objects[i]).Count do begin 
+				if not (TStringList(table.Objects[i]).Objects[j] = nil) then begin
+					TStringList(TStringList(table.Objects[i]).Objects[j]).Free;
+					TStringList(table.Objects[i]).Objects[j] := nil;
+				end;
+				inc(j);
+			end;
+		
+			TStringList(table.Objects[i]).Free;
+			table.Objects[i] := nil;
+		end;
+		inc(i);
+	end;
+	
+	table.Free;
+	table := nil;
+	
+	//LogFunctionEnd;
+end;
+
+//=========================================================================
 //  convert a string list into an internal table structure
 //=========================================================================
 procedure NewEmptyTable(table : TStringList; const hasHeaders :Boolean;);
@@ -16,16 +53,53 @@ begin
 	//LogFunctionStart('CreateNewEmptyTable');
 	
 	table.Clear;
+	table.Add('data=(sublist)'); //always the 1st row
+	table.Objects[0] := TStringList.Create; 
+	//data inside is stored as columns - with info entries at index 0
+	//	[0] is an info entry about the table - contains the row and col count for fast reading access
+	//	[0][1] is an info entry about the first row ???
+	//	[1] is the header of the first column
+	//	[1][0] is an info entry about the first column ???
+	//	[1][1] is the cell in the first column in the first row
+	//	[1][2] is the cell in the first column in the second row, ...and so on
+	TStringList(table.Objects[0]).Add('0=0'); //unfilteredRowCount=unfilteredColCount
+	
+	table.Add('rowIndices=(sublist)'); //always the 2nd row
+	table.Objects[1] := TStringList.Create;
+	//	[0] is an info entry about row-indices (contains number of rows visible after filters)
+	//	[1] contains the unfiltered index that the filtered index 1 points to after filters (as string)
+	//	[2] contains the unfiltered index that the filtered index 2 points to after filters (as string)
+	// if there is no filtering, the list contains only the first entry (and none greater than 0)
+	TStringList(table.Objects[1]).Add('c=0');
+	
+	table.Add('colIndices=(sublist)'); //always the 3rd row
+	table.Objects[2] := TStringList.Create;
+	//	[0] is an info entry about col-indices (contains number of columns visible after considering hidden columns)
+	//	[1] contains the unfiltered index that the filtered index 1 points to after considering hidden columns (as string)
+	//	[2] contains the unfiltered index that the filtered index 2 points to after considering hidden columns (as string)
+	// if there is no hidden column, the list contains only the first entry (and none greater than 0)
+	TStringList(table.Objects[2]).Add('c=0');
+	
+	//always the 4th row
 	if hasHeaders then begin
-		table.Values['hasHeaders'] := 'true';
+		table.Add('hasHeaders=true');
 	end else begin 
-		table.Values['hasHeaders'] := 'false';
+		table.Add('hasHeaders=false');
 	end;
 	
-	table.Values['c_row'] := '0';
-	table.Values['c_frow'] := '0';
-	table.Values['c_col'] := '0';
-	table.Values['c_fil'] := '0';
+	//table.Add('c_fil=0'); //count of active filters
+	
+	table.Add('rowFilters=(sublist)'); //always the 5th row
+	table.Objects[4] := TStringList.Create;
+	//	[0] is the name of the filter
+	//	[0][0] contains the first (unfiltered) row index that should be filtered out
+	//	[0][1] contains the second (unfiltered) row index that should be filtered out
+	
+	table.Add('hiddenColumns=(sublist)'); //always the 6th row
+	table.Objects[5] := TStringList.Create;
+	//	[0] contains the first (unfiltered) col index that should be hidden
+	//	[1] contains the second (unfiltered) col index that should be hidden
+	
 		
 	//LogFunctionEnd;
 end;
@@ -46,8 +120,8 @@ end;
 
 //ChangeColumnOrder //list of names
 
-
-
+//AddTableRow
+//RemoveTableRow //slow for large tables
 
 //=========================================================================
 //  add a column to the table and returns the unique name of the column
@@ -101,7 +175,7 @@ begin
 				header := Format('%s%d',[newHeaderWithoutCounter, counter]);
 			end;
 
-// DebugLog('header: ' + header);
+			// DebugLog('header: ' + header);
 			
 			table.Add(Format('h%d=%s',[colIndex, header]));
 		
@@ -112,11 +186,10 @@ begin
 	end;
 
 
-// DebugLog('header2: ' + table.Values['c_col']);
-
-	
 	//count up the number of columns
-	table.Values['c_col'] := IntToStr(colCount + 1);
+	TStringList(table.Objects[0]).Strings[0] := Format('%d=%d', [GetUnfilteredTableRowCount(table, false), GetTableColCount(table) + 1]);
+	TStringList(table.Objects[2]).Strings[0] := IntToStr(colCount + 1);
+	
 	
 	//return the header for the case that it was not unique and was changed in this function
 	Result := header;
@@ -220,10 +293,10 @@ const
 	columnDelimiter = ',';
 	emptyString = '';
 var 
-	i, j, tmpInt, unfilteredCount, unfilteredRowCount, filteredCount, filteredIndex, index, rowIndex, colIndex, rowCount, colCount : Integer;
+	i, j, tmpInt, unfilteredCount, unfilteredRowCount, filteredCount, filteredIndex, index, rowIndex, colIndex, rowCount, colCount, filterCount : Integer;
 	tmpStr, currentFilter, indexStr : String;
 	found : Boolean;
-	copiedValuesList, tmpList, allFiltersList : TStringList;
+	copiedValuesList : TStringList;
 begin
 	LogFunctionStart('ChangeTableIndexOrder');
 	
@@ -316,9 +389,6 @@ begin
 		//->now we have a complete ordered list of unfiltered indices
 
 		copiedValuesList := TStringList.Create;
-		tmpList := TStringList.Create;
-		allFiltersList := TStringList.Create;
-		allFiltersList.Sorted := true; //so that .Find() works
 		try
 			//copy data into an unfiltered list
 			i := 1;
@@ -332,34 +402,14 @@ begin
 					inc(j);
 				end;
 				
-				if indexType = 1 then begin 
-					//also copy active filters if present
-					tmpStr := Format('r%d|filteredBy', [i]);
-					currentFilter := table.Values[tmpStr];
-					if not SameText(currentFilter, '') then begin 
-						copiedValuesList.Values[tmpStr] := currentFilter;
-						//also remember all current filter IDs on the way
-						StringToStringList(currentFilter, columnDelimiter, emptyString, tmpList, true);
-						j := 0;
-						while j < tmpList.Count do begin
-							tmpStr := tmpList[j];
-							if not allFiltersList.Find(tmpStr, tmpInt) then 
-								allFiltersList.Add(tmpStr);
-							inc(j);
-						end;
-					end;
-				end;
-				
 				inc(i);
 			end;
 			
 			//re-order the indices in the table
-			//also create a from-to translation from old to new index
 			if indexType = 1 then begin 
 				i := 1;
 				while i <= unfilteredRowCount do begin
 					indexStr := orderedIndexList[i - 1];
-					copiedValuesList.Add(Format('%s=%d', [indexStr, i]));
 					
 					j := 1;
 					while j <= colCount do begin
@@ -367,49 +417,31 @@ begin
 						inc(j);
 					end;
 					
-					table.Values[Format('r%d|unfilteredIndex', [i])] := '';
-					table.Values[Format('r%d|filteredIndex', [i])] := '';
-					table.Values[Format('r%d|filteredBy', [i])] := copiedValuesList.Values[Format('r%s|filteredBy', [indexStr])];
+					//table.Values[Format('r%d|filteredBy', [i])] := copiedValuesList.Values[Format('r%s|filteredBy', [indexStr])];
 					inc(i);
 				end;
-				
-				//re-build the filters (replace the filtered out indices with the new sorting)
-				i := 0;
-				while i < allFiltersList.Count do begin
-					currentFilter := table.Values[allFiltersList[i]];
-					if not SameText(currentFilter, '') then begin
-						StringToStringList(currentFilter, columnDelimiter, emptyString, tmpList, true);
-						tmpInt := 0;
-						j := 0;
-						while j < tmpList.Count do begin
-							tmpStr := copiedValuesList.Values[tmpList[j]];
-							if not SameText(tmpStr, '') then begin 
-								if tmpInt = 0 then begin
-									currentFilter := tmpStr;
-								end else begin
-									currentFilter := currentFilter + ',' + tmpStr;
-								end;
-								inc(tmpInt);
-							end;
-							inc(j);
-						end;
-					end;
-					table.Values[allFiltersList[i]] := currentFilter;
-					inc(i);
-				end;
-				
-				RefreshTableIndexes(table, 1);
-			end;
-					
+			end;			
 			//TODO: also re-order columns
+			
+			
+			//re-build the filters (replace the filtered out indices with the new sorting)
+			filterCount := TStringList(table.Objects[indexType + 3]).Count; //either index 4 for rowIndices or index 5 for columnIndices
+			i := 0;
+			while i < filterCount do begin
+				tmpInt := TStringList(TStringList(table.Objects[indexType + 3]).Objects[i]).Count;
+				j := 0;
+				while j < tmpInt do begin
+					tmpStr := TStringList(TStringList(table.Objects[indexType + 3]).Objects[i]).Strings[j];
+					TStringList(TStringList(table.Objects[indexType + 3]).Objects[i]).Strings[j] := IntToStr(orderedIndexList.IndexOf(tmpStr) + 1);
+				end;
+				inc(i);
+			end;
+			
+			RefreshTableIndexes(table, indexType);
 			
 		finally 
 			copiedValuesList.Free;
 			copiedValuesList := nil;
-			tmpList.Free;
-			tmpList := nil;
-			allFiltersList.Free;
-			allFiltersList := nil;
 		end;
 		
 	end;
@@ -424,52 +456,23 @@ const
 	columnDelimiter = ',';
 	emptyString = '';
 var
-	i, j, unfilteredRowCount, tmpInt : Integer;
-	currentFilter, filterId : String;
-	allFiltersList, tmpList : TStringList;
+	i, j : Integer;
 begin
 	LogFunctionStart('RemoveAllFiltersFromTable');
 	
-	unfilteredRowCount := GetUnfilteredTableRowCount(table, false);
-	
-	allFiltersList := TStringList.Create;
-	allFiltersList.Sorted := true; //so that .Find() works
-	tmpList := TStringList.Create;
-	
-	try
-		i := 1;
-		while i <= unfilteredRowCount do begin
-			currentFilter := table.Values[Format('r%s|filteredBy', [index])];
-			if not SameText(currentFilter, emptyString) then begin 
-				StringToStringList(currentFilter, columnDelimiter, emptyString, tmpList, true);
-				j := 0;
-				while j < tmpList.Count do begin
-					filterId := tmpList[j];
-					if not allFiltersList.Find(filterId, tmpInt) then
-						allFiltersList.Add(filterId);
-					inc(j);
-				end;
-				table.Values[Format('r%s|filteredBy', [index])] := emptyString;
-			end;
-			inc(i);
+	i := 4;
+	while i <= 5 do begin 
+		j := 0;
+		while j < TStringList(table.Objects[i]).Count do begin 
+			TStringList(TStringList(table.Objects[i]).Objects[j]).Free;
+			TStringList(table.Objects[i]).Objects[j] := nil;
+			inc(j);
 		end;
-		
-		//TODO: also check filters on columns
-		
-		i := 0;
-		while i < allFiltersList.Count do begin
-			table.Values[allFiltersList[i]] := emptyString;
-			inc(i);
-		end;
-		
-		RefreshTableIndexes(table, 1);
-		
-	finally
-		allFiltersList.Free;
-		allFiltersList := nil;
-		tmpList.Free;
-		tmpList := nil;
+		TStringList(table.Objects[i]).Clear;
+		inc(i);
 	end;
+	
+	RefreshTableIndexes(table, 1);
 	
 	LogFunctionEnd;
 end;
@@ -494,69 +497,21 @@ end;
 //  removes one specific filter from a table 
 //=========================================================================
 procedure RemoveSpecificFilterFromTable(const table : TStringList; const filterId : String;);
-const
-	columnDelimiter = ',';
-	emptyString = '';
 var
-	i, j : Integer;
-	tmpStr, index, currentFilter : String;
-	filteredOutIndicesList, tmpList : TStringList;
+	filterIndex : Integer;
 begin
 	LogFunctionStart('RemoveSpecificFilterFromTable');
 	
-	filteredOutIndicesList := TStringList.Create;
-	tmpList := TStringList.Create;
+	filterIndex := TStringList(table.Objects[4]).IndexOf(filterId);
 	
-	try
-		tmpStr := table.Values[filterId];
+	if filterIndex > -1 then begin 
 		
-		if not SameText(tmpStr, '') then begin 
-			StringToStringList(tmpStr, columnDelimiter, emptyString, filteredOutIndicesList, true);
-			
-			i := 0;
-			while i < filteredOutIndicesList.Count do begin
-				index := filteredOutIndicesList[i];
-				currentFilter := table.Values[Format('r%s|filteredBy', [index])];
-				if not SameText(currentFilter, '') then begin 
-					StringToStringList(currentFilter, columnDelimiter, emptyString, tmpList, true);
-					if tmpList.Count = 0 then begin
-						currentFilter := '';
-					end else begin 
-						j := tmpList.Count - 1;
-						while j >= 0 do begin
-							if SameText(filterId, tmpList[j]) then 
-								tmpList.Delete(j);
-							j := j - 1;
-						end;
-						if tmpList.Count = 0 then begin
-							currentFilter := '';
-						end else begin 
-							currentFilter := StringListToString(tmpList, columnDelimiter, emptyString, emptyString, false);
-						end;
-					end;
-					table.Values[Format('r%s|filteredBy', [index])] := currentFilter;
-				end;
-				
-				inc(i);
-			end;
-			
-			//refresh the filtered index of all rows
-			RefreshTableIndexes(table, 1);
-			
-			//TODO: also check filters on columns
-			
-			
-			//delete the filter
-			table.Values[filterId] := '';
-			//count down the total number of applied filters
-			tmpStr := table.Values['c_fil'];
-			table.Values['c_fil'] := IntToStr(StrToInt(tmpStr) - 1);
-		end;
-	finally
-		filteredOutIndicesList.Free;
-		filteredOutIndicesList := nil;
-		tmpList.Free;
-		tmpList := nil;
+		//delete the filter
+		TStringList(TStringList(table.Objects[4]).Objects[filterIndex]).Free;
+		TStringList(table.Objects[4]).Delete(filterIndex);
+		
+		//refresh the filtered index of all rows
+		RefreshTableIndexes(table, 1);
 	end;
 	
 	LogFunctionEnd;
@@ -564,90 +519,133 @@ end;
 
 //=========================================================================
 //  refreshes the indexes in the table after adding or removing a filter
+//	indexType: 1=rows, 2=columns
 //=========================================================================
 procedure RefreshTableIndexes(const table : TStringList; const indexType : Integer;);
 var
-	i, j, unfilteredRowCount, colCount, filteredRowIndex, oldfilteredRowIndex, tmpInt : Integer;
+	i, j, unfilteredRowCount, colCount, filteredRowIndex, oldfilteredRowIndex, tmpInt, filterCount : Integer;
 	curVal, currentFilter, tmpStr : String;
-	tmpList : TStringList;
+	tmpList, oldIndices, filteredOutIndicesList : TStringList;
 begin
 	LogFunctionStart('RefreshTableIndexes');
+	
 	tmpList := TStringList.Create;
-	tmpList.Sorted := true;
+	oldIndices := TStringList.Create;
+	filteredOutIndicesList := TStringList.Create;
+	filteredOutIndicesList.Sorted := true;
+	filteredOutIndicesList.Duplicates := dupIgnore;
 	
 	try
-		//refresh the filtered index of all rows
-		//(storing the new and old indices is done in a way that access does not need translation.
-		//	...the filtering itself may be slower. This is OK because it will not happen as often as access to the cells)
-		
 		//copy the unfiltered table data to a temporary list
 		CopyList(table,tmpList);
+		
+		// DebugLog(Format('raw contents of table: %s', [table.Text]));
+		// DebugLog(Format('raw contents of tmpList: %s', [tmpList.Text]));		
+		
 		unfilteredRowCount := GetUnfilteredTableRowCount(table, false);
 		colCount := GetTableColCount(table);
+		filterCount := TStringList(table.Objects[indexType + 3]).Count; //either index 4 for rowIndices or index 5 for columnIndices
 		
-		if indexType = 1 then begin 
-			i := 1;
-			filteredRowIndex := 0;
-			while i <= unfilteredRowCount do begin
-				currentFilter := table.Values[Format('r%d|filteredBy', [i])];
-				oldfilteredRowIndex := TranslateUnfilteredToFilteredTableIndex(tmpList, i, 1);
-				j := 0;
-				if SameText(currentFilter, '') then begin
-					inc(filteredRowIndex);
-					while j <= colCount do begin
-						curVal := tmpList.Values[Format('%d|%d', [oldfilteredRowIndex, j])];
-						if SameText(curVal, '') then begin 
-							tmpStr := Format('%d|%d', [filteredRowIndex, j]);
-							tmpInt := table.IndexOfName(tmpStr);
-							if tmpInt > -1 then 
-								table[tmpInt] := tmpStr + '='; //overwriting it should be faster than setting it to '' which would delete it and therefore re-order the table
-						end else begin 
-							table.Values[Format('%d|%d', [filteredRowIndex, j])] := curVal;
-						end;
-						inc(j);
-					end;
-					if filteredRowIndex = i then begin 
-						tmpStr := Format('r%d|filteredIndex', [i]);
-						tmpInt := table.IndexOfName(tmpStr);
-						if tmpInt > -1 then 
-							table[tmpInt] := tmpStr + '=';
-						tmpStr := Format('r%d|unfilteredIndex', [filteredRowIndex]);
-						tmpInt := table.IndexOfName(tmpStr);
-						if tmpInt > -1 then 
-							table[tmpInt] := tmpStr + '='; 
-					end else begin 
-						table.Values[Format('r%d|filteredIndex', [i])] := IntToStr(filteredRowIndex);
-						table.Values[Format('r%d|unfilteredIndex', [filteredRowIndex])] := IntToStr(i);
-					end;
-				end else begin
-					while j <= colCount do begin
-						curVal := tmpList.Values[Format('%d|%d', [oldfilteredRowIndex, j])];
-						if SameText(curVal, '') then begin 
-							tmpStr := Format('%d|%d', [i * -1, j]);
-							tmpInt := table.IndexOfName(tmpStr);
-							if tmpInt > -1 then 
-								table[tmpInt] := tmpStr + '=';
-						end else begin 
-							table.Values[Format('%d|%d', [i * -1, j])] := curVal;
-						end;
-						inc(j);
-					end;
-					table.Values[Format('r%d|filteredIndex', [i])] := IntToStr(i * -1);
-					table.Values[Format('r%d|unfilteredIndex', [i * -1])] := IntToStr(i);
-				end;
-				inc(i);
+		//also copy the old translation of the old indices before deleting them
+		CopyList(TStringList(table.Objects[indexType]), oldIndices);
+		
+		// DebugLog(Format('raw contents of table.Objects[indexType]: %s', [TStringList(table.Objects[indexType]).Text]));		
+		// DebugLog(Format('raw contents of oldIndices: %s', [oldIndices.Text]));		
+		
+		//clear translation between filtered and unfiltered indices (and the count of visible rows/columns)
+		TStringList(table.Objects[indexType]).Clear; 
+		
+		if filterCount = 0 then begin 
+			if indexType = 1 then begin 
+				TStringList(table.Objects[indexType]).Add(Format('c=%d', [unfilteredRowCount]));
+			end else begin 
+				TStringList(table.Objects[indexType]).Add(Format('c=%d', [colCount]));
 			end;
+		end else begin
+			//write a dummy value as count, so that it stays at index 0
+			TStringList(table.Objects[indexType]).Add('c=0');
+		
+			//write a translation for every index that is visible
+			if indexType = 1 then begin 
+				
+				//build a unique list of filtered out rows
+				i := 0;
+				while i < filterCount do begin
+					tmpInt := TStringList(TStringList(table.Objects[indexType + 3]).Objects[i]).Count;
+					j := 0;
+					while j < tmpInt do begin
+						tmpStr := TStringList(TStringList(table.Objects[indexType + 3]).Objects[i]).Strings[j];
+						filteredOutIndicesList.Add(tmpStr);
+						inc(j);
+					end;
+					inc(i);
+				end;
+				
+				// DebugLog(Format('raw contents of table.Objects[indexType]: %s', [TStringList(table.Objects[indexType]).Text]));		
+				// DebugLog(Format('raw contents of oldIndices: %s', [oldIndices.Text]));		
 			
-			//set the new filtered row count
-			//(the highest index of a row that is still visible at the moment is the new filtered row count)
-			table.Values['c_row'] := IntToStr(filteredRowIndex);
-		//end else begin 
-			//TODO: cover hiden columns
+				i := 1;
+				filteredRowIndex := 0;
+				while i <= unfilteredRowCount do begin
+					// currentFilter := table.Values[Format('r%d|filteredBy', [i])];
+					if oldIndices.Count > 1 then begin 
+						oldfilteredRowIndex := oldIndices.IndexOf(IntToStr(i)) ;
+						if oldfilteredRowIndex < 0 then oldfilteredRowIndex := (i * -1);
+					end else begin
+						oldfilteredRowIndex := i;
+					end;
+					
+					j := 1;
+					if filteredOutIndicesList.IndexOf(IntToStr(i)) < 0 then begin 
+						inc(filteredRowIndex);
+						while j <= colCount do begin
+							curVal := tmpList.Values[Format('%d|%d', [oldfilteredRowIndex, j])];
+							if SameText(curVal, '') then begin 
+								// DebugLog(Format('curVal is empty - filteredRowIndex: %d, oldfilteredRowIndex: %d, j: %d, curVal: %s', [filteredRowIndex, oldfilteredRowIndex, j, curVal]));
+								tmpStr := Format('%d|%d', [filteredRowIndex, j]);
+								tmpInt := table.IndexOfName(tmpStr);
+								if tmpInt > -1 then 
+									table[tmpInt] := tmpStr + '='; //overwriting it should be faster than setting it to '' which would delete it and therefore re-order the table
+							end else begin
+								// DebugLog(Format('curVal is not empty - filteredRowIndex: %d, oldfilteredRowIndex: %d, j: %d, curVal: %s', [filteredRowIndex, oldfilteredRowIndex, j, curVal]));
+								table.Values[Format('%d|%d', [filteredRowIndex, j])] := curVal;
+							end;
+							inc(j);
+						end;
+						TStringList(table.Objects[indexType]).Add(IntToStr(i));
+					end else begin
+						while j <= colCount do begin
+							curVal := tmpList.Values[Format('%d|%d', [oldfilteredRowIndex, j])];
+							if SameText(curVal, '') then begin 
+								tmpStr := Format('%d|%d', [i * -1, j]);
+								tmpInt := table.IndexOfName(tmpStr);
+								if tmpInt > -1 then 
+									table[tmpInt] := tmpStr + '=';
+							end else begin 
+								table.Values[Format('%d|%d', [i * -1, j])] := curVal;
+							end;
+							inc(j);
+						end;
+					end;
+					inc(i);
+				end;
+				
+				//set the new filtered row count
+				//(the highest index of a row that is still visible at the moment is the new filtered row count)
+				TStringList(table.Objects[indexType]).Strings[0] := Format('c=%d', [filteredRowIndex]);
+				// DebugLog(Format('new indexTranslation: %s', [TStringList(table.Objects[indexType]).Text]));
+			end;
+			//end else begin 
+				//TODO: cover hiden columns
 		end;
 		
 	finally
 		tmpList.Free;
 		tmpList := nil;
+		oldIndices.Free;
+		oldIndices := nil;
+		filteredOutIndicesList.Free;
+		filteredOutIndicesList := nil;
 	end;
 	
 	LogFunctionEnd;
@@ -684,81 +682,54 @@ function SetManualFilterToTable(const table : TStringList; const indexType : Int
 const
 	newFilterIdWithoutCounter = 'mFil-';
 var
-	i, j, counter, index, newlyFilteredOutRowCount : Integer;
+	i, j, counter, index, newlyFilteredOutRowCount, filterIndex, filterCount : Integer;
 	tmpStr, filterIdPostfix, currentFilter : String;
 begin
 	LogFunctionStart('SetManualFilterToTable');
 	
 	newlyFilteredOutRowCount := 0;
 
-	if indexType = 1 then begin
-		filterIdPostfix := '|filtersRows';
-	end else begin
-		filterIdPostfix := '|hidesColumns';
-	end;
-	
 	if filteredOutIndicesList.Count > 0 then begin 
 		//get a new unique filterId if it was not provided
 		if SameText(filterId, '') then begin 
 			counter := 1;
 			filterId := Format('%s%d%s',[newFilterIdWithoutCounter, counter, filterIdPostfix]);
-			tmpStr := table.Values[filterId];
 			
-			while not SameText(tmpStr, '') do begin
+			filterIndex := TStringList(table.Objects[4]).IndexOf(filterId);
+			
+			while filterIndex > -1 do begin
 				inc(counter);
 				filterId := Format('%s%d%s',[newFilterIdWithoutCounter, counter, filterIdPostfix]);
-				tmpStr := table.Values[filterId];
+				filterIndex := TStringList(table.Objects[4]).IndexOf(filterId);
 			end;
 		end;
 		
 		//check if the filterId is unique
-		tmpStr := table.Values[filterId];
-		if not SameText(tmpStr, '') then
+		filterIndex := TStringList(table.Objects[4]).IndexOf(filterId);
+		if filterIndex > -1 then
 			raise Exception.Create(Format('Could not set new filter. FilterId is not unique. FilterId: %s', [filterId]));
 	
 		//translate the indices from filtered to unfiltered if necessary
 		if indicesAreFilteredIndices then begin 
+			//DebugLog(Format('indicesAreFilteredIndices - filteredOutIndicesList: %s', [filteredOutIndicesList.Text]));
 			i := 0;
 			while i < filteredOutIndicesList.Count do begin
 				index := StrToInt(filteredOutIndicesList[i]);
 				filteredOutIndicesList[i] := IntToStr(TranslateFilteredToUnfilteredTableIndex(table, index, indexType));
 				inc(i);
 			end;
+			//DebugLog(Format('filteredOutIndicesList changed: %s', [filteredOutIndicesList.Text]));
 		end;
 	
 		//remember that this filter wants to filter out these indices
-		table.Values[filterId] := StringListToString(filteredOutIndicesList, ',', '', '', false);
-		
-		//set filters on filtered out rows and remember that this column want them filtered out
-		//while doing so, count which rows are now filtered out that were not filtered out before
-		i := 0;
-		while i < filteredOutIndicesList.Count do begin
-			if indexType = 1 then begin 
-				tmpStr := Format('r%s|filteredBy', [filteredOutIndicesList[i]]);
-			end else begin
-				tmpStr := Format('c%s|hiddenBy', [filteredOutIndicesList[i]]);
-			end;
-			currentFilter := table.Values[tmpStr];
-			if SameText(currentFilter, '') then begin 
-				inc(newlyFilteredOutRowCount);
-				currentFilter := filterId;
-			end else begin
-				currentFilter := currentFilter + ',' + filterId;
-			end;
-			table.Values[tmpStr] := currentFilter;
-			inc(i);
-		end;
+		filterCount := TStringList(table.Objects[4]).Count;
+		TStringList(table.Objects[4]).Add(filterId);
+		TStringList(table.Objects[4]).Objects[filterCount] := TStringList.Create;
+		CopyList(filteredOutIndicesList, TStringList(TStringList(table.Objects[4]).Objects[filterCount]));
 		
 		//refresh the filtered index of all rows
-		//(storing the new and old indices is done in a way that access does not need translation.
-		//	...the filtering itself may be slower. This is OK because it will not happen as often as access to the cells)
-		
 		RefreshTableIndexes(table, 1);
 		//TODO: also check filters on columns
-		
-		//count up the total number of applied filters
-		tmpStr := table.Values['c_fil'];
-		table.Values['c_fil'] := IntToStr(inc(StrToInt(tmpStr)));
 	end;
 	
 	Result := newlyFilteredOutRowCount;
@@ -775,15 +746,14 @@ var
 begin
 	//LogFunctionStart('TranslateFilteredToUnfilteredTableIndex');
 	
-	if indexType = 1 then begin //1=row, 2=col
-		tmpStr := table.Values[Format('r%d|unfilteredIndex', [filteredIndex])];
-		if SameText(tmpStr, '') then begin
-			Result := filteredIndex;
-		end else begin
-			Result := StrToInt(tmpStr);
+	if TStringList(table.Objects[indexType]).Count > 1 then begin 
+		if filteredIndex < 0 then begin
+			Result := filteredIndex * -1;
+		end else begin 
+			Result := StrToInt(TStringList(table.Objects[indexType]).Strings(filteredIndex));
 		end;
 	end else begin
-		Result := -2; //TODO
+		Result := filteredIndex;
 	end;
 
 	//LogFunctionEnd;
@@ -791,6 +761,7 @@ end;
 
 //=========================================================================
 //	internal function to translate an unfiltered row or column index to the filtered index
+//	indexType: 1=rows, 2=columns
 //=========================================================================
 function TranslateUnfilteredToFilteredTableIndex(const table : TStringList; const unfilteredIndex, indexType : Integer;) : Integer;
 var
@@ -798,15 +769,11 @@ var
 begin
 	//LogFunctionStart('TranslateUnfilteredToFilteredTableIndex');
 	
-	if indexType = 1 then begin //1=row, 2=col
-		tmpStr := table.Values[Format('r%d|filteredIndex', [unfilteredIndex])];
-		if SameText(tmpStr, '') then begin
-			Result := unfilteredIndex;
-		end else begin
-			Result := StrToInt(tmpStr);
-		end;
+	if TStringList(table.Objects[indexType]).Count > 1 then begin 
+		Result := TStringList(table.Objects[indexType]).IndexOf(IntToStr(unfilteredIndex)) ;
+		if Result < 0 then Result := (unfilteredIndex * -1);
 	end else begin
-		Result := -2; //TODO
+		Result := unfilteredIndex;
 	end;
 
 	//LogFunctionEnd;
@@ -1000,6 +967,8 @@ begin
 			
 			inc(i);
 		end;
+
+		//DebugLog('filteredOutRowsList: ' + filteredOutRowsList.Text);
 		
 		if filteredOutRowsList.Count > 0 then begin 
 			newlyFilteredOutRowCount := SetManualFilterToTable(table, 1, filterId, filteredOutRowsList, false);
@@ -1023,9 +992,12 @@ function GetUnfilteredTableRowCount(const table : TStringList; const withHeaders
 begin
 	//LogFunctionStart('GetUnfilteredTableRowCount');
 	
-	Result := 
-		GetTableRowCount(table, withHeaders) 	//rows visible after filters
-		+ StrToInt(table.Values['c_frow']);			//rows filtered out
+	Result := StrToInt(TStringList(table.Objects[0]).Names[0]);
+	if withHeaders then begin 
+		if TableHasHeaders(table) then begin
+			inc(Result);
+		end;
+	end;
 		
 	//LogFunctionEnd;
 end;
@@ -1038,7 +1010,7 @@ function TableRowIsFilteredOut(const table : TStringList; const unfilteredRowInd
 begin
 	//LogFunctionStart('TableRowIsFilteredOut');
 	
-	Result := not SameText(table.Values[Format('r%d|filteredBy', [unfilteredRowIndex])], '');
+	Result := (TStringList(table.Objects[1]).IndexOf(IntToStr(unfilteredRowIndex)) < 0);
 	
 	//LogFunctionEnd;
 end;
@@ -1050,7 +1022,7 @@ function TableHasActiveFilters(const table : TStringList;) : Boolean;
 begin
 	//LogFunctionStart('TableHasActiveFilters');
 	
-	Result := not SameText(table.Values['c_fil'], '0');
+	Result := (TStringList(table.Objects[4]).Count > 0);
 	
 	//LogFunctionEnd;
 end;
@@ -1290,18 +1262,14 @@ begin
 	headers.Sorted := true; //so that .Find() works
 	
 	try
-		table.Clear;
+		NewEmptyTable(table, hasHeaders);
 		
-		table.Values['c_frow'] := '0'; //number of filtered out rows
-		table.Values['c_fil'] := '0'; //number of filters
 		rowCount := list.Count;
 		
 		if hasHeaders then begin
-			table.Values['hasHeaders'] := 'true';
-			table.Values['c_row'] := IntToStr(rowCount - 1);
+			TStringList(table.Objects[1]).Strings[0] := Format('c=%d', [rowCount - 1]);
 		end else begin
-			table.Values['hasHeaders'] := 'false';
-			table.Values['c_row'] := IntToStr(rowCount);
+			TStringList(table.Objects[1]).Strings[0] := Format('c=%d', [rowCount]); 
 		end;
 		
 		i := 0;
@@ -1361,7 +1329,14 @@ begin
 			inc(i);
 		end;
 		
-		table.Values['c_col'] := IntToStr(colCount);
+		
+		TStringList(table.Objects[2]).Strings[0] := IntToStr(colCount);
+		
+		if hasHeaders then begin 
+			TStringList(table.Objects[0]).Strings[0] := Format('%d=%d', [rowCount - 1, colCount]);
+		end else begin
+			TStringList(table.Objects[0]).Strings[0] := Format('%d=%d', [rowCount, colCount]);
+		end;
 		
 		j := 1;
 		while j <= colCount do begin
@@ -1521,7 +1496,7 @@ begin
 	
 	if table.Count = 0 then 
 		raise Exception.Create('Table contains no data.');
-	colCount := StrToInt(table.Values['c_col']);
+	colCount := GetTableColCount(table);
 	
 	if rowIndex = 0 then begin
 		if not TableHasHeaders(table) then 
@@ -1619,7 +1594,7 @@ begin
 	if table.Count = 0 then 
 		raise Exception.Create('Table contains no data.');
 	
-	colCount := StrToInt(table.Values['c_col']);
+	colCount := GetTableColCount(table);
 	
 	if rowIndex = 0 then begin
 		if not TableHasHeaders(table) then 
@@ -1751,38 +1726,6 @@ begin
 	//LogFunctionEnd;
 end;
 
-// signature is not right anymore, but logic could be used to get data according to the most specific data type the single value enables:
-// //=========================================================================
-// //  get a specific value from a table
-// // 	rowIndex and colIndex are 1-based
-// //	if you call it with rowIndex=0 it will return the header. If there are no headers it will throw an error.
-// //	if you call it with a rowIndex or colIndex that does not exist, the result will be an empty string 
-// // 	a string value will not be escaped
-// //	if the value is numeric and contains no decimal places, an Integer will be returned
-// //	if the value is numeric and contains decimal places, a Double will be returned
-// //=========================================================================
-// function GetTableCellValue(const table : TStringList; const rowIndex : Integer; const colIndexOrHeader : Variant; const ignoreColumnDatatype : Boolean;) : Variant;
-// const 
-	// decimalSeparator = '.';
-// begin
-	// // //LogFunctionStart('GetTableCellValue');
-	
-	// Result := GetTableCellValueAsString(table, rowIndex, colIndexOrHeader);
-	
-	// if IsNumeric(Result) then begin
-		// if Pos(decimalSeparator, Result) > 0 then begin
-			// Result := StrToFloat(Result);
-		// end else begin
-			// Result := StrToInt(Result);
-		// end;
-	// end else begin 
-		// if SameText(Result, 'true') or SameText(Result, 'false') then begin
-			// Result := SameText(Result, 'true');
-		// end;
-	// end;
-		
-	// // //LogFunctionEnd;
-// end;
 
 //=========================================================================
 //  get a specific value from a table
@@ -2045,8 +1988,10 @@ begin
 	
 	if table.Count = 0 then 
 		raise Exception.Create('Table contains no data.');
-	
-	Result := StrToInt(table.Values['c_row']);
+
+	// debugLog(TStringList(table.Objects[1]).Text);
+
+	Result := StrToInt(TStringList(table.Objects[1]).ValueFromIndex[0]);
 	
 	if withHeaders then begin 
 		if TableHasHeaders(table) then 
@@ -2066,7 +2011,7 @@ begin
 	if table.Count = 0 then 
 		raise Exception.Create('Table contains no data.');
 	
-	Result := StrToInt(table.Values['c_col']);
+	Result := StrToInt(TStringList(table.Objects[2]).Strings[0]);
 	
 	//LogFunctionEnd;
 end;
@@ -2085,7 +2030,7 @@ begin
 	if table.Count = 0 then 
 		raise Exception.Create('Table contains no data.');
 	
-	colCount := StrToInt(table.Values['c_col']);
+	colCount := GetTableColCount(table);
 	
 	if not TableHasHeaders(table) then 
 		raise Exception.Create('Table has no headers, but there was an attempt to access the table via header.');
@@ -2123,7 +2068,7 @@ begin
 	if table.Count = 0 then 
 		raise Exception.Create('Table contains no data.');
 	
-	colCount := StrToInt(table.Values['c_col']);
+	colCount := GetTableColCount(table);
 	
 	if not TableHasHeaders(table) then 
 		raise Exception.Create('Table has no headers, but there was an attempt to access the table via header.');
@@ -2191,7 +2136,7 @@ begin
 	if table.Count = 0 then 
 		raise Exception.Create('Table contains no data.');
 	
-	Result := SameText(table.Values['hasHeaders'], 'true');
+	Result := SameText(table.ValueFromIndex[3], 'true');
 	
 	//LogFunctionEnd;
 end;
